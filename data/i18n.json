@@ -777,7 +777,8 @@
     "life.thisYearHint": "（這一年最重要的事）",
     "intro.bc.fatherAbsent": "出生前已不在",
     "intro.bc.motherAbsent": "生產時去世",
-    "intro.pace": "節奏：每一年"
+    "intro.pace": "節奏：每一年",
+    "life.income": "年收入"
   },
   "zh-Hans": {
     "title": "选出生地 · 人生模拟",
@@ -1557,7 +1558,8 @@
     "life.thisYearHint": "（這一年最重要的事）",
     "intro.bc.fatherAbsent": "出生前已不在",
     "intro.bc.motherAbsent": "生產時去世",
-    "intro.pace": "節奏：每一年"
+    "intro.pace": "節奏：每一年",
+    "life.income": "年收入"
   },
   "en": {
     "title": "Born Somewhere · Life Simulator",
@@ -2337,7 +2339,8 @@
     "life.thisYearHint": "(the year's main event)",
     "intro.bc.fatherAbsent": "Gone before you were born",
     "intro.bc.motherAbsent": "Died when you were born",
-    "intro.pace": "Pace: one year every"
+    "intro.pace": "Pace: one year every",
+    "life.income": "Annual income"
   },
   "ko": {
     "title": "태어난 곳 · 인생 시뮬레이션",
@@ -3117,7 +3120,8 @@
     "life.thisYearHint": "(the year's main event)",
     "intro.bc.fatherAbsent": "Gone before you were born",
     "intro.bc.motherAbsent": "Died when you were born",
-    "intro.pace": "Pace: one year every"
+    "intro.pace": "Pace: one year every",
+    "life.income": "Annual income"
   },
   "ja": {
     "title": "出生地 · 人生シミュレーション",
@@ -3897,7 +3901,8 @@
     "life.thisYearHint": "(the year's main event)",
     "intro.bc.fatherAbsent": "Gone before you were born",
     "intro.bc.motherAbsent": "Died when you were born",
-    "intro.pace": "Pace: one year every"
+    "intro.pace": "Pace: one year every",
+    "life.income": "Annual income"
   },
   "vi": {
     "title": "Nơi sinh · Mô phỏng cuộc đời",
@@ -4677,7 +4682,8 @@
     "life.thisYearHint": "(the year's main event)",
     "intro.bc.fatherAbsent": "Gone before you were born",
     "intro.bc.motherAbsent": "Died when you were born",
-    "intro.pace": "Pace: one year every"
+    "intro.pace": "Pace: one year every",
+    "life.income": "Annual income"
   },
   "fr": {
     "title": "Né quelque part · Simulateur de vie",
@@ -4921,7 +4927,7 @@
     "life.happiness": "Bonheur",
     "life.knowledge": "Savoir",
     "life.social": "Relations",
-    "life.netAssets": "Patrimoine (PPA)",
+    "life.netAssets": "Patrimoine",
     "edu.pre": "avant l'école",
     "edu.univ": "université",
     "footer.feedback": "Avis",
@@ -5479,7 +5485,8 @@
     "causeEx.營養不良": "Sous-alimentation prolongée et carences sévères.",
     "causeEx.中風": "Caillot ou hémorragie dans le cerveau.",
     "causeEx.自行結束": "Vous avez arrêté cette vie vous-même avec le bouton ■.",
-    "intro.pace": "Rythme : une année toutes les"
+    "intro.pace": "Rythme : une année toutes les",
+    "life.income": "Revenu annuel"
   },
   "th": {
     "title": "เกิดที่ไหน · จำลองชีวิต",
@@ -6259,7 +6266,8 @@
     "life.thisYearHint": "(the year's main event)",
     "intro.bc.fatherAbsent": "Gone before you were born",
     "intro.bc.motherAbsent": "Died when you were born",
-    "intro.pace": "Pace: one year every"
+    "intro.pace": "Pace: one year every",
+    "life.income": "Annual income"
   },
   "es": {
     "title": "Nacido en algún lugar · Simulador de vida",
@@ -7039,6 +7047,7 @@
     "life.thisYearHint": "(the year's main event)",
     "intro.bc.fatherAbsent": "Gone before you were born",
     "intro.bc.motherAbsent": "Died when you were born",
-    "intro.pace": "Pace: one year every"
+    "intro.pace": "Pace: one year every",
+    "life.income": "Annual income"
   }
 }

@@ -2427,3 +2427,22 @@ body { overflow-x: hidden; }
 
 .bc-pace { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 14px 0 4px; }
 .bc-pace .seg-btn { min-height: 44px; min-width: 56px; }
+
+/* Compteur central de l'écran de vie */
+.cert-figure svg { width: 180px; height: 180px; }
+.life-hero { text-align: center; margin: 4px auto 20px; max-width: 420px; }
+.lh-age { font-family: var(--serif); font-weight: 700; font-size: clamp(72px, 14vw, 128px); line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; }
+.lh-age small { font-size: 0.3em; font-weight: 600; color: var(--ink-2); }
+.lh-yearbar { height: 6px; background: var(--bg-3); border-radius: 3px; overflow: hidden; margin: 12px 0 16px; }
+.lh-yearbar i { display: block; height: 100%; background: var(--accent); transform-origin: left; transform: scaleX(0); }
+@keyframes lhYear { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.lh-money { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.lh-money > div { background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.lh-money span { display: block; font-size: 12px; color: var(--ink-2); }
+.lh-money b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { .lh-yearbar { display: none; } }
+/* Arbre généalogique plus lisible */
+.tree-canvas svg { margin: 0 auto; }
+.tree-canvas .tree-link { stroke-width: 2; opacity: 1; }
+.tree-canvas .node-name { font-size: 16px; font-weight: 600; }
+.tree-canvas .node-life { font-size: 12px; fill: var(--ink-2); }

@@ -2061,7 +2061,7 @@ function startLife(countryCode, life) {
   stopTicker();
   STATE.life = life || newLife(countryCode);
   if (!STATE.life) return;
-  if (!LANG.startsWith('zh')) STATE.life.currency = 'US$';   // les montants sont en dollars PPA ; NT$ seulement pour les interfaces chinoises
+  if (!LANG.startsWith('zh')) STATE.life.currency = LANG === 'fr' ? '€' : 'US$';   // les montants sont en dollars PPA ; NT$ seulement pour les interfaces chinoises
   { const lbl = $('#currencyLabel'); if (lbl) lbl.textContent = STATE.life.currency || 'NT$'; }
   STATE.life.log.push({ age: 0, kind: 'birth', icon: '👶', text: t('event.birth', '') });
   logLife(t('log.born_in', localize(STATE.life.countryData).name, ''));
@@ -2140,7 +2140,7 @@ function tick() {
   // 基準對齊原作 incomeAt(c, pct) ≈ c.ppp * 0.9，再依教育、家境分位調整。
   // 生活開銷依「自己的收入」而非人均 GDP 計算（否則低教育的人生會被壓成負資產）；
   // 儲蓄率隨分位提高 — 高收入家庭本來就存得比較多。
-  if (STATE.life.stats.employment === 'employed' || STATE.life.stats.employment === 'university') {
+  if (STATE.life.stats.employment === 'employed') {
     const ppp = Number.isFinite(c?.ppp) ? c.ppp : 12000;
     const eduMult = [0.45, 0.6, 0.75, 0.9, 1.25][Math.min(STATE.life.stats.education, 4)] ?? 0.75;
     const q = Math.min(Math.max(STATE.life.stats.incomeQuartile, 1), 4);
@@ -2149,6 +2149,8 @@ function tick() {
     const gross = ppp * 0.9 * eduMult * qMult;
     STATE.life.stats.annualIncome = Math.round(gross);
     STATE.life.stats.netAssets += Math.round(gross * saveRate);
+  } else {
+    STATE.life.stats.annualIncome = 0;
   }
   // 知識隨教育成長
   if (STATE.life.stats.education >= 2 && STATE.life.stats.knowledge < 90) STATE.life.stats.knowledge = Math.min(100, STATE.life.stats.knowledge + 0.5);
@@ -2357,9 +2359,9 @@ function showFinanceModal(forceOpt) {
   const currentInvest = life.investChoice || 'global';
   // v5.42：修掉 ReferenceError — `auto` 未宣告，應讀 life.autoInvest
   const auto = life.autoInvest ? 'active' : '';
-  const annualCost = Math.round(netAssets * 0.03);  // 假設生活方式成本 3%
+  const annualCost = Math.round(netAssets * 0.02);   // même taux que la dépense automatique  // 假設生活方式成本 3%
   const q = $('#financeQuestion');
-  if (q) q.textContent = isEn ? `Net Worth: ${currency || 'US$'}${netAssets.toLocaleString()}` : LANG === 'fr' ? `Patrimoine : ${currency || 'US$'}${netAssets.toLocaleString('fr-FR')}` : `積蓄：${currency || 'NT$'}${netAssets.toLocaleString()}`;
+  if (q) q.textContent = isEn ? `Net Worth: ${money(netAssets)}` : LANG === 'fr' ? `Patrimoine : ${money(netAssets)}` : `積蓄：${currency || 'NT$'}${netAssets.toLocaleString()}`;
   const body = $('#financeBody');
   if (body) {
     body.innerHTML = `
@@ -2367,8 +2369,8 @@ function showFinanceModal(forceOpt) {
       <div class="fin-actions">
         <div class="fin-cost">
           <strong>${isEn?'Family/friend dinners + gifts':LANG === 'fr' ? "Repas et cadeaux avec la famille et les amis" : '和家人朋友聚餐·送禮'}</strong>
-          <span class="fin-effect">${isEn?'social +4 · happy +2 · not enough':LANG === 'fr' ? "relations +4 · bonheur +2 · pas assez d'argent" : '人際關係 +4 · 幸福 +2 · 錢不夠'}</span>
-          <span class="fin-price">${currency}${annualCost.toLocaleString()}</span>
+          <span class="fin-effect">${isEn?'social +4 · happy +2' + (netAssets > 0 ? '' : ' · not enough'):LANG === 'fr' ? "relations +4 · bonheur +2" + (netAssets > 0 ? '' : " · pas assez d'argent") : '人際關係 +4 · 幸福 +2 · 錢不夠'}</span>
+          <span class="fin-price">${money(annualCost)}</span>
         </div>
       </div>
       <h4>${isEn?'Idle money investment':LANG === 'fr' ? "Placer l'argent qui dort" : '閒錢理財'}</h4>
@@ -2913,6 +2915,7 @@ function renderAll() {
   // v5.68：title / aria-label 也走 i18n（topbar 那幾顆只有圖示，靠 tooltip 解釋）
   $$('[data-t-title]').forEach(el => { el.title = t(el.dataset.tTitle); });
   $$('[data-t-aria]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.tAria)); });
+  $$('[data-t-placeholder]').forEach(el => { el.placeholder = t(el.dataset.tPlaceholder); });
   // 暫停鈕的圖示 / tooltip 跟著實際狀態走（STATE.paused 有很多地方會被清掉）
   if (typeof syncPauseBtn === 'function') syncPauseBtn();
   if (typeof syncAutoBtn === 'function') syncAutoBtn();
@@ -3153,6 +3156,23 @@ function renderLife() {
   const ageEl = $('#lifeAge');
   if (ageEl) ageEl.innerHTML = (STATE.life.age || 0) + '<small>' + t('unit.years') + '</small>';
   $('#lifeName2').textContent = (STATE.life.name.full || STATE.life.name.full_en) || '...';
+  {
+    const age = STATE.life.age || 0;
+    const ha = $('#heroAge'); if (ha) ha.textContent = age;
+    const hw = $('#heroAssets'); if (hw) hw.textContent = money(STATE.life.stats.netAssets);
+    const hi = $('#heroIncome'); if (hi) hi.textContent = STATE.life.stats.annualIncome ? money(STATE.life.stats.annualIncome) : '—';
+    const hb = $('#heroYearBar');
+    if (hb) {
+      // la barre se remplit pendant l'année en cours, puis repart à zéro
+      if (hb.dataset.age !== String(age)) {
+        hb.dataset.age = age;
+        hb.style.animation = 'none';
+        void hb.offsetWidth;
+        hb.style.animation = 'lhYear ' + Math.round(STATE.tickMs / STATE.speed) + 'ms linear forwards';
+      }
+      hb.style.animationPlayState = (STATE.paused || STATE.life.died) ? 'paused' : 'running';
+    }
+  }
   $('#lifeLe').textContent = c.le;
   $('#lifeSex').textContent = STATE.life.sex === 'M' ? t('sex.male') : t('sex.female');
   // 教育：顯示 0-4 級距 + 已就讀年數
@@ -3421,7 +3441,7 @@ function renderLifeStats() {
   set($('#stateSocialVal'), $('#stateSocial'), s.social);
   // 淨資產（PPP 美元）
   const na = $('#netAssets');
-  if (na) na.textContent = 'US$' + Math.round(s.netAssets || 0).toLocaleString();
+  if (na) na.textContent = money(s.netAssets);
   // v5.19：當年存活率
   renderSurvivalRate();
   // v5.19：你現在 vs 隨機國家 比較表
@@ -4891,13 +4911,12 @@ function renderMiniTree(container, rootId, maxGen, people, edges) {
     nodes.push({ id, gen, xSlot });
     if (gen < maxGen) {
       const parents = edges.filter(e => e.childId === id).map(e => e.parentId);
-      const slotW = Math.pow(2, maxGen - gen - 1);
-      recurse(parents[0], gen + 1, xSlot);
-      if (parents[1]) recurse(parents[1], gen + 1, xSlot + slotW);
-      else recurse(parents[0], gen + 1, xSlot);
-      const slotW2 = Math.pow(2, maxGen - gen - 1);
-      if (parents[0]) links.push({ from: { gen: gen+1, xSlot }, to: { gen, xSlot } });
-      if (parents[1]) links.push({ from: { gen: gen+1, xSlot: xSlot + slotW2 }, to: { gen, xSlot } });
+      const half = Math.pow(2, maxGen - gen - 1) / 2;
+      const xs = parents.length >= 2 ? [xSlot - half, xSlot + half] : [xSlot];
+      parents.slice(0, 2).forEach((pid, n) => {
+        recurse(pid, gen + 1, xs[n]);
+        links.push({ from: { gen: gen + 1, xSlot: xs[n] }, to: { gen, xSlot } });
+      });
     }
   }
   recurse(rootId, 0, Math.pow(2, maxGen) / 2 - 0.5);
@@ -5405,7 +5424,7 @@ function wire() {
   });
   // v5.22：貨幣切換 + 主題切換
   const currencyBtn = $('#currencyToggle');
-  const currencies = ['NT$', 'HK$', 'MOP$', 'CNY', 'US$'];
+  const currencies = ['€', 'US$', 'NT$', 'HK$', 'MOP$', 'CNY'];
   if (currencyBtn) currencyBtn.addEventListener('click', () => {
     const i = currencies.indexOf(STATE.life?.currency || 'NT$');
     const next = currencies[(i + 1) % currencies.length];
@@ -5658,21 +5677,24 @@ function continueOldLife(pastLife) {
 }
 
 /* v5.22：貨幣切換 — 即時換算 netAssets */
+// Les montants du jeu sont en dollars PPA ; taux fixes approximatifs pour l'affichage.
+const CURRENCY_RATES = { 'NT$': 30, 'HK$': 7.8, 'MOP$': 8.05, 'CNY': 7.2, 'US$': 1, '€': 0.92 };
+function money(usd) {
+  const cur = (STATE.life && STATE.life.currency) || (LANG.startsWith('zh') ? 'NT$' : LANG === 'fr' ? '€' : 'US$');
+  const v = Math.round((usd || 0) * (CURRENCY_RATES[cur] || 1));
+  return cur === '€' ? v.toLocaleString('fr-FR') + ' €' : cur + v.toLocaleString();
+}
 function setCurrency(cur) {
   if (!STATE.life) return;
   STATE.life.currency = cur;
   const s = STATE.life.stats;
-  const rateMap = { 'NT$': 30, 'HK$': 7.8, 'MOP$': 8.05, 'CNY': 7.2, 'US$': 1 };
-  const rates = { 'NT$': '🇹🇼 NT$', 'HK$': '🇭🇰 HK$', 'MOP$': '🇲🇴 MOP$', 'CNY': '🇨🇳 CNY', 'US$': '🇺🇸 US$' };
-  if (!rateMap[cur]) return;
+  if (!CURRENCY_RATES[cur]) return;
   const na = $('#netAssets');
-  if (na) na.textContent = rates[cur] + Math.round((s.netAssets || 0) * rateMap[cur]).toLocaleString();
-  // 也更新「💰 投資」選項的價格顯示
+  if (na) na.textContent = money(s.netAssets);
   document.querySelectorAll('.fin-price').forEach(el => {
-    if (el.dataset.basePrice) {
-      el.textContent = cur + Math.round(parseFloat(el.dataset.basePrice) * rateMap[cur]).toLocaleString();
-    }
+    if (el.dataset.basePrice) el.textContent = money(parseFloat(el.dataset.basePrice));
   });
+  renderLife();
 }
 
 /* v5.22：主題切換（light/dark/sepia） */
@@ -6393,6 +6415,12 @@ function treePeopleGraph() {
   return { people, edges };
 }
 
+function nowYear() { return STATE.life ? STATE.life.year + STATE.life.yearOffset : 2024; }
+// Année de décès seulement si elle est déjà passée dans la vie en cours.
+function pastDeathYear(p) {
+  const d = p && p.death && p.death.year;
+  return d != null && d <= nowYear() ? d : null;
+}
 function renderTree() {
   const canvas = $('#treeCanvas');
   if (!canvas) return;
@@ -6451,13 +6479,12 @@ function getAncestorLayout(rootId, maxGen, people, edges) {
     nodes.push({ id, gen, xSlot });
     if (gen < maxGen) {
       const parents = edges.filter(e => e.childId === id).map(e => e.parentId);
-      const slotW = Math.pow(2, maxGen - gen - 1);
-      recurse(parents[0], gen + 1, xSlot);
-      if (parents[1]) recurse(parents[1], gen + 1, xSlot + slotW);
-      else recurse(parents[0], gen + 1, xSlot);
-      const slotW2 = Math.pow(2, maxGen - gen - 1);
-      if (parents[0]) links.push({ from: { gen: gen+1, xSlot }, to: { gen, xSlot } });
-      if (parents[1]) links.push({ from: { gen: gen+1, xSlot: xSlot + slotW2 }, to: { gen, xSlot } });
+      const half = Math.pow(2, maxGen - gen - 1) / 2;
+      const xs = parents.length >= 2 ? [xSlot - half, xSlot + half] : [xSlot];
+      parents.slice(0, 2).forEach((pid, n) => {
+        recurse(pid, gen + 1, xs[n]);
+        links.push({ from: { gen: gen + 1, xSlot: xs[n] }, to: { gen, xSlot } });
+      });
     }
   }
   recurse(rootId, 0, Math.pow(2, maxGen) / 2 - 0.5);
@@ -6465,11 +6492,17 @@ function getAncestorLayout(rootId, maxGen, people, edges) {
 }
 
 function renderAncestorTree(canvas, rootId, maxGen, people, edges) {
-  const layout = getAncestorLayout(rootId, maxGen, people, edges);
+  let layout = getAncestorLayout(rootId, maxGen, people, edges);
+  // ne pas réserver de place pour des générations absentes : l'arbre reste compact
+  const deepest = Math.max(...layout.nodes.map(n => n.gen));
+  if (deepest >= 1 && deepest < maxGen) { maxGen = deepest; layout = getAncestorLayout(rootId, maxGen, people, edges); }
   const slotW = 220, rowH = 130, marginX = 30, marginY = 30;
   const w = marginX * 2 + layout.totalSlots * slotW;
   const h = marginY * 2 + (maxGen + 1) * rowH;
-  const svg = svgEl('svg', { width: w, height: h, viewBox: `0 0 ${w} ${h}`, preserveAspectRatio: 'xMidYMid meet', style:'max-width:100%;height:auto;' });
+  const usedX = layout.nodes.map(n => n.xSlot);
+  const cropX = Math.min(...usedX) * slotW;
+  const cropW = (Math.max(...usedX) - Math.min(...usedX) + 1) * slotW + marginX * 2;
+  const svg = svgEl('svg', { width: cropW, height: h, viewBox: `${cropX} 0 ${cropW} ${h}`, preserveAspectRatio: 'xMidYMid meet', style:'max-width:100%;height:auto;' });
   for (const { from, to } of layout.links) {
     const fn = layout.nodes.find(n => n.xSlot === from.xSlot && n.gen === from.gen);
     const tn = layout.nodes.find(n => n.xSlot === to.xSlot && n.gen === to.gen);
@@ -6542,7 +6575,7 @@ function renderBothTree(canvas, rootId, maxGen, people, edges) {
 function drawPersonNode(svg, p, x, y, w, h, selected) {
   const g = svgEl('g', { class: 'tree-node' + (selected ? ' selected' : ''), transform: `translate(${x}, ${y})` }, svg);
   const genderColor = p.sex === 'M' ? '#4a6da8' : p.sex === 'F' ? '#b86998' : '#c2b693';
-  const deceased = !!(p.death && p.death.year);
+  const deceased = !!pastDeathYear(p);
   const dash = deceased ? '4 5' : '';
   const op = deceased ? 0.6 : 1;
   svgEl('rect', { class: 'node-rect ' + (p.sex === 'M' ? 'node-m' : p.sex === 'F' ? 'node-f' : 'node-u'),
@@ -6565,7 +6598,7 @@ function drawPersonNode(svg, p, x, y, w, h, selected) {
     const ne = svgEl('text', { class: 'node-en', x: 70, y: nameY + 14, 'font-size': 10, fill: '#7a7a7a' }, g);
     ne.textContent = p.nameEn;
   }
-  const lifeText = p.birth?.year ? `${p.birth.year || '?'} – ${p.death?.year || ''}` : '';
+  const lifeText = p.birth?.year ? `${p.birth.year || '?'} – ${pastDeathYear(p) || ''}` : '';
   if (lifeText) {
     const lt = svgEl('text', { class: 'node-life', x: 70, y: h - 8, 'font-size': 10, fill: '#7a7a7a' }, g);
     lt.textContent = lifeText;
@@ -6616,8 +6649,8 @@ function computeCrossLifeEvents(p) {
     });
   }
   // 他去世時我幾歲
-  if (p.death?.year) {
-    const myAge = selfAgeAt(p.death.year);
+  if (pastDeathYear(p)) {
+    const myAge = selfAgeAt(pastDeathYear(p));
     if (myAge >= 0 && myAge <= self.age) {
       if (!STATE.eduMode && !STATE.softMode) {
         events.push({
@@ -6629,7 +6662,7 @@ function computeCrossLifeEvents(p) {
     } else if (myAge > self.age) {
       events.push({
         icon: '🕯️',
-        text: LANG === 'en' ? `${p.name} would have been ${p.death.year - selfBirthYear} years older than you.` : LANG === 'fr' ? `${p.name} aurait eu ${p.death.year - selfBirthYear} ans de plus que vous.` : `${p.name} 將在你 ${myAge} 歲時離世（在你身後）。`,
+        text: LANG === 'en' ? `${p.name} would have been ${pastDeathYear(p) - selfBirthYear} years older than you.` : LANG === 'fr' ? `${p.name} aurait eu ${pastDeathYear(p) - selfBirthYear} ans de plus que vous.` : `${p.name} 將在你 ${myAge} 歲時離世（在你身後）。`,
         kind: 'forecast'
       });
     }
@@ -6677,7 +6710,7 @@ function showPersonDetail(p) {
       <div class="pd-meta">
         <h3 class="pd-name">${escapeHtml(p.name || '?')} ${deceasedMark(p)}</h3>
         <div class="pd-relation"><span class="badge">${rel}</span> ${p.note === 'adoptive' ? `<span class="badge badge-adopt">🧩 ${t('tree.noteAdoptive')}</span>` : p.note === 'foster' ? `<span class="badge badge-foster">🏠 ${t('tree.noteFoster')}</span>` : ''}</div>
-        <div class="pd-life">${p.birth?.year || '?'} – ${p.death?.year || t('legend.m')}</div>
+        <div class="pd-life">${p.birth?.year || '?'} – ${pastDeathYear(p) || t('legend.m')}</div>
         <div class="pd-country">${p.countryData?.flag || ''} ${p.country || ''}${p.birthOrigin ? ' <span class="fam-flag">' + p.birthOrigin.flag + '→</span>' : ''}</div>
       </div>
       <button class="pd-close" onclick="document.getElementById('personDetail').remove()">×</button>
@@ -6708,7 +6741,7 @@ function relationLabel(p) {
 }
 
 function deceasedMark(p) {
-  return (p.death && p.death.year) ? '<span class="pd-deceased">†</span>' : '';
+  return pastDeathYear(p) ? '<span class="pd-deceased">†</span>' : '';
 }
 
 function escapeHtml(s) {
@@ -6753,7 +6786,7 @@ function svgEl(tag, attrs, parent) {
 
 function computeAge(p) {
   const by = p.birth?.year || 1990;
-  const ey = p.death?.year || 2024;
+  const ey = pastDeathYear(p) || nowYear();
   return Math.max(0, ey - by);
 }
 
