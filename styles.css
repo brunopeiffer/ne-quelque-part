@@ -2424,3 +2424,6 @@ body { overflow-x: hidden; }
 .lang-select, #lifeDuration { min-height: 40px; }
 
 .id-note { margin: 4px 0 8px; color: var(--ink-2); font-size: 13px; line-height: 1.5; text-align: right; }
+
+.bc-pace { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 14px 0 4px; }
+.bc-pace .seg-btn { min-height: 44px; min-width: 56px; }

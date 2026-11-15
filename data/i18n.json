@@ -776,7 +776,8 @@
     "feedback.ph": "請輸入您的想法...",
     "life.thisYearHint": "（這一年最重要的事）",
     "intro.bc.fatherAbsent": "出生前已不在",
-    "intro.bc.motherAbsent": "生產時去世"
+    "intro.bc.motherAbsent": "生產時去世",
+    "intro.pace": "節奏：每一年"
   },
   "zh-Hans": {
     "title": "选出生地 · 人生模拟",
@@ -1555,7 +1556,8 @@
     "feedback.ph": "請輸入您的想法...",
     "life.thisYearHint": "（這一年最重要的事）",
     "intro.bc.fatherAbsent": "出生前已不在",
-    "intro.bc.motherAbsent": "生產時去世"
+    "intro.bc.motherAbsent": "生產時去世",
+    "intro.pace": "節奏：每一年"
   },
   "en": {
     "title": "Born Somewhere · Life Simulator",
@@ -2334,7 +2336,8 @@
     "feedback.ph": "Your thoughts...",
     "life.thisYearHint": "(the year's main event)",
     "intro.bc.fatherAbsent": "Gone before you were born",
-    "intro.bc.motherAbsent": "Died when you were born"
+    "intro.bc.motherAbsent": "Died when you were born",
+    "intro.pace": "Pace: one year every"
   },
   "ko": {
     "title": "태어난 곳 · 인생 시뮬레이션",
@@ -3113,7 +3116,8 @@
     "feedback.ph": "Your thoughts...",
     "life.thisYearHint": "(the year's main event)",
     "intro.bc.fatherAbsent": "Gone before you were born",
-    "intro.bc.motherAbsent": "Died when you were born"
+    "intro.bc.motherAbsent": "Died when you were born",
+    "intro.pace": "Pace: one year every"
   },
   "ja": {
     "title": "出生地 · 人生シミュレーション",
@@ -3892,7 +3896,8 @@
     "feedback.ph": "Your thoughts...",
     "life.thisYearHint": "(the year's main event)",
     "intro.bc.fatherAbsent": "Gone before you were born",
-    "intro.bc.motherAbsent": "Died when you were born"
+    "intro.bc.motherAbsent": "Died when you were born",
+    "intro.pace": "Pace: one year every"
   },
   "vi": {
     "title": "Nơi sinh · Mô phỏng cuộc đời",
@@ -4671,7 +4676,8 @@
     "feedback.ph": "Your thoughts...",
     "life.thisYearHint": "(the year's main event)",
     "intro.bc.fatherAbsent": "Gone before you were born",
-    "intro.bc.motherAbsent": "Died when you were born"
+    "intro.bc.motherAbsent": "Died when you were born",
+    "intro.pace": "Pace: one year every"
   },
   "fr": {
     "title": "Né quelque part · Simulateur de vie",
@@ -5472,7 +5478,8 @@
     "causeEx.自然衰老": "Affaiblissement général du grand âge, sans maladie dominante.",
     "causeEx.營養不良": "Sous-alimentation prolongée et carences sévères.",
     "causeEx.中風": "Caillot ou hémorragie dans le cerveau.",
-    "causeEx.自行結束": "Vous avez arrêté cette vie vous-même avec le bouton ■."
+    "causeEx.自行結束": "Vous avez arrêté cette vie vous-même avec le bouton ■.",
+    "intro.pace": "Rythme : une année toutes les"
   },
   "th": {
     "title": "เกิดที่ไหน · จำลองชีวิต",
@@ -6251,7 +6258,8 @@
     "feedback.ph": "Your thoughts...",
     "life.thisYearHint": "(the year's main event)",
     "intro.bc.fatherAbsent": "Gone before you were born",
-    "intro.bc.motherAbsent": "Died when you were born"
+    "intro.bc.motherAbsent": "Died when you were born",
+    "intro.pace": "Pace: one year every"
   },
   "es": {
     "title": "Nacido en algún lugar · Simulador de vida",
@@ -7030,6 +7038,7 @@
     "feedback.ph": "Your thoughts...",
     "life.thisYearHint": "(the year's main event)",
     "intro.bc.fatherAbsent": "Gone before you were born",
-    "intro.bc.motherAbsent": "Died when you were born"
+    "intro.bc.motherAbsent": "Died when you were born",
+    "intro.pace": "Pace: one year every"
   }
 }

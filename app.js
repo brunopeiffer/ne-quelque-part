@@ -2067,12 +2067,8 @@ function startLife(countryCode, life) {
   logLife(t('log.born_in', localize(STATE.life.countryData).name, ''));
   STATE.paused = false;
   STATE.speed = 1;
-  // v5.25：依 duration 選擇調整 tickMs
-  const dur = $('#lifeDuration')?.value || '1hr';
-  if (dur === '30min') STATE.tickMs = 600;       // 約 30 分鐘跑完一生
-  else if (dur === '1hr') STATE.tickMs = 1200;  // 預設約 1 小時
-  else if (dur === '90min') STATE.tickMs = 1800; // 約 1.5 小時
-  else STATE.tickMs = 1500;
+  STATE.tickMs = (STATE.paceSec || 5) * 1000;   // rythme choisi sur l'acte de naissance : secondes par année
+  if (bgMusic) { stopMusic(); try { startMusic(musicStyleKey(STATE.life.countryData)); } catch (e) {} }
   setView('life');
   renderAll();
   startTicker();
@@ -3406,9 +3402,7 @@ function renderManualDecisions() {
     renderSpeedBtns && renderSpeedBtns();
   });
   // v5.19：「♪ 背景音樂」= 沒有音樂資源，顯示 toast
-  $('#mdMusicBtn')?.addEventListener('click', () => {
-    toast(isEn ? '♪ Music feature coming soon' : LANG === 'fr' ? "♪ Musique bientôt disponible" : '♪ 音樂功能即將推出');
-  });
+  $('#mdMusicBtn')?.addEventListener('click', toggleBackgroundMusic);
 }
 
 function renderLifeStats() {
@@ -4115,26 +4109,83 @@ function showManageRecordsModal() {
 
 /* v5.23：背景音樂（Web Audio API 簡單環境音） */
 let bgMusic = null;
-function toggleBackgroundMusic() {
-  if (!bgMusic) {
-    const isEn = LANG === 'en';
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.value = 220;  // A1
-      gain.gain.value = 0.02;
-      osc.connect(gain).connect(ctx.destination);
-      osc.start();
-      bgMusic = { ctx, osc, gain };
-      toast(isEn ? '♪ Music on' : LANG === 'fr' ? "♪ Musique activée" : '♪ 音樂已開啟');
-    } catch (e) { toast('Audio not supported'); }
-  } else {
-    try { bgMusic.osc.stop(); bgMusic.ctx.close(); } catch (e) {}
-    bgMusic = null;
-    toast(LANG === 'en' ? '♪ Music off' : LANG === 'fr' ? "♪ Musique coupée" : '♪ 音樂已關閉');
+// Musique générée par le navigateur (aucun fichier audio) : gamme, rythme et timbre selon la région du pays.
+// step = durée d'un pas en secondes ; mel = probabilité d'une note à chaque pas ; bass = demi-tons au-dessus de la tonique.
+const MUSIC_STYLES = {
+  namerica: { fr: 'Amérique du Nord', en: 'North America', root: 110, scale: [0,3,5,6,7,10], step: 0.30, swing: 0.62, wave: 'triangle', decay: 0.5, mel: [.9,.3,.6,.4,.8,.3,.6,.5], bass: [0,null,null,0,null,7,null,null] },
+  lac:      { fr: 'Amérique latine', en: 'Latin America', root: 130.8, scale: [0,2,4,5,7,9,11], step: 0.27, wave: 'triangle', decay: 0.35, mel: [.8,.5,.3,.8,.5,.3,.8,.4], bass: [0,null,null,7,null,null,7,null] },
+  europe:   { fr: 'Europe', en: 'Europe', root: 146.8, scale: [0,2,3,5,7,8,10], step: 0.33, wave: 'sine', decay: 0.9, mel: [.9,.3,.6,.3,.6,.3], bass: [0,null,7,null,7,null] },
+  mena:     { fr: 'Moyen-Orient et Afrique du Nord', en: 'Middle East & North Africa', root: 146.8, scale: [0,1,4,5,7,8,10], step: 0.34, wave: 'sawtooth', decay: 0.45, drone: true, mel: [.9,.5,.4,.7,.8,.3,.7,.4], bass: [0,null,null,null,0,null,null,null] },
+  africa:   { fr: 'Afrique subsaharienne', en: 'Sub-Saharan Africa', root: 174.6, scale: [0,2,4,7,9], step: 0.19, wave: 'sine', decay: 0.3, mel: [.8,.4,.7,.5,.7,.4,.8,.4,.7,.5,.7,.4], bass: [0,null,null,7,null,null,0,null,null,7,null,null] },
+  sasia:    { fr: 'Asie du Sud', en: 'South Asia', root: 138.6, scale: [0,1,4,5,7,8,11], step: 0.42, wave: 'sawtooth', decay: 0.8, drone: true, mel: [.8,.3,.5,.3,.7,.3,.5,.4], bass: [] },
+  easia:    { fr: "Asie de l'Est", en: 'East Asia', root: 196, scale: [0,2,4,7,9], step: 0.5, wave: 'triangle', decay: 1.3, mel: [.8,.2,.4,.2,.6,.2,.4,.2], bass: [0,null,null,null,null,null,null,null] },
+};
+function musicStyleKey(c) {
+  if (!c) return 'europe';
+  if (c.region === 'hi') {   // « revenu élevé » n'est pas une région géographique
+    if (c.id === 'USA' || c.id === 'CAN') return 'namerica';
+    if (['JPN', 'SGP', 'KOR', 'TWN', 'HKG', 'MAC'].includes(c.id)) return 'easia';
+    return c.id === 'ISR' ? 'mena' : 'europe';
   }
+  return ({ eap: 'easia', sa: 'sasia', eca: 'europe', mena: 'mena', ssa: 'africa', lac: 'lac' })[c.region] || 'europe';
+}
+function startMusic(key) {
+  const st = MUSIC_STYLES[key] || MUSIC_STYLES.europe;
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const master = ctx.createGain(); master.gain.value = 0.14;
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = st.wave === 'sawtooth' ? 1400 : 2600;
+  const delay = ctx.createDelay(); delay.delayTime.value = st.step * 1.5;
+  const fb = ctx.createGain(); fb.gain.value = 0.25;
+  lp.connect(master); lp.connect(delay); delay.connect(fb); fb.connect(delay); fb.connect(master);
+  master.connect(ctx.destination);
+  const note = (freq, when, vol, dec, wave) => {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = wave; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, when);
+    g.gain.exponentialRampToValueAtTime(vol, when + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, when + dec);
+    o.connect(g).connect(lp); o.start(when); o.stop(when + dec + 0.05);
+  };
+  if (st.drone) [0.5, 0.75].forEach(m => {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.value = st.root * m; g.gain.value = 0.12;
+    o.connect(g).connect(lp); o.start();
+  });
+  const semi = n => Math.pow(2, n / 12);
+  let i = 0, deg = st.scale.length, next = ctx.currentTime + 0.1;   // deg : position dans la gamme, sur deux octaves
+  const timer = setInterval(() => {
+    while (next < ctx.currentTime + 0.3) {
+      const k = i % st.mel.length;
+      const when = next + (st.swing && k % 2 ? (st.swing - 0.5) * 2 * st.step : 0);
+      const b = st.bass[k];
+      if (b != null) note(st.root / 2 * semi(b), when, 0.5, st.decay * 1.6, 'sine');
+      if (Math.random() < st.mel[k]) {
+        deg = Math.max(0, Math.min(st.scale.length * 2, deg + [-2, -1, -1, 0, 1, 1, 2][Math.floor(Math.random() * 7)]));
+        note(st.root * 2 * semi(st.scale[deg % st.scale.length] + 12 * Math.floor(deg / st.scale.length)), when, 0.45, st.decay, st.wave);
+      }
+      i++; next += st.step;
+    }
+  }, 100);
+  bgMusic = { ctx, timer, key };
+}
+function stopMusic() {
+  if (!bgMusic) return;
+  clearInterval(bgMusic.timer);
+  try { bgMusic.ctx.close(); } catch (e) {}
+  bgMusic = null;
+}
+function toggleBackgroundMusic() {
+  if (bgMusic) {
+    stopMusic();
+    toast(LANG === 'en' ? '♪ Music off' : LANG === 'fr' ? "♪ Musique coupée" : '♪ 音樂已關閉');
+    return;
+  }
+  try {
+    const key = musicStyleKey(STATE.life && STATE.life.countryData);
+    startMusic(key);
+    const st = MUSIC_STYLES[key];
+    toast(LANG === 'fr' ? '♪ Musique : ' + st.fr : LANG === 'en' ? '♪ Music: ' + st.en : '♪ 音樂已開啟');
+  } catch (e) { toast('Audio not supported'); }
 }
 
 /* ==== Shelf 世界地圖 ==== */
@@ -5289,6 +5340,17 @@ function wire() {
     if (c) showBirthCertModal(c);
   });
   // v5.19：出生卡 modal 的確認按鈕
+  // Rythme choisi au lancement : secondes par année de vie
+  const paceBtns = $$('#paceSeg [data-pace]');
+  const setPace = (sec) => {
+    STATE.paceSec = sec;
+    try { localStorage.setItem(STORAGE_KEY + ':pace', sec); } catch (e) {}
+    paceBtns.forEach(b => b.classList.toggle('active', +b.dataset.pace === sec));
+  };
+  paceBtns.forEach(b => b.addEventListener('click', () => setPace(+b.dataset.pace)));
+  let savedPace = 5;
+  try { savedPace = +localStorage.getItem(STORAGE_KEY + ':pace'); } catch (e) {}
+  setPace([5, 10, 15, 20].includes(savedPace) ? savedPace : 5);
   const birthCertConfirm = $('#birthCertConfirm');
   if (birthCertConfirm) birthCertConfirm.addEventListener('click', () => {
     const c = STATE.birthCertCountry;

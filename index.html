@@ -107,13 +107,6 @@
         </div>
       </div>
     </div>
-      <label class="seg-block"><span data-t="intro.duration">這一生的長度</span>
-        <select id="lifeDuration">
-          <option value="30min" data-t="intro.dur.30">約 30 分鐘</option>
-          <option value="1hr" selected data-t="intro.dur.60">約 1 小時</option>
-          <option value="90min" data-t="intro.dur.90">約 1 小時 30 分鐘</option>
-        </select>
-      </label>
     </details>
       <p class="warnline">
         <span data-t="intro.heavy">死亡、暴力、自殺這類沉重的事，也會照實際統計發生。不會描寫畫面，並會一起告訴你可以求助的地方。</span>
@@ -619,6 +612,15 @@
     </div>
     <div id="birthCertBody" class="bc-body">
       <!-- 由 buildBirthCertCard() 填入 -->
+    </div>
+    <div class="bc-pace">
+      <span class="seg-label" data-t="intro.pace">節奏：每一年</span>
+      <div class="seg" id="paceSeg">
+        <button type="button" class="seg-btn" data-pace="5">5 s</button>
+        <button type="button" class="seg-btn" data-pace="10">10 s</button>
+        <button type="button" class="seg-btn" data-pace="15">15 s</button>
+        <button type="button" class="seg-btn" data-pace="20">20 s</button>
+      </div>
     </div>
     <div class="bc-actions">
       <button id="birthCertReroll" class="ghost" data-t="intro.bc.reroll">🎲 換一個國家</button>
