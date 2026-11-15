@@ -843,6 +843,25 @@ const INTERRUPT_GAP = 2;
    effets décrits par un objet { money, happy, health, social, know } ou une fonction pour un résultat aléatoire.
    Les montants sont en dollars PPA pour un pays à 40 000 $ par habitant, puis mis à l'échelle du pays. */
 const half = () => Math.random() < 0.5;
+// roll([p1, issue1], [p2, issue2], …) : tire une issue selon les probabilités données.
+const roll = (...opts) => { let r = Math.random(); for (const [pr, fx] of opts) { if ((r -= pr) < 0) return fx; } return opts[opts.length - 1][1]; };
+const pppOf = (life) => life.countryData?.ppp || 0;
+const quartOf = (life) => life.stats.incomeQuartile || 1;
+// Vrai si le pays est assez riche, ou si la famille est dans la moitié aisée du pays.
+const comfortable = (minPpp) => (life) => pppOf(life) >= minPpp || quartOf(life) >= 3;
+const heavyOk = () => !STATE.softMode && !STATE.eduMode;
+// Part de musulmans dans le pays, lue dans le champ `rel` (ex. « C55,N33,M9 »).
+const muslimShare = (c) => { const m = /(?:^|,)\s*M(\d+)/.exec((c && c.rel) || ''); return m ? +m[1] : 0; };
+const MIGRATION_DEST = { lac: ['USA', 'ESP'], ssa: ['FRA', 'GBR', 'ITA'], mena: ['FRA', 'DEU'], sa: ['GBR', 'USA'], eap: ['JPN', 'AUS', 'KOR'], eca: ['DEU', 'POL'] };
+function migrateLife(life) {
+  const from = life.countryData;
+  const dest = countryById(pick(MIGRATION_DEST[from.region] || ['USA']));
+  if (!dest || dest.id === life.country) return;
+  if (!life.birthOrigin) life.birthOrigin = { country: life.country, flag: from.flag };
+  life.country = dest.id;
+  life.countryData = dest;
+  if (life === STATE.life) setTimeout(() => toast(from.flag + ' → ' + dest.flag + '  Migration'), 200);
+}
 const EXTRA_DECISIONS = [
   { id: 'sm_stray', kind: 'small', min: 6, max: 12, p: 0.10,
     fr: ["Le chien errant", "Un chien sans collier vous suit jusqu'à la maison et s'assoit devant la porte."],
@@ -852,7 +871,7 @@ const EXTRA_DECISIONS = [
       { k: 'feed', icon: '🍖', fr: "Lui donner à manger, puis le laisser repartir", en: "Feed it, then let it go", fx: { happy: 1 } },
       { k: 'shoo', icon: '🚪', fr: "Fermer la porte", en: "Close the door", fx: { happy: -1 } },
     ] },
-  { id: 'sm_cheat', kind: 'small', min: 10, max: 16, p: 0.10,
+  { id: 'sm_cheat', kind: 'small', min: 10, max: 16, p: 0.10, when: (life) => life.stats.education >= 1,
     fr: ["Les réponses du contrôle", "Pendant le contrôle, votre voisin de table pousse discrètement sa copie vers vous."],
     en: ["The test answers", "During the test, the pupil next to you quietly slides their paper your way."],
     choices: [
@@ -860,7 +879,7 @@ const EXTRA_DECISIONS = [
       { k: 'refuse', icon: '✋', fr: "Faire le contrôle seul(e)", en: "Do the test on your own", fx: { know: 2 } },
       { k: 'tell', icon: '🧑‍🏫', fr: "Le dire au professeur", en: "Tell the teacher", fx: { know: 1, social: -3 } },
     ] },
-  { id: 'sm_bully', kind: 'small', min: 9, max: 15, p: 0.10,
+  { id: 'sm_bully', kind: 'small', min: 9, max: 15, p: 0.10, when: (life) => life.stats.education >= 1,
     fr: ["Dans la cour", "Un élève plus petit se fait bousculer par un groupe, tous les jours au même endroit."],
     en: ["In the schoolyard", "A smaller pupil gets shoved around by a group, every day in the same spot."],
     choices: [
@@ -868,7 +887,7 @@ const EXTRA_DECISIONS = [
       { k: 'adult', icon: '🧑‍🏫', fr: "Prévenir un adulte", en: "Tell an adult", fx: { social: 2 } },
       { k: 'ignore', icon: '🙈', fr: "Regarder ailleurs", en: "Look away", fx: { happy: -3 } },
     ] },
-  { id: 'sm_music', kind: 'small', min: 8, max: 14, p: 0.10,
+  { id: 'sm_music', kind: 'small', min: 8, max: 14, p: 0.10, when: comfortable(8000),
     fr: ["Une place au cours de musique", "Une place se libère au cours de musique du quartier. Le même soir, vos amis jouent dehors."],
     en: ["A spot in music class", "A spot opens up in the local music class. On the same evening, your friends play outside."],
     choices: [
@@ -884,21 +903,21 @@ const EXTRA_DECISIONS = [
       { k: 'family', icon: '🤲', fr: "En donner une part à la famille", en: "Give a share to your family", fx: { money: 200, social: 4 } },
       { k: 'treat', icon: '🎉', fr: "Vous faire plaisir", en: "Treat yourself", fx: { happy: 4 } },
     ] },
-  { id: 'sm_language', kind: 'small', min: 13, max: 20, p: 0.10,
+  { id: 'sm_language', kind: 'small', min: 13, max: 20, p: 0.10, when: comfortable(5000),
     fr: ["Une autre langue", "On vous propose des cours du soir pour apprendre une langue étrangère."],
     en: ["Another language", "You are offered evening classes to learn a foreign language."],
     choices: [
       { k: 'learn', icon: '🗣️', fr: "S'y mettre sérieusement", en: "Take it seriously", fx: { know: 5, happy: -1 } },
       { k: 'skip', icon: '🛋️', fr: "Garder vos soirées", en: "Keep your evenings", fx: { happy: 1 } },
     ] },
-  { id: 'de_study_abroad', kind: 'big', min: 18, max: 24, p: 0.10, when: (life) => (life.eduTarget ?? 0) >= 4,
+  { id: 'de_study_abroad', kind: 'big', min: 18, max: 24, p: 0.10, when: (life) => (life.eduTarget ?? 0) >= 4 && quartOf(life) >= 3 && (pppOf(life) >= 8000 || quartOf(life) === 4),
     fr: ["Une année à l'étranger", "Une bourse permet d'étudier un an dans un autre pays. Il faut répondre cette semaine."],
     en: ["A year abroad", "A scholarship would let you study in another country for a year. You must answer this week."],
     choices: [
       { k: 'go', icon: '🌍', fr: "Partir", en: "Go", fx: { know: 6, happy: 3, social: -3 } },
       { k: 'stay', icon: '🏠', fr: "Rester près des vôtres", en: "Stay close to home", fx: { social: 3 } },
     ] },
-  { id: 'de_startup', kind: 'big', min: 22, max: 40, p: 0.06, when: (life) => life.stats.employment === 'employed',
+  { id: 'de_startup', kind: 'big', min: 22, max: 40, p: 0.03, when: (life) => life.stats.employment === 'employed',
     fr: ["Monter une entreprise", "Un ami veut lancer une entreprise et vous propose de vous associer. Il faudrait quitter votre poste."],
     en: ["Starting a business", "A friend wants to start a business and asks you to join. You would have to leave your job."],
     choices: [
@@ -913,15 +932,7 @@ const EXTRA_DECISIONS = [
       { k: 'city', icon: '🏙️', fr: "Partir en ville", en: "Move to the city", fx: { money: 6000, social: -4, happy: -1 } },
       { k: 'village', icon: '🌾', fr: "Rester au village", en: "Stay in the village", fx: { social: 3, happy: 1 } },
     ] },
-  { id: 'de_emigrate', kind: 'big', min: 20, max: 40, p: 0.07, when: (life) => (life.countryData?.ppp || 0) < 15000,
-    fr: ["Partir à l'étranger", "Un cousin installé dans un pays plus riche peut vous aider à le rejoindre. Le voyage coûte cher et rien n'est garanti."],
-    en: ["Leaving the country", "A cousin settled in a richer country can help you join him. The trip is costly and nothing is guaranteed."],
-    choices: [
-      { k: 'go', icon: '🧳', fr: "Tenter le départ", en: "Try to leave", fx: () => (half() ? { money: 25000, social: -6 } : { money: -4000, health: -4, happy: -3 }) },
-      { k: 'send', icon: '✉️', fr: "Aider un proche à partir à votre place", en: "Help a relative go instead", fx: { money: -1500, social: -2 } },
-      { k: 'stay', icon: '🏡', fr: "Rester", en: "Stay", fx: { social: 2 } },
-    ] },
-  { id: 'fa_parent_time', kind: 'family', min: 24, max: 45, p: 0.10, when: (life) => (life.stats.kids || []).length > 0 && life.stats.employment === 'employed',
+  { id: 'fa_parent_time', kind: 'family', min: 24, max: 45, p: 0.10, when: (life) => (life.stats.kids || []).length > 0 && life.stats.employment === 'employed' && pppOf(life) >= 10000,
     fr: ["Du temps pour votre enfant", "Votre enfant est encore petit. Vous pourriez réduire votre temps de travail quelques années."],
     en: ["Time for your child", "Your child is still small. You could cut back your working hours for a few years."],
     choices: [
@@ -929,7 +940,7 @@ const EXTRA_DECISIONS = [
       { k: 'full', icon: '💼', fr: "Garder le plein temps", en: "Stay full-time", fx: { money: 3000, happy: -3 } },
       { k: 'share', icon: '⚖️', fr: "Partager l'effort avec votre conjoint", en: "Share the load with your partner", fx: { money: -2000, happy: 2, social: 2 } },
     ] },
-  { id: 'de_whistle', kind: 'big', min: 28, max: 55, p: 0.05, when: (life) => life.stats.employment === 'employed',
+  { id: 'de_whistle', kind: 'big', min: 28, max: 55, p: 0.02, when: (life) => life.stats.employment === 'employed',
     fr: ["Ce que vous avez vu", "Vous découvrez que votre employeur triche sur les règles de sécurité. Personne d'autre ne semble au courant."],
     en: ["What you saw", "You find out your employer is cheating on safety rules. Nobody else seems to know."],
     choices: [
@@ -937,7 +948,7 @@ const EXTRA_DECISIONS = [
       { k: 'inside', icon: '🗂️', fr: "En parler à votre hiérarchie", en: "Raise it with your managers", fx: { know: 1, happy: 1 } },
       { k: 'silent', icon: '🤐', fr: "Vous taire", en: "Keep quiet", fx: { happy: -5 } },
     ] },
-  { id: 'de_strike', kind: 'big', min: 22, max: 58, p: 0.06, when: (life) => life.stats.employment === 'employed',
+  { id: 'de_strike', kind: 'big', min: 22, max: 58, p: 0.06, when: (life) => life.stats.employment === 'employed' && pppOf(life) >= 4000,
     fr: ["La grève", "Vos collègues arrêtent le travail pour obtenir de meilleurs salaires. Chaque jour de grève n'est pas payé."],
     en: ["The strike", "Your colleagues stop work to win better pay. Strike days are unpaid."],
     choices: [
@@ -945,7 +956,7 @@ const EXTRA_DECISIONS = [
       { k: 'work', icon: '🏭', fr: "Continuer à travailler", en: "Keep working", fx: { money: 500, social: -4 } },
       { k: 'aside', icon: '🚶', fr: "Poser des congés et rester à l'écart", en: "Take leave and stay out of it", fx: { social: -1 } },
     ] },
-  { id: 'de_flood', kind: 'big', min: 15, max: 75, p: 0.025,
+  { id: 'de_flood', kind: 'big', min: 15, max: 75, p: 0.008,
     fr: ["L'eau monte", "Après des jours de pluie, la rivière déborde. L'eau entre dans les maisons du bas de la rue."],
     en: ["Rising water", "After days of rain the river bursts its banks. Water is entering the houses down the street."],
     choices: [
@@ -953,7 +964,7 @@ const EXTRA_DECISIONS = [
       { k: 'leave', icon: '🚗', fr: "Partir vous mettre à l'abri", en: "Leave for safety", fx: { money: -1000, health: 1 } },
       { k: 'guard', icon: '🪣', fr: "Rester pour protéger la maison", en: "Stay to protect the house", fx: { health: -3, money: 500 } },
     ] },
-  { id: 'de_war_flee', kind: 'big', min: 12, max: 65, p: 0.08, when: (life) => (life.countryData?.war || 0) >= 0.5 && !STATE.softMode && !STATE.eduMode,
+  { id: 'de_war_flee', kind: 'big', min: 12, max: 65, p: (life) => 0.02 * (life.countryData?.war || 0), when: (life) => (life.countryData?.war || 0) >= 0.5 && !STATE.softMode && !STATE.eduMode,
     fr: ["Les combats approchent", "On entend les tirs depuis votre rue. Des voisins chargent déjà leurs affaires."],
     en: ["The fighting gets closer", "Gunfire can be heard from your street. Neighbours are already loading their belongings."],
     choices: [
@@ -977,7 +988,7 @@ const EXTRA_DECISIONS = [
       { k: 'switch', icon: '🔀', fr: "Changer complètement de voie", en: "Switch careers entirely", fx: () => (half() ? { money: 8000, happy: 3 } : { money: -8000, happy: 3 }) },
       { k: 'coast', icon: '🪑', fr: "Compter sur votre expérience", en: "Rely on your experience", fx: { happy: -1 } },
     ] },
-  { id: 'de_retire_early', kind: 'big', min: 55, max: 62, p: 0.10, when: (life) => life.stats.employment === 'employed',
+  { id: 'de_retire_early', kind: 'big', min: 55, max: 62, p: 0.10, when: (life) => life.stats.employment === 'employed' && pppOf(life) >= 10000,
     fr: ["Partir plus tôt", "Votre employeur propose un départ anticipé, avec une somme moins élevée que si vous restiez."],
     en: ["Leaving early", "Your employer offers early retirement, for less money than if you stayed on."],
     choices: [
@@ -1001,6 +1012,205 @@ const EXTRA_DECISIONS = [
       { k: 'once', icon: '🤝', fr: "L'aider cette fois-ci", en: "Help him this once", fx: { social: 2 } },
       { k: 'busy', icon: '⌚', fr: "Vous n'avez pas le temps", en: "You have no time", fx: {} },
     ] },
+  // ---- Évènements à fort impact : dépendances, violence, pauvreté, migration ----
+  { id: 'sm_cigarette', kind: 'small', min: 12, max: 19, when: (life) => !life.smoker,
+    p: (life) => 0.04 + ((life.sex === 'M' ? life.countryData?.sm : life.countryData?.sf) || 10) / 100 * 0.2,
+    fr: ["La première cigarette", "Derrière l'école, un ami vous tend une cigarette allumée. Les autres vous regardent."],
+    en: ["The first cigarette", "Behind the school, a friend holds out a lit cigarette. The others are watching."],
+    choices: [
+      { k: 'take', icon: '🚬', fr: "La prendre", en: "Take it",
+        fx: () => roll([0.5, { smoker: true, social: 2, health: -2, msg: { fr: "Vous prenez l'habitude de fumer.", en: "Smoking becomes a habit." } }],
+                       [0.5, { social: 1, msg: { fr: "Vous toussez. Vous n'y retouchez pas.", en: "You cough. You never touch one again." } }]) },
+      { k: 'no', icon: '✋', fr: "Refuser", en: "Refuse", fx: {} },
+      { k: 'lie', icon: '🤥', fr: "Dire que vous avez déjà essayé", en: "Say you have already tried", fx: { social: 1 } },
+    ] },
+  { id: 'de_alcohol', kind: 'big', min: 16, max: 26, p: 0.07, when: (life) => muslimShare(life.countryData) < 50,
+    fr: ["Les soirées", "Chaque fin de semaine, le groupe se retrouve pour boire. On remarque vite ceux qui ne suivent pas."],
+    en: ["The parties", "Every weekend the group meets to drink. Those who do not join in get noticed."],
+    choices: [
+      { k: 'drink', icon: '🍺', fr: "Boire comme les autres", en: "Drink like the others",
+        fx: () => roll([0.3, { flag: ['drinker', true], social: 3, health: -7, msg: { fr: "L'alcool devient une habitude quotidienne.", en: "Drinking becomes a daily habit." } }],
+                       [0.7, { social: 3, health: -1 }]) },
+      { k: 'sober', icon: '🥤', fr: "Venir sans boire", en: "Come but stay sober", fx: { social: 1 } },
+      { k: 'leave', icon: '🚶', fr: "Ne plus y aller", en: "Stop going", fx: { social: -3, health: 1 } },
+    ] },
+  { id: 'de_drugs', kind: 'big', min: 15, max: 28, p: 0.05, when: heavyOk,
+    fr: ["Ce qu'on vous tend", "En soirée, quelqu'un fait circuler une drogue. « Juste une fois », dit-il."],
+    en: ["What you are offered", "At a party, someone passes a drug around. \"Just once,\" he says."],
+    choices: [
+      { k: 'try', icon: '💊', fr: "Essayer", en: "Try it",
+        fx: () => roll([0.2, { flag: ['addicted', true], health: -8, happy: -4, money: -1500, msg: { fr: "Vous n'arrivez plus à vous en passer.", en: "You can no longer do without it." } }],
+                       [0.8, { happy: 1, health: -1, msg: { fr: "Vous n'y retouchez pas.", en: "You never touch it again." } }]) },
+      { k: 'no', icon: '✋', fr: "Refuser", en: "Refuse", fx: {} },
+      { k: 'leave', icon: '🚪', fr: "Quitter la soirée", en: "Leave the party", fx: { social: -1 } },
+    ] },
+  { id: 'de_addiction', kind: 'big', min: 16, max: 60, p: 0.5, when: (life) => !!life.addicted,
+    fr: ["Sortir de la dépendance", "La drogue prend votre argent, votre sommeil et vos amis. Un proche vous parle d'un centre de soins."],
+    en: ["Getting clean", "The drug is taking your money, your sleep and your friends. Someone close tells you about a treatment centre."],
+    choices: [
+      { k: 'care', icon: '🏥', fr: "Entrer en soins", en: "Enter treatment",
+        fx: () => roll([0.6, { flag: ['addicted', false], health: 6, happy: 5, money: -2500, msg: { fr: "Après des mois difficiles, vous vous en sortez.", en: "After hard months, you pull through." } }],
+                       [0.4, { money: -2500, health: -2, msg: { fr: "Vous rechutez à la sortie.", en: "You relapse when you get out." } }]) },
+      { k: 'alone', icon: '🧍', fr: "Arrêter seul(e)", en: "Quit on your own",
+        fx: () => roll([0.25, { flag: ['addicted', false], health: 4, happy: 3, msg: { fr: "Contre toute attente, vous tenez.", en: "Against the odds, you hold on." } }],
+                       [0.75, { health: -5, happy: -3, msg: { fr: "Vous rechutez au bout de quelques semaines.", en: "You relapse after a few weeks." } }]) },
+      { k: 'go', icon: '🌀', fr: "Continuer", en: "Carry on",
+        fx: () => roll([0.08, { die: '事故', msg: { fr: "Une dose de trop.", en: "One dose too many." } }],
+                       [0.92, { health: -10, money: -4000, happy: -6, social: -5 }]) },
+    ] },
+  { id: 'de_package', kind: 'big', min: 15, max: 30, p: 0.05,
+    when: (life) => heavyOk() && quartOf(life) <= 2 && ((life.countryData?.hom || 0) > 5 || pppOf(life) < 12000),
+    fr: ["Le paquet", "Un homme du quartier propose une grosse somme pour porter un paquet à l'autre bout de la ville, sans poser de questions."],
+    en: ["The package", "A man from the neighbourhood offers a large sum to carry a package across town, no questions asked."],
+    choices: [
+      { k: 'yes', icon: '📦', fr: "Accepter", en: "Accept",
+        fx: () => roll([0.55, { money: 4000, msg: { fr: "Tout se passe bien. On vous le reproposera.", en: "It goes smoothly. They will ask again." } }],
+                       [0.33, { happy: -10, social: -6, know: -2, money: -1000, msg: { fr: "Vous êtes arrêté(e) et passez plusieurs mois en prison.", en: "You are arrested and spend several months in prison." } }],
+                       [0.12, { health: -18, msg: { fr: "Le rendez-vous tourne mal : vous êtes gravement blessé(e).", en: "The handover goes wrong: you are badly hurt." } }]) },
+      { k: 'no', icon: '✋', fr: "Refuser", en: "Refuse", fx: {} },
+      { k: 'tell', icon: '👪', fr: "En parler à votre famille", en: "Tell your family", fx: { social: 2 } },
+    ] },
+  { id: 'de_robbery', kind: 'big', min: 15, max: 75, when: (life) => heavyOk() && (life.countryData?.hom || 0) > 3,
+    p: (life) => Math.min(life.countryData?.hom || 0, 40) / 40 * 0.05,
+    fr: ["Dans la rue", "Deux hommes vous barrent le passage et réclament votre téléphone et votre argent."],
+    en: ["In the street", "Two men block your way and demand your phone and your money."],
+    choices: [
+      { k: 'give', icon: '🤲', fr: "Tout donner", en: "Hand everything over", fx: { money: -300, happy: -2 } },
+      { k: 'fight', icon: '✊', fr: "Résister", en: "Fight back",
+        fx: () => roll([0.5, { happy: 1, msg: { fr: "Ils prennent la fuite.", en: "They run off." } }],
+                       [0.42, { health: -14, money: -300, msg: { fr: "Vous êtes blessé(e) et ils repartent avec tout.", en: "You are hurt and they leave with everything." } }],
+                       [0.08, { die: '他殺', msg: { fr: "L'un d'eux était armé.", en: "One of them was armed." } }]) },
+      { k: 'run', icon: '🏃', fr: "Courir", en: "Run",
+        fx: () => roll([0.8, { msg: { fr: "Vous leur échappez.", en: "You get away." } }],
+                       [0.2, { health: -6, money: -300, msg: { fr: "Ils vous rattrapent.", en: "They catch up with you." } }]) },
+    ] },
+  { id: 'de_gang', kind: 'big', min: 12, max: 18, p: 0.10,
+    when: (life) => heavyOk() && (life.countryData?.hom || 0) > 10 && quartOf(life) <= 2,
+    fr: ["Le groupe du quartier", "Les jeunes qui tiennent votre rue vous proposent de les rejoindre. Ils promettent de l'argent et de la protection."],
+    en: ["The neighbourhood crew", "The young men who run your street ask you to join. They promise money and protection."],
+    choices: [
+      { k: 'join', icon: '🔗', fr: "Les rejoindre", en: "Join them",
+        fx: () => roll([0.1, { die: '他殺', msg: { fr: "Un règlement de comptes vous coûte la vie.", en: "A settling of scores costs you your life." } }],
+                       [0.9, { money: 2500, health: -5, know: -3, edu: 'stop', flag: ['gang', true], msg: { fr: "Vous quittez l'école pour le groupe.", en: "You leave school for the crew." } }]) },
+      { k: 'no', icon: '✋', fr: "Refuser", en: "Refuse",
+        fx: () => roll([0.7, {}], [0.3, { health: -6, msg: { fr: "Ils vous le font payer.", en: "They make you pay for it." } }]) },
+      { k: 'move', icon: '🧳', fr: "Partir vivre chez un parent, ailleurs", en: "Go and live with a relative elsewhere", fx: { social: -4, money: -800 } },
+    ] },
+  { id: 'fa_child_marriage', kind: 'family', min: 13, max: 17,
+    when: (life) => heavyOk() && life.sex === 'F' && !life.stats.married && (life.countryData?.cm || 0) >= 10,
+    p: (life) => (life.countryData?.cm || 0) / 100 / 5 * 1.2,
+    fr: ["Un mariage arrangé", "Vos parents ont trouvé un mari. Il est bien plus âgé que vous. Le mariage est prévu pour bientôt."],
+    en: ["An arranged marriage", "Your parents have found a husband. He is much older than you. The wedding is to be soon."],
+    choices: [
+      { k: 'accept', icon: '💍', fr: "Accepter", en: "Accept", fx: { happy: -6, social: 2, edu: 'stop', marry: true } },
+      { k: 'plead', icon: '📚', fr: "Supplier de rester à l'école", en: "Plead to stay in school",
+        fx: () => roll([0.5, { know: 2, social: -3, msg: { fr: "Vos parents cèdent, pour l'instant.", en: "Your parents give in, for now." } }],
+                       [0.5, { happy: -6, edu: 'stop', marry: true, msg: { fr: "Le mariage a lieu malgré tout.", en: "The wedding goes ahead anyway." } }]) },
+      { k: 'flee', icon: '🏃‍♀️', fr: "Fuir chez une tante en ville", en: "Run away to an aunt in town", fx: { social: -6, happy: -2, know: 1 } },
+    ] },
+  { id: 'fa_child_labor', kind: 'family', min: 8, max: 13, p: 0.10, when: (life) => pppOf(life) < 8000 && quartOf(life) <= 2,
+    fr: ["Aider la famille", "L'argent manque à la maison. Vos parents vous demandent de travailler au lieu d'aller à l'école."],
+    en: ["Helping the family", "Money is short at home. Your parents ask you to work instead of going to school."],
+    choices: [
+      { k: 'quit', icon: '🧺', fr: "Quitter l'école pour travailler", en: "Leave school to work", fx: { pppx: 0.15, know: -3, edu: 'stop' } },
+      { k: 'both', icon: '🌙', fr: "Travailler après la classe", en: "Work after class", fx: { pppx: 0.07, health: -3, know: -1 } },
+      { k: 'school', icon: '🎒', fr: "Rester à l'école", en: "Stay in school", fx: { know: 2, happy: -1 } },
+    ] },
+  { id: 'de_migration', kind: 'big', min: 18, max: 40, p: 0.04, when: (life) => pppOf(life) < 15000,
+    fr: ["Partir vers un pays riche", "Un passeur promet de vous faire entrer dans un pays riche. Il demande l'équivalent de plusieurs années d'économies. D'autres sont partis avant vous ; tous ne sont pas arrivés."],
+    en: ["Leaving for a rich country", "A smuggler promises to get you into a rich country. He asks for the equivalent of several years of savings. Others left before you; not all of them arrived."],
+    choices: [
+      { k: 'smuggler', icon: '🚤', fr: "Payer le passeur", en: "Pay the smuggler",
+        fx: () => roll([0.5, { migrate: true, pppx: -2.5, social: -6, msg: { fr: "Après des semaines de voyage, vous arrivez à destination.", en: "After weeks on the road, you reach your destination." } }],
+                       [0.25, { pppx: -2.5, happy: -5, msg: { fr: "Vous êtes arrêté(e) à la frontière et expulsé(e) vers votre pays. L'argent est perdu.", en: "You are stopped at the border and deported home. The money is gone." } }],
+                       [0.15, { pppx: -2.5, health: -8, happy: -6, msg: { fr: "Vous restez bloqué(e) des mois dans un pays de transit, puis vous rentrez.", en: "You are stuck for months in a transit country, then go back." } }],
+                       [0.10, { die: '溺水', msg: { fr: "L'embarcation chavire pendant la traversée.", en: "The boat capsizes during the crossing." } }]) },
+      { k: 'visa', icon: '🛂', fr: "Demander un visa de travail", en: "Apply for a work visa",
+        fx: (life) => roll([life.stats.education >= 4 ? 0.3 : 0.06, { migrate: true, pppx: -0.3, social: -5, msg: { fr: "Votre visa est accepté. Vous partez légalement.", en: "Your visa is granted. You leave legally." } }],
+                           [1, { pppx: -0.1, happy: -2, msg: { fr: "Votre demande de visa est refusée.", en: "Your visa application is refused." } }]) },
+      { k: 'stay', icon: '🏡', fr: "Rester", en: "Stay", fx: { social: 2 } },
+    ] },
+  { id: 'de_malaria', kind: 'big', min: 8, max: 60, p: 0.06, when: (life) => (life.countryData?.mal || 0) > 0,
+    fr: ["La fièvre", "Une forte fièvre vous cloue au lit depuis deux jours. Le dispensaire est à plusieurs heures de route."],
+    en: ["The fever", "A high fever has kept you in bed for two days. The clinic is several hours away."],
+    choices: [
+      { k: 'clinic', icon: '🏥', fr: "Aller au dispensaire", en: "Go to the clinic", fx: { pppx: -0.03, health: -2 } },
+      { k: 'meds', icon: '💊', fr: "Envoyer quelqu'un acheter des médicaments", en: "Send someone to buy medicine", fx: { pppx: -0.02, health: -5 } },
+      { k: 'wait', icon: '🛏️', fr: "Attendre que ça passe", en: "Wait for it to pass",
+        fx: () => roll([0.65, { health: -4 }],
+                       [0.31, { health: -14, msg: { fr: "La fièvre empire. Vous mettez des semaines à vous remettre.", en: "The fever worsens. It takes you weeks to recover." } }],
+                       [0.04, { die: '瘧疾', msg: { fr: "Le paludisme n'a pas été soigné à temps.", en: "The malaria was not treated in time." } }]) },
+    ] },
+  { id: 'sm_helmet', kind: 'small', min: 15, max: 45, p: 0.07, when: (life) => (life.countryData?.road || 0) > 15,
+    fr: ["La moto", "Vous vous déplacez à moto tous les jours. Un casque coûte plusieurs jours de salaire."],
+    en: ["The motorbike", "You ride a motorbike every day. A helmet costs several days' pay."],
+    choices: [
+      { k: 'buy', icon: '🪖', fr: "Acheter un casque", en: "Buy a helmet", fx: { pppx: -0.02 } },
+      { k: 'none', icon: '🏍️', fr: "Rouler sans", en: "Ride without one",
+        fx: () => roll([0.88, {}],
+                       [0.10, { health: -15, msg: { fr: "Vous chutez. Sans casque, la blessure est sérieuse.", en: "You crash. Without a helmet, the injury is serious." } }],
+                       [0.02, { die: '事故', msg: { fr: "Un accident de la route.", en: "A road accident." } }]) },
+    ] },
+  { id: 'de_burnout', kind: 'big', min: 28, max: 55, p: 0.05, when: (life) => life.stats.employment === 'employed' && pppOf(life) >= 20000,
+    fr: ["À bout", "Vous dormez mal, vous oubliez des choses, et le dimanche soir vous serre la gorge. Votre médecin parle d'épuisement."],
+    en: ["Burnt out", "You sleep badly, you forget things, and Sunday evenings tighten your throat. Your doctor calls it exhaustion."],
+    choices: [
+      { k: 'stop', icon: '🛌', fr: "Vous arrêter plusieurs mois", en: "Take several months off", fx: { money: -3000, health: 6, happy: 4 } },
+      { k: 'hold', icon: '💼', fr: "Tenir", en: "Push through", fx: { money: 4000, health: -8, happy: -6 } },
+      { k: 'quit', icon: '🚪', fr: "Démissionner", en: "Resign", fx: { money: -8000, happy: 6, health: 3 } },
+    ] },
+  { id: 'de_student_loan', kind: 'big', min: 17, max: 20, p: 0.15,
+    when: (life) => (life.eduTarget ?? 0) >= 4 && quartOf(life) <= 2 && pppOf(life) >= 15000,
+    fr: ["Payer ses études", "Vous êtes admis(e) à l'université, mais votre famille ne peut pas payer."],
+    en: ["Paying for university", "You have a place at university, but your family cannot pay."],
+    choices: [
+      { k: 'loan', icon: '🏦', fr: "Emprunter", en: "Take out a loan", fx: { money: -15000, know: 3 } },
+      { k: 'job', icon: '🍽️', fr: "Travailler le soir et le week-end", en: "Work evenings and weekends", fx: { money: -2000, health: -3, know: 1 } },
+      { k: 'drop', icon: '✖️', fr: "Renoncer à l'université", en: "Give up on university", fx: { edu: 3, happy: -4, money: 2000 } },
+    ] },
+  { id: 'de_gambling', kind: 'big', min: 20, max: 60, p: 0.015, when: (life) => life.stats.employment === 'employed' && muslimShare(life.countryData) < 50,
+    fr: ["Les paris", "Un collègue dit gagner régulièrement aux paris sportifs. Il vous montre comment faire depuis votre téléphone."],
+    en: ["Betting", "A colleague says he wins regularly on sports bets. He shows you how to do it from your phone."],
+    choices: [
+      { k: 'bet', icon: '🎰', fr: "Parier", en: "Place bets",
+        fx: () => roll([0.55, { money: -600, msg: { fr: "Vous perdez un peu et vous arrêtez.", en: "You lose a little and stop." } }],
+                       [0.30, { money: 900, happy: 2, msg: { fr: "Vous gagnez un peu.", en: "You win a little." } }],
+                       [0.15, { money: -12000, happy: -6, social: -3, msg: { fr: "Vous ne savez plus vous arrêter et perdez beaucoup.", en: "You cannot stop any more and lose a lot." } }]) },
+      { k: 'no', icon: '✋', fr: "Ne pas commencer", en: "Do not start", fx: {} },
+    ] },
+  { id: 'fa_violence', kind: 'family', min: 20, max: 60, p: 0.01, when: (life) => heavyOk() && life.stats.married,
+    fr: ["À la maison", "Votre conjoint vous a frappé(e). Ce n'est pas la première fois. Il promet que cela ne se reproduira pas."],
+    en: ["At home", "Your partner hit you. It is not the first time. They promise it will not happen again."],
+    choices: [
+      { k: 'leave', icon: '🚪', fr: "Partir", en: "Leave", fx: { money: -3000, happy: 3, social: 2, leave: true } },
+      { k: 'help', icon: '🤝', fr: "Demander de l'aide à un proche ou à une association", en: "Ask a relative or a support group for help", fx: { social: 4, happy: 1 } },
+      { k: 'stay', icon: '🏠', fr: "Rester", en: "Stay", fx: { health: -8, happy: -10 } },
+    ] },
+  { id: 'sm_scam', kind: 'small', min: 55, max: 85, p: 0.06, when: (life) => pppOf(life) >= 15000,
+    fr: ["Le placement miracle", "Au téléphone, un conseiller très aimable vous propose un placement « sans risque » à 12 % par an."],
+    en: ["The miracle investment", "On the phone, a very friendly adviser offers you a \"risk-free\" investment at 12% a year."],
+    choices: [
+      { k: 'invest', icon: '💸', fr: "Investir", en: "Invest",
+        fx: () => roll([0.85, { money: -9000, happy: -4, msg: { fr: "C'était une arnaque. L'argent a disparu.", en: "It was a scam. The money is gone." } }],
+                       [0.15, { money: 500, msg: { fr: "Vous récupérez votre mise de justesse.", en: "You barely get your money back." } }]) },
+      { k: 'ask', icon: '📞', fr: "En parler d'abord à un proche", en: "Talk to someone close first", fx: { social: 2 } },
+      { k: 'hang', icon: '📵', fr: "Raccrocher", en: "Hang up", fx: {} },
+    ] },
+  { id: 'de_literacy', kind: 'big', min: 18, max: 40, p: 0.08, when: (life) => life.stats.education <= 1 && pppOf(life) < 15000,
+    fr: ["Les cours du soir", "Une association ouvre des cours du soir pour les adultes qui n'ont pas pu finir l'école."],
+    en: ["Evening classes", "A charity opens evening classes for adults who could not finish school."],
+    choices: [
+      { k: 'go', icon: '📖', fr: "Vous inscrire", en: "Sign up", fx: { know: 8, happy: 3, health: -1 } },
+      { k: 'no', icon: '⌚', fr: "Vous n'avez pas le temps", en: "You have no time", fx: {} },
+    ] },
+  { id: 'de_water', kind: 'big', min: 12, max: 45, p: 0.06, when: (life) => life.stats.birthPlaceType === 'rural' && pppOf(life) < 5000,
+    fr: ["Le puits à sec", "Le puits du village est à sec. Le point d'eau le plus proche est à deux heures de marche."],
+    en: ["The dry well", "The village well has run dry. The nearest water is a two-hour walk away."],
+    choices: [
+      { k: 'walk', icon: '🚶', fr: "Aller chercher l'eau chaque matin", en: "Fetch water every morning", fx: { health: -3, know: -1 } },
+      { k: 'dig', icon: '⛏️', fr: "Creuser un nouveau puits avec les voisins", en: "Dig a new well with the neighbours", fx: { social: 5, health: -2 } },
+      { k: 'buy', icon: '🚚', fr: "Acheter l'eau au camion-citerne", en: "Buy water from the tanker", fx: { pppx: -0.05 } },
+    ] },
 ];
 const FX_LABELS = {
   fr: { money: 'Patrimoine', happy: 'Bonheur', health: 'Santé', social: 'Relations', know: 'Savoir' },
@@ -1009,23 +1219,42 @@ const FX_LABELS = {
 function fxSub(fx) {
   if (typeof fx === 'function') return LANG === 'fr' ? 'Résultat incertain' : 'Uncertain outcome';
   const lab = FX_LABELS[LANG === 'fr' ? 'fr' : 'en'];
-  return Object.keys(fx).filter(k => lab[k] && fx[k]).map(k => lab[k] + (fx[k] > 0 ? '↑' : '↓')).join(' ');
+  const v = { ...fx, money: (fx.money || 0) + (fx.pppx || 0) };
+  return Object.keys(v).filter(k => lab[k] && v[k]).map(k => lab[k] + (v[k] > 0 ? '↑' : '↓')).join(' ');
 }
 function applyFx(life, fx) {
-  const e = typeof fx === 'function' ? fx(life) : fx;
+  let e = typeof fx === 'function' ? fx(life) : fx;
+  if (e.die && !heavyOk()) e = { happy: -5 };   // mode protégé : aucun évènement ne tue
   const s = life.stats;
-  const scale = Math.max(0.05, (life.countryData?.ppp || 12000) / 40000);
+  const c = life.countryData || {};
+  const scale = Math.max(0.05, (c.ppp || 12000) / 40000);
   const clamp = v => Math.max(0, Math.min(100, v));
   if (e.money) s.netAssets += Math.round(e.money * scale);
+  if (e.pppx) s.netAssets += Math.round(e.pppx * (c.ppp || 12000));   // montant exprimé en années de revenu moyen du pays
   if (e.happy) s.happiness = clamp(s.happiness + e.happy);
   if (e.health) bumpHealth(life, e.health);
   if (e.social) s.social = clamp(s.social + e.social);
   if (e.know) s.knowledge = clamp(s.knowledge + e.know);
   if (e.retire) s.employment = 'retired';
+  if (e.smoker) life.smoker = true;
+  if (e.flag) life[e.flag[0]] = e.flag[1];
+  if (e.edu != null) life.eduTarget = e.edu === 'stop' ? s.education : Math.min(life.eduTarget ?? 4, e.edu);
+  if (e.marry && !s.married) {
+    s.married = true;
+    s.partner = { name: randomName(c, life.sex === 'M' ? 'F' : 'M'), birth: { year: life.year + life.yearOffset - life.age - 9 } };
+  }
+  if (e.leave) { s.married = false; s.partner = null; }
+  if (e.migrate) migrateLife(life);
+  if (e.msg) {
+    const m = LANG === 'fr' ? e.msg.fr : e.msg.en;
+    life.log.push({ age: life.age, kind: 'decision', icon: '❗', text: m });
+    if (life === STATE.life) { logLife(m); toast(m); }
+  }
+  if (e.die) setTimeout(() => { if (STATE.life === life && !life.died) dieNow(e.die); }, 80);
 }
 EXTRA_DECISIONS.forEach(d => DECISIONS.push({
   id: d.id, kind: d.kind,
-  chance: (life) => life.age >= d.min && life.age <= d.max && (!d.when || d.when(life)) && Math.random() < d.p,
+  chance: (life) => life.age >= d.min && life.age <= d.max && (!d.when || d.when(life)) && Math.random() < (typeof d.p === 'function' ? d.p(life) : d.p),
   show: () => {
     const fr = LANG === 'fr';
     return {
