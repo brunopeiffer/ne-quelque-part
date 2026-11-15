@@ -774,7 +774,9 @@
     "life.skip": "跳過抉擇",
     "life.statesInfo": "狀態代表什麼？",
     "feedback.ph": "請輸入您的想法...",
-    "life.thisYearHint": "（這一年最重要的事）"
+    "life.thisYearHint": "（這一年最重要的事）",
+    "intro.bc.fatherAbsent": "出生前已不在",
+    "intro.bc.motherAbsent": "生產時去世"
   },
   "zh-Hans": {
     "title": "选出生地 · 人生模拟",
@@ -1551,7 +1553,9 @@
     "life.skip": "跳過抉擇",
     "life.statesInfo": "狀態代表什麼？",
     "feedback.ph": "請輸入您的想法...",
-    "life.thisYearHint": "（這一年最重要的事）"
+    "life.thisYearHint": "（這一年最重要的事）",
+    "intro.bc.fatherAbsent": "出生前已不在",
+    "intro.bc.motherAbsent": "生產時去世"
   },
   "en": {
     "title": "Born Somewhere · Life Simulator",
@@ -2328,7 +2332,9 @@
     "life.skip": "Skip decision",
     "life.statesInfo": "What do these mean?",
     "feedback.ph": "Your thoughts...",
-    "life.thisYearHint": "(the year's main event)"
+    "life.thisYearHint": "(the year's main event)",
+    "intro.bc.fatherAbsent": "Gone before you were born",
+    "intro.bc.motherAbsent": "Died when you were born"
   },
   "ko": {
     "title": "태어난 곳 · 인생 시뮬레이션",
@@ -3105,7 +3111,9 @@
     "life.skip": "Skip decision",
     "life.statesInfo": "What do these mean?",
     "feedback.ph": "Your thoughts...",
-    "life.thisYearHint": "(the year's main event)"
+    "life.thisYearHint": "(the year's main event)",
+    "intro.bc.fatherAbsent": "Gone before you were born",
+    "intro.bc.motherAbsent": "Died when you were born"
   },
   "ja": {
     "title": "出生地 · 人生シミュレーション",
@@ -3882,7 +3890,9 @@
     "life.skip": "Skip decision",
     "life.statesInfo": "What do these mean?",
     "feedback.ph": "Your thoughts...",
-    "life.thisYearHint": "(the year's main event)"
+    "life.thisYearHint": "(the year's main event)",
+    "intro.bc.fatherAbsent": "Gone before you were born",
+    "intro.bc.motherAbsent": "Died when you were born"
   },
   "vi": {
     "title": "Nơi sinh · Mô phỏng cuộc đời",
@@ -4659,7 +4669,9 @@
     "life.skip": "Skip decision",
     "life.statesInfo": "What do these mean?",
     "feedback.ph": "Your thoughts...",
-    "life.thisYearHint": "(the year's main event)"
+    "life.thisYearHint": "(the year's main event)",
+    "intro.bc.fatherAbsent": "Gone before you were born",
+    "intro.bc.motherAbsent": "Died when you were born"
   },
   "fr": {
     "title": "Né quelque part · Simulateur de vie",
@@ -5439,7 +5451,28 @@
     "life.skip": "Passer la décision",
     "life.statesInfo": "Que signifient ces jauges ?",
     "feedback.ph": "Écrivez votre avis…",
-    "life.thisYearHint": "(le fait marquant de l'année)"
+    "life.thisYearHint": "(le fait marquant de l'année)",
+    "intro.bc.fatherAbsent": "Disparu avant votre naissance",
+    "intro.bc.motherAbsent": "Morte à votre naissance",
+    "causeEx.事故": "Par exemple : accident de la route, chute, brûlure, intoxication, accident du travail.",
+    "causeEx.周產期問題": "Par exemple : naissance prématurée, manque d'oxygène à l'accouchement, infection du nouveau-né.",
+    "causeEx.先天異常": "Par exemple : malformation du cœur, anomalie chromosomique, malformation du système nerveux.",
+    "causeEx.感染性疾病": "Par exemple : pneumonie, diarrhée sévère, tuberculose, rougeole, sida.",
+    "causeEx.嬰兒猝死": "Décès inattendu d'un nourrisson pendant son sommeil, sans cause identifiée.",
+    "causeEx.其他": "Par exemple : maladie du foie, des reins ou du système digestif, maladie neurologique, cause mal définie.",
+    "causeEx.溺水": "Par exemple : chute dans une rivière, un puits ou un étang, baignade sans surveillance, inondation.",
+    "causeEx.癌症": "Par exemple : cancer du poumon, du sein, du côlon ou du foie, leucémie.",
+    "causeEx.自殺": "Les circonstances ne sont pas décrites. Si vous traversez un moment difficile, en France le 3114 répond jour et nuit.",
+    "causeEx.他殺": "Par exemple : agression, violence armée, violence au sein du foyer.",
+    "causeEx.心血管": "Par exemple : infarctus, insuffisance cardiaque, complication de l'hypertension.",
+    "causeEx.呼吸系統": "Par exemple : bronchite chronique (BPCO), asthme sévère, pneumonie à un âge avancé.",
+    "causeEx.糖尿病": "Complications du diabète : atteinte des reins ou du cœur, infections graves.",
+    "causeEx.戰爭/衝突": "Par exemple : bombardement, combats, explosion d'une mine.",
+    "causeEx.瘧疾": "Paludisme grave, transmis par les moustiques et non soigné à temps.",
+    "causeEx.自然衰老": "Affaiblissement général du grand âge, sans maladie dominante.",
+    "causeEx.營養不良": "Sous-alimentation prolongée et carences sévères.",
+    "causeEx.中風": "Caillot ou hémorragie dans le cerveau.",
+    "causeEx.自行結束": "Vous avez arrêté cette vie vous-même avec le bouton ■."
   },
   "th": {
     "title": "เกิดที่ไหน · จำลองชีวิต",
@@ -6216,7 +6249,9 @@
     "life.skip": "Skip decision",
     "life.statesInfo": "What do these mean?",
     "feedback.ph": "Your thoughts...",
-    "life.thisYearHint": "(the year's main event)"
+    "life.thisYearHint": "(the year's main event)",
+    "intro.bc.fatherAbsent": "Gone before you were born",
+    "intro.bc.motherAbsent": "Died when you were born"
   },
   "es": {
     "title": "Nacido en algún lugar · Simulador de vida",
@@ -6993,6 +7028,8 @@
     "life.skip": "Skip decision",
     "life.statesInfo": "What do these mean?",
     "feedback.ph": "Your thoughts...",
-    "life.thisYearHint": "(the year's main event)"
+    "life.thisYearHint": "(the year's main event)",
+    "intro.bc.fatherAbsent": "Gone before you were born",
+    "intro.bc.motherAbsent": "Died when you were born"
   }
 }

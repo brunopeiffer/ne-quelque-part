@@ -2422,3 +2422,5 @@ body { overflow-x: hidden; }
 }
 #view-intro .ci-val { font-family: var(--sans); font-size: 14px; }
 .lang-select, #lifeDuration { min-height: 40px; }
+
+.id-note { margin: 4px 0 8px; color: var(--ink-2); font-size: 13px; line-height: 1.5; text-align: right; }

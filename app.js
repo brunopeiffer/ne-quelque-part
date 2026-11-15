@@ -905,6 +905,10 @@ function causeLabel(cause) {
   if (!cause) return '';
   return t('cause.' + cause);
 }
+// Exemples concrets d'une cause de décès ; vide si la langue n'en fournit pas.
+function causeExamples(cause) {
+  return (I18N[LANG] || {})['causeEx.' + cause] || '';
+}
 
 async function loadData() {
   if (!CACHE.countries) {
@@ -3098,8 +3102,8 @@ function buildBirthCertCard(c, life) {
         <tr><td class="bc-k">${t('intro.bc.country')}</td><td class="bc-v">${c.flag} ${escapeHtml(loc.name)}</td></tr>
         <tr><td class="bc-k">${t('intro.bc.place')}</td><td class="bc-v">${life.stats.birthPlaceType === 'rural' ? t('intro.bc.rural') : t('intro.bc.urban')} · ${escapeHtml(loc.region_name || '')}</td></tr>
         <tr><td class="bc-k">${t('intro.bc.income')}</td><td class="bc-v">${t('intro.bc.quartile')} Q${life.stats.incomeQuartile || 2} / 4</td></tr>
-        <tr><td class="bc-k">${t('intro.bc.father')}</td><td class="bc-v">${father ? escapeHtml(father.name) : '—'}${fd.age ? ` · ${fd.age} ${t('unit.years')}` : ''}${fd.job ? ` · ${escapeHtml(fd.job)}` : ''}</td></tr>
-        <tr><td class="bc-k">${t('intro.bc.mother')}</td><td class="bc-v">${mother ? escapeHtml(mother.name) : '—'}${md.age ? ` · ${md.age} ${t('unit.years')}` : ''}${md.job ? ` · ${escapeHtml(md.job)}` : ''}</td></tr>
+        <tr><td class="bc-k">${t('intro.bc.father')}</td><td class="bc-v">${father ? escapeHtml(father.name) : escapeHtml(t('intro.bc.fatherAbsent'))}${fd.age ? ` · ${fd.age} ${t('unit.years')}` : ''}${fd.job ? ` · ${escapeHtml(fd.job)}` : ''}</td></tr>
+        <tr><td class="bc-k">${t('intro.bc.mother')}</td><td class="bc-v">${mother ? escapeHtml(mother.name) : escapeHtml(t('intro.bc.motherAbsent'))}${md.age ? ` · ${md.age} ${t('unit.years')}` : ''}${md.job ? ` · ${escapeHtml(md.job)}` : ''}</td></tr>
         <tr><td class="bc-k">${t('intro.bc.housing')}</td><td class="bc-v">${escapeHtml(housing)}</td></tr>
         <tr><td class="bc-k">${t('intro.bc.religion')}</td><td class="bc-v">${escapeHtml(life.stats.religion || '—')}</td></tr>
         <tr class="bc-stat"><td class="bc-k">${t('intro.bc.le')}</td><td class="bc-v">${c.le.toFixed(1)} ${t('unit.years')}</td></tr>
@@ -3811,6 +3815,7 @@ function renderEnd() {
   $('#endBorn').textContent = life.year + '/' + t('event.born_in2', life.sex === 'M' ? t('sex.male') : t('sex.female'));
   $('#endAge').textContent = life.deathAge + ' ' + t('unit.years');
   $('#endCause').textContent = causeLabel(life.cause);
+  { const ex = $('#endCauseEx'); if (ex) { ex.textContent = causeExamples(life.cause); ex.hidden = !ex.textContent; } }
   $('#endName').textContent = life.name.full || life.name.full_en || '—';
   $('#endPortrait').innerHTML = pixelPortraitSVG(life.countryData, life.age, life.sex);
   $('#endLe').textContent = t('end.lifespan_le', { age: life.deathAge, le: c.le });
