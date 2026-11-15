@@ -2446,3 +2446,69 @@ body { overflow-x: hidden; }
 .tree-canvas .tree-link { stroke-width: 2; opacity: 1; }
 .tree-canvas .node-name { font-size: 16px; font-weight: 600; }
 .tree-canvas .node-life { font-size: 12px; fill: var(--ink-2); }
+
+/* === Écran de vie v2 : fiche du personnage à gauche, année en cours et journal à droite === */
+body { font-size: 16px; }
+#view-life .ltb-brand { display: none; }
+#view-life .ltb-speed-btn[data-speed="8"], #view-life .ltb-speed-btn[data-speed="12"], #view-life .ltb-speed-btn[data-speed="16"] { display: none; }
+#view-life .ltb-speed button { min-height: 40px; min-width: 40px; border-radius: 8px; }
+#view-life .life-cert { background: transparent; border: 0; box-shadow: none; padding: 0; }
+#view-life .cert-band { border-radius: 14px; margin-bottom: 16px; }
+#view-life .cert-body { background: var(--bg-2); border: 1px solid var(--line); border-radius: 14px; padding: 24px 20px; margin-bottom: 16px; }
+@media (min-width: 1000px) {
+  #view-life .life-cert { display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 0 24px; align-items: start; }
+  #view-life .cert-band { grid-column: 1 / -1; }
+  #view-life .cert-body { position: sticky; top: 76px; }
+}
+#view-life .cert-figure { margin: 0 0 8px; }
+#view-life .cert-figure svg { width: 120px; height: 120px; }
+#view-life .cert-name-main { font-size: 24px; margin: 0 0 4px; }
+#view-life .life-hero { margin: 0 auto 20px; max-width: none; }
+#view-life .lh-age { font-size: 88px; }
+#view-life .lh-money b { font-size: 19px; }
+#view-life .cert-body .life-stats { border: 0; background: transparent; padding: 0; margin: 0 0 20px; box-shadow: none; }
+#view-life .cert-age-row { justify-content: center; margin: 0 0 12px; }
+#view-life .cert-meta { grid-template-columns: 1fr 1fr; max-width: none; width: auto; margin: 0 0 16px; }
+#view-life .cert-family { margin: 0; }
+#view-life .life-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding: 0; border: 0; background: transparent; }
+#view-life .life-grid > * { min-width: 0; }
+#view-life .life-grid > .life-detail-only, #view-life .life-grid > .life-meta-controls, #view-life .life-grid > #btnDetailToggle { grid-column: 1 / -1; }
+#view-life #lifeThisYear { order: 1; grid-column: 1 / -1; border: 2px solid var(--accent); }
+#view-life #lifeEventsFeed { order: 2; grid-column: 1 / -1; max-height: 480px; overflow: auto; }
+#view-life #lifeManualDecisions { order: 3; grid-column: 1 / -1; }
+#view-life #lifeActualVsRandom { order: 4; grid-column: 1 / -1; }
+#view-life #lifeFamilyDetail { order: 5; }
+#view-life #lifeScene { order: 6; }
+#view-life #lifeCompanions { order: 7; grid-column: 1 / -1; }
+#view-life .life-meta-controls { order: 8; grid-column: 1 / -1; }
+#view-life #btnDetailToggle { order: 9; grid-column: 1 / -1; }
+#view-life #lifeIllus { display: none; }
+#view-life .life-grid > div:not(.life-meta-controls) { background: var(--bg-2); border: 1px solid var(--line); border-radius: 14px; padding: 20px; margin: 0; box-shadow: none; }
+#view-life h4 { text-transform: none; letter-spacing: 0; font-family: var(--sans); font-size: 17px; font-weight: 650; color: var(--ink); margin: 0 0 12px; }
+#view-life h4 .muted { font-size: 13px; font-weight: 400; text-transform: none; letter-spacing: 0; }
+#view-life .cert-family-head { text-transform: none; letter-spacing: 0; font-size: 15px; font-weight: 650; color: var(--ink); }
+#view-life .ty-event { display: flex; align-items: center; gap: 12px; font-size: 20px; }
+#view-life .ty-icon { font-size: 32px; }
+#view-life .ty-age { margin-left: auto; color: var(--ink-2); font-size: 14px; }
+#view-life .lef-row { display: grid; grid-template-columns: 64px 28px minmax(0, 1fr) 24px; gap: 8px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 16px; }
+#view-life .lef-age { font-variant-numeric: tabular-nums; color: var(--ink-2); font-size: 13px; }
+#view-life .lef-icon { font-size: 20px; text-align: center; }
+@media (max-width: 720px) {
+  #view-life .life-grid { grid-template-columns: minmax(0, 1fr); }
+  #view-life .cert-figure svg { width: 96px; height: 96px; }
+  #view-life .lh-age { font-size: 72px; }
+}
+
+#view-life #lifeSituation, #view-life #lifeManualDecisions { grid-column: 1 / -1; }
+#view-life #lifeSituation .cert-meta { grid-template-columns: repeat(3, minmax(0, 1fr)); border: 0; background: transparent; padding: 0; margin: 0; }
+#view-life #lifeSituation .cert-age-row { justify-content: flex-start; margin: 0 0 12px; }
+#view-life #certFamily { background: var(--bg-2); }
+#view-life #lifeActualVsRandom { overflow-x: auto; }
+@media (max-width: 720px) {
+  #view-life #lifeEventsFeed { max-height: none; }
+  #view-life #lifeSituation .cert-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+#view-life .life-grid > * { order: 0 !important; }
+#view-life .life-cert { overflow: visible; }
+#view-life #lifeScene { grid-column: 1 / -1; }
+@media (min-width: 1000px) { #view-life .cert-body { top: 148px; } }

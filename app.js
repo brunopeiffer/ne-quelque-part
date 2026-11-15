@@ -4062,6 +4062,8 @@ function renderActualVsRandom() {
   const real = guessBirthCountry();
   const random = c;
   if (!real) return;
+  wrap.hidden = real.id === c.id;   // comparer un pays à lui-même n'apprend rien
+  if (wrap.hidden) return;
   const rows = [
     { key: 'le',   labelZh: '平均壽命',      labelEn: 'Life expectancy', fmt: v => (v ? (v + ' ' + t('unit.years')) : '—'), realVal: real.le, randVal: random.le },
     { key: 'u5',   labelZh: '5 歲前死亡機率', labelEn: 'Under-5 mortality', fmt: v => v != null ? ((v / 1000) * 100).toFixed(2) + '%' : '—', realVal: real.u5, randVal: random.u5 },
@@ -5849,6 +5851,28 @@ function wire() {
     if (c) showBirthCertModal(c);
   });
   // v5.19：出生卡 modal 的確認按鈕
+  // Mise en page : les jauges rejoignent la fiche du personnage, sous le compteur d'âge.
+  { const hero = document.querySelector('.life-hero'), st = $('#lifeStats'); if (hero && st) hero.after(st); }
+  // Les panneaux quittent leurs trois colonnes d'origine pour une seule grille, dans l'ordre de lecture voulu.
+  {
+    const grid = document.querySelector('#view-life .life-grid');
+    if (grid) {
+      const cols = [...grid.querySelectorAll(':scope > .life-col')];
+      const rest = cols.flatMap(c => [...c.children]);
+      // « Situation » (sexe, études, travail, conjoint…) et « Famille » sortent de la fiche pour l'alléger.
+      const situation = document.createElement('div');
+      situation.id = 'lifeSituation';
+      situation.append(...['.cert-age-row', '.cert-meta'].map(q => document.querySelector('#lifeCert ' + q)).filter(Boolean));
+      const first = [document.getElementById('lifeThisYear'), document.getElementById('lifeEventsFeed'), situation,
+        ...['lifeManualDecisions', 'certFamily', 'lifeFamilyDetail', 'lifeActualVsRandom', 'lifeScene', 'lifeCompanions'].map(id => document.getElementById(id))]
+        .filter(Boolean);
+      const toggle = document.getElementById('btnDetailToggle');
+      const isDetail = e => e.classList.contains('life-detail-only');
+      [...first, ...rest.filter(e => !first.includes(e) && e !== toggle && !isDetail(e)), toggle, ...rest.filter(isDetail)]
+        .forEach(e => e && grid.appendChild(e));
+      cols.forEach(c => c.remove());
+    }
+  }
   // Rythme choisi au lancement : secondes par année de vie
   const paceBtns = $$('#paceSeg [data-pace]');
   const setPace = (sec) => {
