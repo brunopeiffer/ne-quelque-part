@@ -838,6 +838,204 @@ const DECISIONS = [
 const DECISION_COOLDOWN = 4;
 const INTERRUPT_GAP = 2;
 
+/* ==== Évènements à choix supplémentaires ====
+   Définis par des données : textes français et anglais sur place (les autres langues reçoivent l'anglais),
+   effets décrits par un objet { money, happy, health, social, know } ou une fonction pour un résultat aléatoire.
+   Les montants sont en dollars PPA pour un pays à 40 000 $ par habitant, puis mis à l'échelle du pays. */
+const half = () => Math.random() < 0.5;
+const EXTRA_DECISIONS = [
+  { id: 'sm_stray', kind: 'small', min: 6, max: 12, p: 0.10,
+    fr: ["Le chien errant", "Un chien sans collier vous suit jusqu'à la maison et s'assoit devant la porte."],
+    en: ["The stray dog", "A dog with no collar follows you home and sits by the door."],
+    choices: [
+      { k: 'keep', icon: '🐕', fr: "Supplier vos parents de le garder", en: "Beg your parents to keep it", fx: { happy: 5, money: -150 } },
+      { k: 'feed', icon: '🍖', fr: "Lui donner à manger, puis le laisser repartir", en: "Feed it, then let it go", fx: { happy: 1 } },
+      { k: 'shoo', icon: '🚪', fr: "Fermer la porte", en: "Close the door", fx: { happy: -1 } },
+    ] },
+  { id: 'sm_cheat', kind: 'small', min: 10, max: 16, p: 0.10,
+    fr: ["Les réponses du contrôle", "Pendant le contrôle, votre voisin de table pousse discrètement sa copie vers vous."],
+    en: ["The test answers", "During the test, the pupil next to you quietly slides their paper your way."],
+    choices: [
+      { k: 'copy', icon: '👀', fr: "Recopier", en: "Copy", fx: { happy: 1, know: -2 } },
+      { k: 'refuse', icon: '✋', fr: "Faire le contrôle seul(e)", en: "Do the test on your own", fx: { know: 2 } },
+      { k: 'tell', icon: '🧑‍🏫', fr: "Le dire au professeur", en: "Tell the teacher", fx: { know: 1, social: -3 } },
+    ] },
+  { id: 'sm_bully', kind: 'small', min: 9, max: 15, p: 0.10,
+    fr: ["Dans la cour", "Un élève plus petit se fait bousculer par un groupe, tous les jours au même endroit."],
+    en: ["In the schoolyard", "A smaller pupil gets shoved around by a group, every day in the same spot."],
+    choices: [
+      { k: 'step', icon: '🛡️', fr: "Vous interposer", en: "Step in", fx: { social: 4, health: -1 } },
+      { k: 'adult', icon: '🧑‍🏫', fr: "Prévenir un adulte", en: "Tell an adult", fx: { social: 2 } },
+      { k: 'ignore', icon: '🙈', fr: "Regarder ailleurs", en: "Look away", fx: { happy: -3 } },
+    ] },
+  { id: 'sm_music', kind: 'small', min: 8, max: 14, p: 0.10,
+    fr: ["Une place au cours de musique", "Une place se libère au cours de musique du quartier. Le même soir, vos amis jouent dehors."],
+    en: ["A spot in music class", "A spot opens up in the local music class. On the same evening, your friends play outside."],
+    choices: [
+      { k: 'music', icon: '🎻', fr: "Prendre la place", en: "Take the spot", fx: { know: 3, happy: 2, money: -200 } },
+      { k: 'sport', icon: '⚽', fr: "Préférer le sport", en: "Choose sport instead", fx: { health: 3, social: 2 } },
+      { k: 'friends', icon: '🧒', fr: "Rester avec vos amis", en: "Stay with your friends", fx: { social: 3 } },
+    ] },
+  { id: 'sm_firstpay', kind: 'small', min: 15, max: 19, p: 0.12,
+    fr: ["La première paie", "Vous tenez dans la main l'argent de votre premier petit boulot."],
+    en: ["First pay", "You are holding the money from your very first job."],
+    choices: [
+      { k: 'save', icon: '🐷', fr: "Tout mettre de côté", en: "Save all of it", fx: { money: 600 } },
+      { k: 'family', icon: '🤲', fr: "En donner une part à la famille", en: "Give a share to your family", fx: { money: 200, social: 4 } },
+      { k: 'treat', icon: '🎉', fr: "Vous faire plaisir", en: "Treat yourself", fx: { happy: 4 } },
+    ] },
+  { id: 'sm_language', kind: 'small', min: 13, max: 20, p: 0.10,
+    fr: ["Une autre langue", "On vous propose des cours du soir pour apprendre une langue étrangère."],
+    en: ["Another language", "You are offered evening classes to learn a foreign language."],
+    choices: [
+      { k: 'learn', icon: '🗣️', fr: "S'y mettre sérieusement", en: "Take it seriously", fx: { know: 5, happy: -1 } },
+      { k: 'skip', icon: '🛋️', fr: "Garder vos soirées", en: "Keep your evenings", fx: { happy: 1 } },
+    ] },
+  { id: 'de_study_abroad', kind: 'big', min: 18, max: 24, p: 0.10, when: (life) => (life.eduTarget ?? 0) >= 4,
+    fr: ["Une année à l'étranger", "Une bourse permet d'étudier un an dans un autre pays. Il faut répondre cette semaine."],
+    en: ["A year abroad", "A scholarship would let you study in another country for a year. You must answer this week."],
+    choices: [
+      { k: 'go', icon: '🌍', fr: "Partir", en: "Go", fx: { know: 6, happy: 3, social: -3 } },
+      { k: 'stay', icon: '🏠', fr: "Rester près des vôtres", en: "Stay close to home", fx: { social: 3 } },
+    ] },
+  { id: 'de_startup', kind: 'big', min: 22, max: 40, p: 0.06, when: (life) => life.stats.employment === 'employed',
+    fr: ["Monter une entreprise", "Un ami veut lancer une entreprise et vous propose de vous associer. Il faudrait quitter votre poste."],
+    en: ["Starting a business", "A friend wants to start a business and asks you to join. You would have to leave your job."],
+    choices: [
+      { k: 'all', icon: '🚀', fr: "Vous lancer", en: "Go all in", fx: () => (Math.random() < 0.35 ? { money: 40000, happy: 5 } : { money: -15000, happy: -2, know: 3 }) },
+      { k: 'part', icon: '💶', fr: "Mettre un peu d'argent sans quitter votre poste", en: "Put in some money but keep your job", fx: () => (Math.random() < 0.35 ? { money: 9000 } : { money: -3000 }) },
+      { k: 'no', icon: '🙅', fr: "Refuser", en: "Decline", fx: { happy: -1 } },
+    ] },
+  { id: 'de_move_city', kind: 'big', min: 18, max: 35, p: 0.08, when: (life) => life.stats.birthPlaceType === 'rural',
+    fr: ["La ville ou le village", "En ville, il y a du travail. Au village, il y a votre famille et tout ce que vous connaissez."],
+    en: ["City or village", "The city has jobs. The village has your family and everything you know."],
+    choices: [
+      { k: 'city', icon: '🏙️', fr: "Partir en ville", en: "Move to the city", fx: { money: 6000, social: -4, happy: -1 } },
+      { k: 'village', icon: '🌾', fr: "Rester au village", en: "Stay in the village", fx: { social: 3, happy: 1 } },
+    ] },
+  { id: 'de_emigrate', kind: 'big', min: 20, max: 40, p: 0.07, when: (life) => (life.countryData?.ppp || 0) < 15000,
+    fr: ["Partir à l'étranger", "Un cousin installé dans un pays plus riche peut vous aider à le rejoindre. Le voyage coûte cher et rien n'est garanti."],
+    en: ["Leaving the country", "A cousin settled in a richer country can help you join him. The trip is costly and nothing is guaranteed."],
+    choices: [
+      { k: 'go', icon: '🧳', fr: "Tenter le départ", en: "Try to leave", fx: () => (half() ? { money: 25000, social: -6 } : { money: -4000, health: -4, happy: -3 }) },
+      { k: 'send', icon: '✉️', fr: "Aider un proche à partir à votre place", en: "Help a relative go instead", fx: { money: -1500, social: -2 } },
+      { k: 'stay', icon: '🏡', fr: "Rester", en: "Stay", fx: { social: 2 } },
+    ] },
+  { id: 'fa_parent_time', kind: 'family', min: 24, max: 45, p: 0.10, when: (life) => (life.stats.kids || []).length > 0 && life.stats.employment === 'employed',
+    fr: ["Du temps pour votre enfant", "Votre enfant est encore petit. Vous pourriez réduire votre temps de travail quelques années."],
+    en: ["Time for your child", "Your child is still small. You could cut back your working hours for a few years."],
+    choices: [
+      { k: 'part', icon: '🧸', fr: "Passer à temps partiel", en: "Go part-time", fx: { money: -6000, happy: 5, social: 3 } },
+      { k: 'full', icon: '💼', fr: "Garder le plein temps", en: "Stay full-time", fx: { money: 3000, happy: -3 } },
+      { k: 'share', icon: '⚖️', fr: "Partager l'effort avec votre conjoint", en: "Share the load with your partner", fx: { money: -2000, happy: 2, social: 2 } },
+    ] },
+  { id: 'de_whistle', kind: 'big', min: 28, max: 55, p: 0.05, when: (life) => life.stats.employment === 'employed',
+    fr: ["Ce que vous avez vu", "Vous découvrez que votre employeur triche sur les règles de sécurité. Personne d'autre ne semble au courant."],
+    en: ["What you saw", "You find out your employer is cheating on safety rules. Nobody else seems to know."],
+    choices: [
+      { k: 'report', icon: '📣', fr: "Le signaler aux autorités", en: "Report it to the authorities", fx: () => (half() ? { social: 4, happy: 3 } : { money: -6000, social: 2, happy: -2 }) },
+      { k: 'inside', icon: '🗂️', fr: "En parler à votre hiérarchie", en: "Raise it with your managers", fx: { know: 1, happy: 1 } },
+      { k: 'silent', icon: '🤐', fr: "Vous taire", en: "Keep quiet", fx: { happy: -5 } },
+    ] },
+  { id: 'de_strike', kind: 'big', min: 22, max: 58, p: 0.06, when: (life) => life.stats.employment === 'employed',
+    fr: ["La grève", "Vos collègues arrêtent le travail pour obtenir de meilleurs salaires. Chaque jour de grève n'est pas payé."],
+    en: ["The strike", "Your colleagues stop work to win better pay. Strike days are unpaid."],
+    choices: [
+      { k: 'join', icon: '✊', fr: "Faire grève avec eux", en: "Strike with them", fx: () => (half() ? { money: 2500, social: 5 } : { money: -1500, social: 5 }) },
+      { k: 'work', icon: '🏭', fr: "Continuer à travailler", en: "Keep working", fx: { money: 500, social: -4 } },
+      { k: 'aside', icon: '🚶', fr: "Poser des congés et rester à l'écart", en: "Take leave and stay out of it", fx: { social: -1 } },
+    ] },
+  { id: 'de_flood', kind: 'big', min: 15, max: 75, p: 0.025,
+    fr: ["L'eau monte", "Après des jours de pluie, la rivière déborde. L'eau entre dans les maisons du bas de la rue."],
+    en: ["Rising water", "After days of rain the river bursts its banks. Water is entering the houses down the street."],
+    choices: [
+      { k: 'host', icon: '🏠', fr: "Accueillir des voisins chez vous", en: "Take neighbours in", fx: { social: 6, money: -1500 } },
+      { k: 'leave', icon: '🚗', fr: "Partir vous mettre à l'abri", en: "Leave for safety", fx: { money: -1000, health: 1 } },
+      { k: 'guard', icon: '🪣', fr: "Rester pour protéger la maison", en: "Stay to protect the house", fx: { health: -3, money: 500 } },
+    ] },
+  { id: 'de_war_flee', kind: 'big', min: 12, max: 65, p: 0.08, when: (life) => (life.countryData?.war || 0) >= 0.5 && !STATE.softMode && !STATE.eduMode,
+    fr: ["Les combats approchent", "On entend les tirs depuis votre rue. Des voisins chargent déjà leurs affaires."],
+    en: ["The fighting gets closer", "Gunfire can be heard from your street. Neighbours are already loading their belongings."],
+    choices: [
+      { k: 'abroad', icon: '🧳', fr: "Fuir vers un autre pays", en: "Flee to another country", fx: { money: -5000, social: -8, health: 2 } },
+      { k: 'country', icon: '🌾', fr: "Vous réfugier chez des proches à la campagne", en: "Shelter with relatives in the countryside", fx: { money: -1500, social: 2 } },
+      { k: 'stay', icon: '🏚️', fr: "Rester", en: "Stay", fx: { health: -8, happy: -6 } },
+    ] },
+  { id: 'de_harvest', kind: 'big', min: 18, max: 60, p: 0.07, when: (life) => life.stats.birthPlaceType === 'rural' && (life.countryData?.agr || 0) > 30,
+    fr: ["Une mauvaise récolte", "La pluie n'est pas venue. La récolte de cette année ne suffira pas."],
+    en: ["A bad harvest", "The rains did not come. This year's harvest will not be enough."],
+    choices: [
+      { k: 'borrow', icon: '🌱', fr: "Emprunter pour acheter des semences", en: "Borrow to buy seed", fx: () => (half() ? { money: 3000 } : { money: -3000, happy: -2 }) },
+      { k: 'season', icon: '🏗️', fr: "Chercher un travail en ville pour la saison", en: "Find seasonal work in town", fx: { money: 1500, social: -2 } },
+      { k: 'tighten', icon: '🍚', fr: "Réduire les repas et attendre", en: "Cut back on meals and wait", fx: { health: -3, happy: -2 } },
+    ] },
+  { id: 'de_retrain', kind: 'big', min: 38, max: 55, p: 0.06, when: (life) => life.stats.employment === 'employed',
+    fr: ["Votre métier change", "Les outils de votre métier ne sont plus ceux que vous avez appris. Une formation longue est possible."],
+    en: ["Your trade is changing", "The tools of your trade are no longer the ones you learned. A long training course is available."],
+    choices: [
+      { k: 'train', icon: '📚', fr: "Suivre la formation", en: "Take the course", fx: { know: 6, money: -4000, happy: 1 } },
+      { k: 'switch', icon: '🔀', fr: "Changer complètement de voie", en: "Switch careers entirely", fx: () => (half() ? { money: 8000, happy: 3 } : { money: -8000, happy: 3 }) },
+      { k: 'coast', icon: '🪑', fr: "Compter sur votre expérience", en: "Rely on your experience", fx: { happy: -1 } },
+    ] },
+  { id: 'de_retire_early', kind: 'big', min: 55, max: 62, p: 0.10, when: (life) => life.stats.employment === 'employed',
+    fr: ["Partir plus tôt", "Votre employeur propose un départ anticipé, avec une somme moins élevée que si vous restiez."],
+    en: ["Leaving early", "Your employer offers early retirement, for less money than if you stayed on."],
+    choices: [
+      { k: 'leave', icon: '🌅', fr: "Accepter et arrêter de travailler", en: "Accept and stop working", fx: { happy: 6, health: 3, money: -10000, retire: true } },
+      { k: 'stay', icon: '💼', fr: "Continuer jusqu'au bout", en: "Work until the end", fx: { money: 15000, health: -3 } },
+      { k: 'part', icon: '⏳', fr: "Négocier un temps partiel", en: "Negotiate part-time", fx: { happy: 3, money: 4000 } },
+    ] },
+  { id: 'fa_grandkids', kind: 'family', min: 58, max: 82, p: 0.10, when: (life) => (life.stats.kids || []).length > 0,
+    fr: ["Garder les petits", "Vos enfants vous demandent de garder les petits-enfants un jour par semaine."],
+    en: ["Minding the little ones", "Your children ask you to mind the grandchildren one day a week."],
+    choices: [
+      { k: 'weekly', icon: '👵', fr: "Accepter chaque semaine", en: "Agree to every week", fx: { social: 5, happy: 3, health: -1 } },
+      { k: 'sometimes', icon: '📅', fr: "De temps en temps", en: "Now and then", fx: { social: 2, happy: 1 } },
+      { k: 'no', icon: '🛋️', fr: "Garder votre temps pour vous", en: "Keep your time for yourself", fx: { health: 1, social: -2 } },
+    ] },
+  { id: 'sm_neighbour', kind: 'small', min: 30, max: 75, p: 0.08,
+    fr: ["Le voisin d'en face", "Votre voisin âgé n'arrive plus à porter ses courses jusque chez lui."],
+    en: ["The neighbour across the way", "Your elderly neighbour can no longer carry his shopping home."],
+    choices: [
+      { k: 'weekly', icon: '🛒', fr: "Faire ses courses chaque semaine", en: "Do his shopping every week", fx: { social: 5, happy: 2 } },
+      { k: 'once', icon: '🤝', fr: "L'aider cette fois-ci", en: "Help him this once", fx: { social: 2 } },
+      { k: 'busy', icon: '⌚', fr: "Vous n'avez pas le temps", en: "You have no time", fx: {} },
+    ] },
+];
+const FX_LABELS = {
+  fr: { money: 'Patrimoine', happy: 'Bonheur', health: 'Santé', social: 'Relations', know: 'Savoir' },
+  en: { money: 'Wealth', happy: 'Happiness', health: 'Health', social: 'Social', know: 'Knowledge' },
+};
+function fxSub(fx) {
+  if (typeof fx === 'function') return LANG === 'fr' ? 'Résultat incertain' : 'Uncertain outcome';
+  const lab = FX_LABELS[LANG === 'fr' ? 'fr' : 'en'];
+  return Object.keys(fx).filter(k => lab[k] && fx[k]).map(k => lab[k] + (fx[k] > 0 ? '↑' : '↓')).join(' ');
+}
+function applyFx(life, fx) {
+  const e = typeof fx === 'function' ? fx(life) : fx;
+  const s = life.stats;
+  const scale = Math.max(0.05, (life.countryData?.ppp || 12000) / 40000);
+  const clamp = v => Math.max(0, Math.min(100, v));
+  if (e.money) s.netAssets += Math.round(e.money * scale);
+  if (e.happy) s.happiness = clamp(s.happiness + e.happy);
+  if (e.health) bumpHealth(life, e.health);
+  if (e.social) s.social = clamp(s.social + e.social);
+  if (e.know) s.knowledge = clamp(s.knowledge + e.know);
+  if (e.retire) s.employment = 'retired';
+}
+EXTRA_DECISIONS.forEach(d => DECISIONS.push({
+  id: d.id, kind: d.kind,
+  chance: (life) => life.age >= d.min && life.age <= d.max && (!d.when || d.when(life)) && Math.random() < d.p,
+  show: () => {
+    const fr = LANG === 'fr';
+    return {
+      title: fr ? d.fr[0] : d.en[0],
+      body: fr ? d.fr[1] : d.en[1],
+      choices: d.choices.map(c => ({ k: c.k, icon: c.icon, label: fr ? c.fr : c.en, sub: fxSub(c.fx), apply: (life) => applyFx(life, c.fx) })),
+    };
+  },
+}));
+
 function tryTriggerDecision(life, newAge) {
   if (!life) return false;
   // 已經有 modal 在開就不要觸發
