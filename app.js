@@ -217,6 +217,9 @@ function anyParentAlive(life) {
   return life.family.parents.some(p => isAliveAt(p, year));
 }
 
+// Les sommes des évènements sont écrites pour un pays à 40 000 $ PPA par habitant, puis mises à l'échelle.
+function moneyScale(life) { return Math.max(0.05, ((life.countryData && life.countryData.ppp) || 12000) / 40000); }
+function addMoney(life, usd) { life.stats.netAssets += Math.round(usd * moneyScale(life)); }
 const DECISIONS = [
   // 1. 失業：要不要接受一份外地工作？
   {
@@ -232,7 +235,7 @@ const DECISIONS = [
         { k: 'go', icon: '✈️',
           label: t('de.relocate.go'),
           sub: t('de.relocate.go.sub'),
-          apply: (life) => { life.stats.netAssets += 8000; life.stats.happiness -= 4; life.stats.social -= 3; logLife(t('de.relocate.go.log')); } },
+          apply: (life) => { addMoney(life, 8000); life.stats.happiness -= 4; life.stats.social -= 3; logLife(t('de.relocate.go.log')); } },
         { k: 'stay', icon: '🏠',
           label: t('de.relocate.stay'),
           sub: t('de.relocate.stay.sub'),
@@ -300,7 +303,7 @@ const DECISIONS = [
         { k: 'treat', icon: '💊',
           label: t('de.illness.treat'),
           sub: t('de.illness.treat.sub'),
-          apply: (life) => { bumpHealth(life, +5); life.stats.happiness += 3; life.stats.netAssets -= 4000; logLife(t('de.illness.treat.log')); } },
+          apply: (life) => { bumpHealth(life, +5); life.stats.happiness += 3; addMoney(life, -4000); logLife(t('de.illness.treat.log')); } },
         { k: 'wait', icon: '⏳',
           label: t('de.illness.wait'),
           sub: t('de.illness.wait.sub'),
@@ -328,11 +331,11 @@ const DECISIONS = [
         { k: 'home', icon: '🏡',
           label: t('de.parents.home'),
           sub: t('de.parents.home.sub'),
-          apply: (life) => { life.stats.happiness += 5; life.stats.netAssets -= 6000; logLife(t('de.parents.home.log')); } },
+          apply: (life) => { life.stats.happiness += 5; addMoney(life, -6000); logLife(t('de.parents.home.log')); } },
         { k: 'nurse', icon: '🏥',
           label: t('de.parents.nurse'),
           sub: t('de.parents.nurse.sub'),
-          apply: (life) => { life.stats.netAssets -= 8000; life.stats.happiness -= 1; logLife(t('de.parents.nurse.log')); } },
+          apply: (life) => { addMoney(life, -8000); life.stats.happiness -= 1; logLife(t('de.parents.nurse.log')); } },
         { k: 'kin', icon: '👪',
           label: t('de.parents.kin'),
           sub: t('de.parents.kin.sub'),
@@ -396,7 +399,7 @@ const DECISIONS = [
   {
     id: 'de_conscription', kind: 'big',
     chance: (life) => life.age >= 18 && life.age <= 25 &&
-                     life.stats.sex === 'M' &&
+                     life.sex === 'M' &&
                      ['KOR','TWN','ISR','SGP','CHN','RUS'].includes(life.country) &&
                      Math.random() < 0.10,
     show: (life) => ({
@@ -407,12 +410,12 @@ const DECISIONS = [
         { k: 'volunteer', icon: '🪖',
           label: t('de.conscript.volunteer'),
           sub: t('de.conscript.volunteer.sub'),
-          apply: (life) => { life.stats.netAssets += 2000; life.stats.happiness += 1; bumpHealth(life, -2); logLife(t('de.conscript.volunteer.log')); } },
+          apply: (life) => { addMoney(life, 2000); life.stats.happiness += 1; bumpHealth(life, -2); logLife(t('de.conscript.volunteer.log')); } },
         { k: 'lottery', icon: '🎲',
           label: t('de.conscript.lottery'),
           sub: t('de.conscript.lottery.sub'),
           apply: (life) => {
-            if (Math.random() < 0.5) { life.stats.netAssets += 2000; bumpHealth(life, -2); logLife(t('de.conscript.lottery.go')); }
+            if (Math.random() < 0.5) { addMoney(life, 2000); bumpHealth(life, -2); logLife(t('de.conscript.lottery.go')); }
             else { logLife(t('de.conscript.lottery.skip')); }
           } },
         { k: 'object', icon: '✋',
@@ -436,15 +439,15 @@ const DECISIONS = [
         { k: 'keep', icon: '💰',
           label: t('de.lottery.keep'),
           sub: t('de.lottery.keep.sub'),
-          apply: (life) => { life.stats.netAssets += 5000; life.stats.happiness += 3; logLife(t('de.lottery.keep.log')); } },
+          apply: (life) => { addMoney(life, 5000); life.stats.happiness += 3; logLife(t('de.lottery.keep.log')); } },
         { k: 'share', icon: '🎁',
           label: t('de.lottery.share'),
           sub: t('de.lottery.share.sub'),
-          apply: (life) => { life.stats.netAssets += 2000; life.stats.social += 5; life.stats.happiness += 5; logLife(t('de.lottery.share.log')); } },
+          apply: (life) => { addMoney(life, 2000); life.stats.social += 5; life.stats.happiness += 5; logLife(t('de.lottery.share.log')); } },
         { k: 'donate', icon: '❤️',
           label: t('de.lottery.donate'),
           sub: t('de.lottery.donate.sub'),
-          apply: (life) => { life.stats.netAssets += 1000; life.stats.happiness += 8; logLife(t('de.lottery.donate.log')); } },
+          apply: (life) => { addMoney(life, 1000); life.stats.happiness += 8; logLife(t('de.lottery.donate.log')); } },
       ],
       hasNote: true,
     }),
@@ -472,7 +475,7 @@ const DECISIONS = [
         { k: 'therapy', icon: '🛋️',
           label: t('de.mental.therapy'),
           sub: t('de.mental.therapy.sub'),
-          apply: (life) => { life.stats.happiness += 12; life.stats.netAssets -= 1500; logLife(t('de.mental.therapy.log')); } },
+          apply: (life) => { life.stats.happiness += 12; addMoney(life, -1500); logLife(t('de.mental.therapy.log')); } },
         { k: 'tough', icon: '💪',
           label: t('de.mental.tough'),
           sub: t('de.mental.tough.sub'),
@@ -496,15 +499,15 @@ const DECISIONS = [
         { k: 'buy', icon: '🏠',
           label: t('de.home.buy'),
           sub: t('de.home.buy.sub'),
-          apply: (life) => { life.stats.netAssets -= 20000; life.stats.social += 1; logLife(t('de.home.buy.log')); } },
+          apply: (life) => { addMoney(life, -20000); life.stats.social += 1; logLife(t('de.home.buy.log')); } },
         { k: 'rent', icon: '🔑',
           label: t('de.home.rent'),
           sub: t('de.home.rent.sub'),
-          apply: (life) => { life.stats.netAssets += 5000; life.stats.happiness += 1; logLife(t('de.home.rent.log')); } },
+          apply: (life) => { addMoney(life, 5000); life.stats.happiness += 1; logLife(t('de.home.rent.log')); } },
         { k: 'share', icon: '🏘️',
           label: t('de.home.share'),
           sub: t('de.home.share.sub'),
-          apply: (life) => { life.stats.netAssets -= 6000; life.stats.social += 5; life.stats.happiness += 3; logLife(t('de.home.share.log')); } },
+          apply: (life) => { addMoney(life, -6000); life.stats.social += 5; life.stats.happiness += 3; logLife(t('de.home.share.log')); } },
       ],
     }),
   },
@@ -522,7 +525,7 @@ const DECISIONS = [
         { k: 'give', icon: '🤝',
           label: t('de.loan.give'),
           sub: t('de.loan.give.sub'),
-          apply: (life) => { life.stats.netAssets -= 4000; life.stats.social += 6; life.stats.happiness += 3; logLife(t('de.loan.give.log')); } },
+          apply: (life) => { addMoney(life, -4000); life.stats.social += 6; life.stats.happiness += 3; logLife(t('de.loan.give.log')); } },
         { k: 'refuse', icon: '🚫',
           label: t('de.loan.refuse'),
           sub: t('de.loan.refuse.sub'),
@@ -549,11 +552,11 @@ const DECISIONS = [
         { k: 'take_it', icon: '🌴',
           label: t('de.sabbatical.take_it'),
           sub: t('de.sabbatical.take_it.sub'),
-          apply: (life) => { life.stats.happiness += 8; bumpHealth(life, +4); life.stats.netAssets -= 8000; logLife(t('de.sabbatical.take_it.log')); } },
+          apply: (life) => { life.stats.happiness += 8; bumpHealth(life, +4); addMoney(life, -8000); logLife(t('de.sabbatical.take_it.log')); } },
         { k: 'push', icon: '💼',
           label: t('de.sabbatical.push'),
           sub: t('de.sabbatical.push.sub'),
-          apply: (life) => { life.stats.netAssets += 6000; life.stats.knowledge += 2; logLife(t('de.sabbatical.push.log')); } },
+          apply: (life) => { addMoney(life, 6000); life.stats.knowledge += 2; logLife(t('de.sabbatical.push.log')); } },
       ],
     }),
   },
@@ -572,15 +575,15 @@ const DECISIONS = [
         { k: 'keep', icon: '🏛️',
           label: t('de.inherit.keep'),
           sub: t('de.inherit.keep.sub'),
-          apply: (life) => { life.stats.netAssets += 15000; life.stats.employment = 'family_biz'; logLife(t('de.inherit.keep.log')); } },
+          apply: (life) => { addMoney(life, 15000); life.stats.employment = 'family_biz'; logLife(t('de.inherit.keep.log')); } },
         { k: 'sell', icon: '💰',
           label: t('de.inherit.sell'),
           sub: t('de.inherit.sell.sub'),
-          apply: (life) => { life.stats.netAssets += 80000; life.stats.happiness -= 4; logLife(t('de.inherit.sell.log')); } },
+          apply: (life) => { addMoney(life, 80000); life.stats.happiness -= 4; logLife(t('de.inherit.sell.log')); } },
         { k: 'split', icon: '👨‍👩‍👧',
           label: t('de.inherit.split'),
           sub: t('de.inherit.split.sub'),
-          apply: (life) => { life.stats.netAssets += 5000; life.stats.social += 8; life.stats.happiness += 3; logLife(t('de.inherit.split.log')); } },
+          apply: (life) => { addMoney(life, 5000); life.stats.social += 8; life.stats.happiness += 3; logLife(t('de.inherit.split.log')); } },
       ],
     }),
   },
@@ -598,11 +601,11 @@ const DECISIONS = [
         { k: 'take_in', icon: '🏡',
           label: t('de.relative.take_in'),
           sub: t('de.relative.take_in.sub'),
-          apply: (life) => { life.stats.netAssets -= 5000; life.stats.social += 4; life.stats.happiness += 2; logLife(t('de.relative.take_in.log')); } },
+          apply: (life) => { addMoney(life, -5000); life.stats.social += 4; life.stats.happiness += 2; logLife(t('de.relative.take_in.log')); } },
         { k: 'facility', icon: '🏥',
           label: t('de.relative.facility'),
           sub: t('de.relative.facility.sub'),
-          apply: (life) => { life.stats.netAssets -= 10000; life.stats.social += 2; life.stats.happiness -= 2; logLife(t('de.relative.facility.log')); } },
+          apply: (life) => { addMoney(life, -10000); life.stats.social += 2; life.stats.happiness -= 2; logLife(t('de.relative.facility.log')); } },
         { k: 'kin_share', icon: '👪',
           label: t('de.relative.kin_share'),
           sub: t('de.relative.kin_share.sub'),
@@ -625,7 +628,7 @@ const DECISIONS = [
         { k: 'take', icon: '📈',
           label: t('de.promotion.take'),
           sub: t('de.promotion.take.sub'),
-          apply: (life) => { life.stats.netAssets += 4000; life.stats.knowledge += 3; life.stats.social -= 2; life.stats.happiness -= 1; logLife(t('de.promotion.take.log')); } },
+          apply: (life) => { addMoney(life, 4000); life.stats.knowledge += 3; life.stats.social -= 2; life.stats.happiness -= 1; logLife(t('de.promotion.take.log')); } },
         { k: 'decline', icon: '🚪',
           label: t('de.promotion.decline'),
           sub: t('de.promotion.decline.sub'),
@@ -633,7 +636,7 @@ const DECISIONS = [
         { k: 'negotiate', icon: '🤝',
           label: t('de.promotion.negotiate'),
           sub: t('de.promotion.negotiate.sub'),
-          apply: (life) => { if (Math.random() < 0.5) { life.stats.netAssets += 2000; life.stats.happiness += 1; logLife(t('de.promotion.negotiate.ok')); } else { logLife(t('de.promotion.negotiate.no')); } } },
+          apply: (life) => { if (Math.random() < 0.5) { addMoney(life, 2000); life.stats.happiness += 1; logLife(t('de.promotion.negotiate.ok')); } else { logLife(t('de.promotion.negotiate.no')); } } },
       ],
       hasNote: true,
     }),
@@ -682,7 +685,7 @@ const DECISIONS = [
         { k: 'save', icon: '🐷',
           label: t('sm.pocket.save'),
           sub: t('sm.pocket.save.sub'),
-          apply: (life) => { life.stats.netAssets += 60; logLife(t('sm.pocket.save.log')); } },
+          apply: (life) => { addMoney(life, 60); logLife(t('sm.pocket.save.log')); } },
         { k: 'snack', icon: '🍡',
           label: t('sm.pocket.snack'),
           sub: t('sm.pocket.snack.sub'),
@@ -711,7 +714,7 @@ const DECISIONS = [
         { k: 'visit', icon: '🚄',
           label: t('sm.call.visit'),
           sub: t('sm.call.visit.sub'),
-          apply: (life) => { life.stats.social += 5; life.stats.netAssets -= 800; logLife(t('sm.call.visit.log')); } },
+          apply: (life) => { life.stats.social += 5; addMoney(life, -800); logLife(t('sm.call.visit.log')); } },
         { k: 'later', icon: '⏳',
           label: t('sm.call.later'),
           sub: t('sm.call.later.sub'),
@@ -732,11 +735,11 @@ const DECISIONS = [
         { k: 'go', icon: '🥂',
           label: t('sm.reunion.go'),
           sub: t('sm.reunion.go.sub'),
-          apply: (life) => { life.stats.social += 5; life.stats.happiness += 2; life.stats.netAssets -= 500; logLife(t('sm.reunion.go.log')); } },
+          apply: (life) => { life.stats.social += 5; life.stats.happiness += 2; addMoney(life, -500); logLife(t('sm.reunion.go.log')); } },
         { k: 'skip', icon: '🚫',
           label: t('sm.reunion.skip'),
           sub: t('sm.reunion.skip.sub'),
-          apply: (life) => { life.stats.netAssets += 200; logLife(t('sm.reunion.skip.log')); } },
+          apply: (life) => { addMoney(life, 200); logLife(t('sm.reunion.skip.log')); } },
       ],
     }),
   },
@@ -753,11 +756,11 @@ const DECISIONS = [
         { k: 'learn', icon: '🍳',
           label: t('sm.cook.learn'),
           sub: t('sm.cook.learn.sub'),
-          apply: (life) => { life.stats.happiness += 3; life.stats.knowledge += 2; life.stats.netAssets -= 100; logLife(t('sm.cook.learn.log')); } },
+          apply: (life) => { life.stats.happiness += 3; life.stats.knowledge += 2; addMoney(life, -100); logLife(t('sm.cook.learn.log')); } },
         { k: 'buy', icon: '🍱',
           label: t('sm.cook.buy'),
           sub: t('sm.cook.buy.sub'),
-          apply: (life) => { life.stats.netAssets -= 200; bumpHealth(life, -1); logLife(t('sm.cook.buy.log')); } },
+          apply: (life) => { addMoney(life, -200); bumpHealth(life, -1); logLife(t('sm.cook.buy.log')); } },
       ],
     }),
   },
@@ -816,11 +819,11 @@ const DECISIONS = [
         { k: 'upgrade', icon: '📱',
           label: t('sm.phone.upgrade'),
           sub: t('sm.phone.upgrade.sub'),
-          apply: (life) => { life.stats.netAssets -= 900; life.stats.happiness += 3; life.stats.knowledge += 1; logLife(t('sm.phone.upgrade.log')); } },
+          apply: (life) => { addMoney(life, -900); life.stats.happiness += 3; life.stats.knowledge += 1; logLife(t('sm.phone.upgrade.log')); } },
         { k: 'keep', icon: '📴',
           label: t('sm.phone.keep'),
           sub: t('sm.phone.keep.sub'),
-          apply: (life) => { life.stats.netAssets += 300; life.stats.happiness -= 1; logLife(t('sm.phone.keep.log')); } },
+          apply: (life) => { addMoney(life, 300); life.stats.happiness -= 1; logLife(t('sm.phone.keep.log')); } },
       ],
     }),
   },
@@ -980,7 +983,7 @@ const EXTRA_DECISIONS = [
       { k: 'season', icon: '🏗️', fr: "Chercher un travail en ville pour la saison", en: "Find seasonal work in town", fx: { money: 1500, social: -2 } },
       { k: 'tighten', icon: '🍚', fr: "Réduire les repas et attendre", en: "Cut back on meals and wait", fx: { health: -3, happy: -2 } },
     ] },
-  { id: 'de_retrain', kind: 'big', min: 38, max: 55, p: 0.06, when: (life) => life.stats.employment === 'employed',
+  { id: 'de_retrain', kind: 'big', min: 38, max: 55, p: 0.06, when: (life) => life.stats.employment === 'employed' && comfortable(5000)(life),
     fr: ["Votre métier change", "Les outils de votre métier ne sont plus ceux que vous avez appris. Une formation longue est possible."],
     en: ["Your trade is changing", "The tools of your trade are no longer the ones you learned. A long training course is available."],
     choices: [
@@ -1227,7 +1230,7 @@ function applyFx(life, fx) {
   if (e.die && !heavyOk()) e = { happy: -5 };   // mode protégé : aucun évènement ne tue
   const s = life.stats;
   const c = life.countryData || {};
-  const scale = Math.max(0.05, (c.ppp || 12000) / 40000);
+  const scale = moneyScale(life);
   const clamp = v => Math.max(0, Math.min(100, v));
   if (e.money) s.netAssets += Math.round(e.money * scale);
   if (e.pppx) s.netAssets += Math.round(e.pppx * (c.ppp || 12000));   // montant exprimé en années de revenu moyen du pays
@@ -1252,6 +1255,27 @@ function applyFx(life, fx) {
   }
   if (e.die) setTimeout(() => { if (STATE.life === life && !life.died) dieNow(e.die); }, 80);
 }
+// Conditions ajoutées aux évènements d'origine : ils supposaient tous un pays riche.
+const ORIGINAL_GUARDS = {
+  de_health_warning: comfortable(5000),                                   // un médecin qui fait un bilan
+  de_illness_treat: comfortable(6000),                                    // un dépistage précoce
+  de_inflation: (life) => life.stats.netAssets > 1000 * moneyScale(life), // il faut une épargne à protéger
+  de_job_change: comfortable(8000),                                       // une startup
+  de_buy_home: (life) => comfortable(10000)(life) && life.stats.netAssets > 0,
+  de_sabbatical: (life) => pppOf(life) >= 20000,
+  de_inheritance: (life) => quartOf(life) >= 3,                           // une entreprise familiale et des biens
+  sm_weekend: (life) => life.stats.employment === 'employed',
+  sm_cook: (life) => pppOf(life) >= 10000,                                // la livraison de repas
+  sm_volunteer: (life) => pppOf(life) >= 8000,                                        // un centre communautaire
+  sm_reunion: (life) => life.stats.education >= 2,                        // d'anciens camarades de classe
+  sm_phone: comfortable(3000),
+};
+DECISIONS.forEach(d => {
+  const guard = ORIGINAL_GUARDS[d.id];
+  if (!guard) return;
+  const base = d.chance;
+  d.chance = (life) => guard(life) && base(life);
+});
 EXTRA_DECISIONS.forEach(d => DECISIONS.push({
   id: d.id, kind: d.kind,
   chance: (life) => life.age >= d.min && life.age <= d.max && (!d.when || d.when(life)) && Math.random() < (typeof d.p === 'function' ? d.p(life) : d.p),
@@ -1913,12 +1937,47 @@ const FIRST_NAMES_FR = {
   M: ['Gabriel','Léo','Raphaël','Louis','Arthur','Jules','Adam','Hugo','Lucas','Nathan','Théo','Paul','Antoine','Maxime','Julien','Nicolas','Pierre','Thomas','Karim','Mathieu'],
   F: ['Emma','Jade','Louise','Alice','Chloé','Léa','Manon','Camille','Inès','Sarah','Julie','Marie','Clara','Zoé','Anna','Juliette','Lucie','Margaux','Élise','Nadia'],
 };
+// Prénoms et noms courants par aire culturelle, en écriture latine. Approximation : une aire regroupe plusieurs pays.
+const NAME_SETS = {
+  en:   { l: ['Smith','Johnson','Williams','Brown','Jones','Miller','Davis','Wilson','Taylor','Clark'], M: ['James','John','Michael','William','David','Daniel','Thomas','Ryan'], F: ['Emily','Sarah','Jessica','Olivia','Emma','Hannah','Laura','Grace'] },
+  es:   { l: ['García','Rodríguez','Martínez','López','González','Pérez','Sánchez','Ramírez','Torres','Flores','Morales','Castillo'], M: ['Santiago','Mateo','Diego','Carlos','Luis','Javier','Andrés','Miguel'], F: ['Sofía','Valentina','Camila','Lucía','María','Daniela','Gabriela','Paula'] },
+  pt:   { l: ['Silva','Santos','Oliveira','Souza','Pereira','Costa','Ferreira','Almeida','Ribeiro','Carvalho'], M: ['João','Pedro','Lucas','Gabriel','Rafael','Thiago','Bruno','Felipe'], F: ['Ana','Beatriz','Juliana','Larissa','Mariana','Camila','Fernanda','Letícia'] },
+  ar:   { l: ['Al-Sayed','Haddad','Mansour','Khalil','Nasser','Hamdan','Saleh','Farouk','Aziz','Bakr'], M: ['Ahmed','Mohamed','Omar','Youssef','Ali','Hassan','Khaled','Karim'], F: ['Fatima','Aïcha','Layla','Mariam','Nour','Salma','Yasmine','Hana'] },
+  ssa:  { l: ['Diallo','Traoré','Okafor','Mensah','Ndlovu','Kamara','Mwangi','Abdi','Bello','Tembo','Ouédraogo','Mutombo'], M: ['Kwame','Amadou','Chidi','Tendai','Moussa','Juma','Sipho','Ibrahim'], F: ['Amina','Fatou','Ngozi','Thandiwe','Aïssatou','Wanjiru','Zainab','Abena'] },
+  sam:  { l: ['Khan','Ahmed','Hossain','Rahman','Malik','Chowdhury','Durrani','Karimi','Siddiqui','Akhtar'], M: ['Imran','Farhan','Tariq','Rashid','Hamid','Bilal','Arif','Nasir'], F: ['Ayesha','Nasrin','Farzana','Shabnam','Rukhsana','Sadia','Parveen','Zahra'] },
+  slav: { l: ['Ivanov','Kowalski','Novák','Petrov','Horvat','Popov','Kovač','Shevchenko','Nowak','Sokolov'], M: ['Ivan','Jan','Pavel','Dmitri','Marek','Nikolai','Tomasz','Andrei'], F: ['Anna','Olga','Katarina','Natalia','Elena','Marta','Irina','Zofia'] },
+  turk: { l: ['Yılmaz','Kaya','Demir','Aliyev','Karimov','Nazarov','Şahin','Çelik','Rakhimov','Öztürk'], M: ['Mehmet','Mustafa','Emre','Timur','Rustam','Elchin','Murat','Aziz'], F: ['Ayşe','Elif','Zeynep','Leyla','Dilnoza','Gulnara','Aylin','Madina'] },
+  ger:  { l: ['Müller','Schmidt','Jansen','Andersson','Nielsen','Bauer','De Vries','Virtanen','Hansen','Meier'], M: ['Lukas','Jonas','Lars','Erik','Felix','Daan','Mikael','Henrik'], F: ['Anna','Emma','Ingrid','Lena','Sofie','Freja','Hanna','Elin'] },
+  it:   { l: ['Rossi','Russo','Ferrari','Esposito','Bianchi','Romano','Colombo','Ricci','Marino','Greco'], M: ['Marco','Luca','Giuseppe','Matteo','Andrea','Francesco','Paolo','Davide'], F: ['Giulia','Chiara','Francesca','Sara','Martina','Elena','Alessia','Valentina'] },
+  gr:   { l: ['Papadopoulos','Georgiou','Nikolaou','Dimitriou','Ioannou','Vasiliou','Christou','Makris'], M: ['Giorgos','Dimitris','Nikos','Kostas','Yannis','Christos'], F: ['Maria','Eleni','Katerina','Sofia','Dimitra','Ioanna'] },
+  he:   { l: ['Cohen','Levi','Mizrahi','Peretz','Biton','Friedman','Katz','Azoulay'], M: ['David','Noam','Yosef','Daniel','Ariel','Eitan'], F: ['Noa','Tamar','Yael','Maya','Shira','Talia'] },
+  zh:   { l: ['Wang','Li','Zhang','Liu','Chen','Yang','Huang','Zhao','Wu','Zhou'], M: ['Wei','Jun','Hao','Lei','Ming','Tao','Jie','Bo'], F: ['Xiu','Mei','Ling','Yan','Jing','Hui','Lan','Ying'] },
+  ja:   { l: ['Sato','Suzuki','Takahashi','Tanaka','Watanabe','Ito','Yamamoto','Nakamura','Kobayashi','Kato'], M: ['Haruto','Ren','Sota','Yuto','Kenji','Hiroshi','Takumi','Daiki'], F: ['Yui','Sakura','Hina','Aoi','Yuki','Emi','Haruka','Miyu'] },
+  ko:   { l: ['Kim','Lee','Park','Choi','Jung','Kang','Cho','Yoon'], M: ['Min-jun','Seo-jun','Ji-ho','Hyun-woo','Dong-hyun','Sung-min'], F: ['Seo-yeon','Ji-woo','Min-seo','Ha-eun','Soo-jin','Eun-ji'] },
+  sea:  { l: ['Nguyen','Tran','Pham','Wijaya','Santoso','Reyes','Dela Cruz','Sok','Wong','Rahman'], M: ['Minh','Anh','Budi','Agus','Jose','Somchai','Arif','Dara'], F: ['Linh','Mai','Siti','Dewi','Maria','Sokha','Putri','Thuy'] },
+};
+const NAME_SET_BY_ID = {};
+[['en', 'USA CAN GBR IRL AUS NZL JAM GUY TTO'], ['es', 'ESP GNQ'], ['pt', 'BRA PRT AGO MOZ GNB CPV TLS'],
+ ['ar', 'SDN SOM MRT DJI COM'], ['sam', 'PAK BGD AFG MDV IRN'], ['turk', 'TUR AZE KAZ UZB KGZ TKM TJK'],
+ ['ger', 'DEU AUT CHE NLD DNK FIN NOR SWE LUX BEL'], ['it', 'ITA MLT'], ['gr', 'GRC CYP'], ['he', 'ISR'],
+ ['zh', 'CHN TWN HKG MAC SGP'], ['ja', 'JPN'], ['ko', 'KOR PRK']]
+  .forEach(([set, ids]) => ids.split(' ').forEach(id => { NAME_SET_BY_ID[id] = set; }));
+function nameSetFor(c) {
+  return NAME_SET_BY_ID[c.id] || ({ lac: 'es', mena: 'ar', ssa: 'ssa', eca: 'slav', eap: 'sea', hi: 'slav' })[c.region] || null;
+}
 // forcedLast : nom de famille hérité, pour qu'une fratrie porte le même nom
 function randomName(country, sex, forcedLast) {
   const lang = country.lang || '';
   if (/^fr:/.test(lang)) {
     const last = forcedLast || pick(LAST_NAMES_FR);
     const first = pick(FIRST_NAMES_FR[sex] || FIRST_NAMES_FR.M);
+    return { last, first, full: first + ' ' + last, full_en: first + ' ' + last };
+  }
+  // Hors interfaces chinoise, japonaise et coréenne : noms de l'aire culturelle du pays, en écriture latine.
+  const nameSet = NAME_SETS[nameSetFor(country)];
+  if (nameSet && country.id !== 'IND' && !['zh-Hant', 'zh-Hans', 'ja', 'ko'].includes(LANG)) {
+    const last = forcedLast || pick(nameSet.l);
+    const first = pick(nameSet[sex] || nameSet.M);
     return { last, first, full: first + ' ' + last, full_en: first + ' ' + last };
   }
   if (country.id === 'TWN' || country.id === 'HKG' || country.region === 'eap' && lang === 'zh') {
@@ -2309,7 +2368,7 @@ function milestoneEvents(life, newAge) {
   if (newAge >= 25 && newAge <= 35 && !life.stats.married && chance(0.15) && (life.stats.employment === 'university' || life.stats.employment === 'employed')) {
     life.stats.married = true;
     const partnerName = randomName(life.countryData, life.sex === 'M' ? 'F' : 'M');
-    life.stats.partner = { name: partnerName, sex: life.sex === 'M' ? 'F' : 'M' };
+    life.stats.partner = { name: partnerName, sex: life.sex === 'M' ? 'F' : 'M', birth: { year: life.year + life.yearOffset - life.age + Math.floor(Math.random() * 8) - 3 } };
     if (life.family) {
       life.family.partner = {
         id: 'p_' + Math.random().toString(36).slice(2,8),
@@ -2578,6 +2637,10 @@ function tick() {
     STATE.life.stats.netAssets += Math.round(gross * saveRate);
   } else {
     STATE.life.stats.annualIncome = 0;
+    // à la retraite, on vit sur son épargne : sans cela le patrimoine grossissait sans fin
+    if (STATE.life.stats.employment === 'retired' && STATE.life.stats.netAssets > 0) {
+      STATE.life.stats.netAssets -= Math.round(STATE.life.stats.netAssets * 0.04);
+    }
   }
   // 知識隨教育成長
   if (STATE.life.stats.education >= 2 && STATE.life.stats.knowledge < 90) STATE.life.stats.knowledge = Math.min(100, STATE.life.stats.knowledge + 0.5);
@@ -2731,7 +2794,7 @@ function showFocusChoice() {
     play:   '⚽ +3 幸福 · +1 人際',
     rest:   '🌳 +3 幸福 · +1 健康',
   };
-  if (LANG === 'fr') Object.assign(tooltips, { study: '📚 +3 Savoir · +1 Bonheur', work: '💼 +2 000 $ de patrimoine · +2 Savoir', family: '👨‍👩‍👧 +4 Relations · +3 Bonheur', health: '🧘 +4 Santé', play: '⚽ +3 Bonheur · +1 Relations', rest: '🌳 +3 Bonheur · +1 Santé' });
+  if (LANG === 'fr') Object.assign(tooltips, { study: '📚 +3 Savoir · +1 Bonheur', work: '💼 Patrimoine↑ · +2 Savoir', family: '👨‍👩‍👧 +4 Relations · +3 Bonheur', health: '🧘 +4 Santé', play: '⚽ +3 Bonheur · +1 Relations', rest: '🌳 +3 Bonheur · +1 Santé' });
   const body = $('#focusBody');
   if (body) body.innerHTML = focusOpts.map(o => `<button class="focus-btn" data-focus="${o.id}" title="${(tooltips[o.id] || '').replace(/"/g,'&quot;')}"><span class="fb-icon">${o.icon}</span><span class="fb-label">${enfr(o.en, o.zh)}</span><span class="fb-tip">${tooltips[o.id] || ''}</span></button>`).join('');
   body.querySelectorAll('.focus-btn').forEach(btn => {
@@ -2752,7 +2815,7 @@ function applyFocusEffects(focus) {
   if (!STATE.life || !STATE.life.stats) return;
   const s = STATE.life.stats;
   if (focus === 'study') s.knowledge = Math.min(100, s.knowledge + 3);
-  else if (focus === 'work') s.netAssets += 2000;
+  else if (focus === 'work') s.netAssets += Math.round(2000 * moneyScale(STATE.life));
   else if (focus === 'family') { s.social = Math.min(100, s.social + 4); s.happiness = Math.min(100, s.happiness + 3); }
   else if (focus === 'health') s.health = Math.min(100, s.health + 4);
   else if (focus === 'play' || focus === 'rest') s.happiness = Math.min(100, s.happiness + 3);
@@ -3159,7 +3222,7 @@ function applyEventEffects(event, isYearLike) {
     s.social = Math.min(100, s.social + 2);
   } else if (txt.includes('升職') || txt.includes('畢業')) {
     s.knowledge = Math.min(100, s.knowledge + 3);
-    s.netAssets += 1500;
+    s.netAssets += Math.round(1500 * moneyScale(STATE.life));
   } else if (txt.includes('生病') || txt.includes('受傷') || txt.includes('動亂') || txt.includes('離婚')) {
     s.health = Math.max(0, s.health - 5);
     s.happiness = Math.max(0, s.happiness - 3);
@@ -3606,7 +3669,7 @@ function renderLife() {
   const educLabels = ['—', t('edu.0')+'（'+t('edu.pre')+'）', t('edu.1'), t('edu.2'), t('edu.3'), t('edu.4')];
   $('#lifeEduc').textContent = educLabels[Math.min(STATE.life.stats.education + 1, educLabels.length - 1)];
   // 工作：顯示 sector + 是否在職
-  $('#lifeJob').textContent = STATE.life.stats.employment === 'employed' ? `${jobLabel('employed')} · ${LANG==='en'?'employed':LANG === 'fr' ? 'en poste' : '在職'}` : jobLabel(STATE.life.stats.employment);
+  $('#lifeJob').textContent = STATE.life.stats.employment === 'employed' ? (LANG === 'fr' ? jobLabel('employed') : `${jobLabel('employed')} · ${LANG==='en'?'employed':'在職'}`) : jobLabel(STATE.life.stats.employment);
   // 伴侶：顯示名字 + 年齡
   if (STATE.life.stats.married && STATE.life.stats.partner) {
     const p = STATE.life.stats.partner;
@@ -4210,20 +4273,20 @@ function renderFamilySummary() {
   if (f.siblings && f.siblings.length) {
     const liveSib = f.siblings.filter(s => !s.death?.year);
     const deadSib = f.siblings.filter(s => s.death?.year);
-    let sibText = `👫 ${f.siblings.length} ${LANG==='en'?'siblings':LANG === 'fr' ? "frères et sœurs" : '手足'}`;
+    let sibText = `👫 ${f.siblings.length} ${LANG==='en'?'siblings':LANG === 'fr' ? (f.siblings.length > 1 ? "frères et sœurs" : "frère ou sœur") : '手足'}`;
     if (liveSib.length < f.siblings.length) sibText += `（${liveSib.length} ${LANG==='en'?'alive':LANG === 'fr' ? 'en vie' : '存'}，${deadSib.length} †）`;
     parts.push(sibText);
   }
   // 祖父母
   if (f.grandparents && f.grandparents.length) {
-    parts.push(`👴👵 ${f.grandparents.length} ${LANG==='en'?'grandparents':LANG === 'fr' ? 'grands-parents' : '祖父母'}`);
+    parts.push(`👴👵 ${f.grandparents.length} ${LANG==='en'?'grandparents':LANG === 'fr' ? (f.grandparents.length > 1 ? 'grands-parents' : 'grand-parent') : '祖父母'}`);
   }
   // 伴侶
   if (f.partner) parts.push(`💍 ${f.partner.name}`);
   // 子女
   if (f.kids && f.kids.length) {
     const deadKids = f.kids.filter(k => k.death?.year);
-    let kidText = `👶 ${f.kids.length} ${LANG==='en'?'children':LANG === 'fr' ? 'enfants' : '子女'}`;
+    let kidText = `👶 ${f.kids.length} ${LANG==='en'?'children':LANG === 'fr' ? (f.kids.length > 1 ? 'enfants' : 'enfant') : '子女'}`;
     if (deadKids.length) kidText += `（${deadKids.length} †）`;
     parts.push(kidText);
   }
