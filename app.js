@@ -3135,6 +3135,25 @@ function habitMort(life) {
   if (life.sporty) m *= 0.8;                        // environ 2 ans de plus
   return m;
 }
+// Risque annuel supplémentaire de mourir de la maladie en cours : un cancer non traité tue souvent en quelques années, même à 23 ans.
+function illnessHazard(life) {
+  const il = life.illness; if (!il || il.status === 'resolved' || il.treated == null) return null;
+  const acc = Math.max(0.3, illnessAccess(life.countryData || {}));
+  if (il.type === 'cancer') {
+    if (il.status === 'remission') return { p: 0.01, cause: '癌症' };
+    return { p: il.treated === 'full' ? 0.06 / acc : il.treated === 'partial' ? 0.14 : 0.3, cause: '癌症' };
+  }
+  if (il.type === 'heart') return { p: il.treated === 'full' ? 0.015 : il.treated === 'partial' ? 0.03 : 0.06, cause: '心血管' };
+  if (il.type === 'stroke') return { p: il.treated === 'full' ? 0.02 : il.treated === 'partial' ? 0.04 : 0.1, cause: '中風' };
+  if (il.type === 'diabetes' && il.treated === 'none') return { p: 0.02, cause: '糖尿病' };
+  return null;
+}
+// Décès de l'année : risque de base, puis risque propre à la maladie en cours.
+function yearDeath(life, c, sex) {
+  const ih = illnessHazard(life);
+  if (ih && Math.random() < Math.min(0.6, ih.p)) return ih.cause;
+  return Math.random() < Math.min(1, pDie(life.age, c, sex) * habitMort(life)) ? true : false;
+}
 function pickCause(c, age, sex) {
   const w = causeWeights(c, age, sex);
   const keys = Object.keys(w);
@@ -3637,10 +3656,10 @@ function illnessYear(life, newAge) {
   if (ill.type === 'cancer') {
     if (ill.status === 'active') {
       if (ill.treated === 'none') {
-        bumpHealth(life, -6); s.happiness = Math.max(0, s.happiness - 3);
+        bumpHealth(life, -14); s.happiness = Math.max(0, s.happiness - 3);
         say('🥀', "La maladie progresse. Chaque semaine vous épuise un peu plus et vous renoncez à presque tout.");
       } else {
-        bumpHealth(life, -2);
+        bumpHealth(life, ill.treated === 'full' ? -4 : -7);
         say('💉', pick(["Une séance de traitement vous laisse épuisé{e} pour plusieurs jours.", "Vos cheveux tombent. Vous restez un long moment devant le miroir.", "Un proche vous accompagne à chaque séance et ne vous quitte pas des yeux.", "Vous comptez les semaines qui vous séparent du prochain examen."]));
         if (newAge - ill.treatStart >= 2) {
           const p = (ill.treated === 'full' ? 0.7 : 0.4) * illnessAccess(c);
@@ -3660,10 +3679,10 @@ function illnessYear(life, newAge) {
       else if (Math.random() < 0.5) say('🩺', "Vous passez votre contrôle annuel. Tout va bien, cette fois encore.");
     }
   } else if (ill.type === 'heart' || ill.type === 'stroke') {
-    if (ill.treated === 'none') { bumpHealth(life, -3); if (Math.random() < 0.6) say('😮‍💨', "Votre essoufflement s'aggrave : le moindre escalier devient une épreuve."); }
+    if (ill.treated === 'none') { bumpHealth(life, -6); if (Math.random() < 0.6) say('😮‍💨', "Votre essoufflement s'aggrave : le moindre escalier devient une épreuve."); }
     else if (Math.random() < 0.4) say('💊', pick(["Votre cardiologue ajuste le traitement. Vous prenez vos comprimés chaque matin sans y penser.", "Un contrôle montre que votre cœur tient le coup. Vous respirez.", "Vous renoncez au sel et aux escaliers pressés, à contrecœur."]));
   } else if (ill.type === 'diabetes') {
-    if (ill.treated === 'none') { bumpHealth(life, -2); }
+    if (ill.treated === 'none') { bumpHealth(life, -3); }
     else if (Math.random() < 0.4) say('🩸', "Vous contrôlez votre glycémie chaque matin, comme un rituel.");
   }
   return out;
@@ -4036,7 +4055,7 @@ function tick() {
       if (STATE.life.age === 0 && Math.random() < pDie(0, c, sex)) { dieNow(); break; }
       STATE.life.age += 1;
       STATE.life.yearOffset += 1;
-      if (Math.random() < Math.min(1, pDie(STATE.life.age, c, sex) * habitMort(STATE.life))) { dieNow(); break; }
+      { const yd = yearDeath(STATE.life, c, sex); if (yd) { dieNow(yd === true ? undefined : yd); break; } }
       if ([5,15,30,50,70].includes(STATE.life.age)) {
         STATE.pendingDecision = { age: STATE.life.age, type: 'pause' };
         if (STATE.autoDecide) resolvePendingDecision();
@@ -4051,10 +4070,8 @@ function tick() {
   STATE.life.age += 1;
   STATE.life.yearOffset += 1;
   // 死亡判定
-  if (Math.random() < Math.min(1, pDie(STATE.life.age, c, sex) * habitMort(STATE.life))) {
-    dieNow();
-    return;
-  }
+  { const yd = yearDeath(STATE.life, c, sex);
+    if (yd) { dieNow(yd === true ? undefined : yd); return; } }
   // v5.8 新增：狀態自然衰減/成長
   // v5.90：健康不再「出生就頂在 100、六十歲後才開始掉」。
   // 舊版 newLife 給 health: 100，加上 60 歲後每年 −0.3，於是：
