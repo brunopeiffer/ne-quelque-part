@@ -2651,3 +2651,41 @@ body { font-size: 16px; }
 .px-scene{display:block;width:100%;height:auto;aspect-ratio:104/34;border-radius:10px;image-rendering:pixelated}
 .ty-scene{margin-bottom:10px;box-shadow:0 6px 18px -10px rgba(0,0,0,.35);border-radius:10px;overflow:hidden}
 #deathReel .dr-card{height:auto;display:block;font-size:inherit;background:none;box-shadow:0 12px 40px #0008;overflow:hidden;border-radius:10px;width:min(560px,86vw);margin:0 auto 16px}
+
+/* ==== Page de vie en trois zones : repères fixes, « Maintenant », « Ma vie » ==== */
+.ltb-vitals{flex:1 0 100%;display:flex;flex-wrap:wrap;align-items:center;gap:4px 18px;padding-top:6px;border-top:1px dashed var(--line);font-size:13px}
+.ltb-vitals small{color:var(--ink-2);margin-right:6px}
+.v-money b{font-variant-numeric:tabular-nums}.v-money b.neg{color:#a33}
+.v-bar{display:inline-flex;align-items:center;gap:6px}
+.v-bar i{display:inline-block;width:56px;height:6px;border-radius:3px;background:#e4dccb;overflow:hidden}
+.v-bar u{display:block;height:100%;background:var(--accent,#8c1d3c)}
+.v-bar b{min-width:22px;text-align:right;font-variant-numeric:tabular-nums}
+#view-life .life-hero{display:none}
+#view-life .cert-body{padding:16px 18px;display:grid;grid-template-columns:72px 1fr;gap:4px 14px;align-items:center;position:static}
+#view-life #lifePortrait{width:72px;grid-column:1;grid-row:1}
+#view-life #lifePortrait svg{width:72px;height:72px}
+#view-life #lifeName2{grid-column:2;grid-row:1;text-align:left;margin:0;font-size:20px}
+#view-life .cert-body > :not(#lifePortrait):not(#lifeName2){grid-column:1/-1}
+.zone-h{grid-column:1/-1;margin:2px 0 -2px;font:600 13px var(--sans,sans-serif);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+#lifeMine{display:flex;flex-direction:column;gap:12px;margin-top:0}
+#lifeMine > div{background:var(--bg-2);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin:0}
+#lifeMine > #lifeIdCard{padding:0;overflow:hidden}
+#lifeMine > #lifeIdCard.is-collapsed .id-head{border-radius:0}
+.collapsible > h4,.collapsible > .id-head{cursor:pointer;user-select:none}
+.collapsible > h4{display:flex;align-items:center;gap:8px}
+.collapsible > h4::after,.collapsible > .id-head::after{content:'▾';margin-left:auto;padding-left:10px;color:var(--ink-2);transition:transform .2s}
+.collapsible.is-collapsed > h4::after,.collapsible.is-collapsed > .id-head::after{transform:rotate(-90deg)}
+.collapsible.is-collapsed > :not(:first-child){display:none}
+.collapsible.is-collapsed{padding-bottom:12px}
+@media (min-width:1000px){
+  #view-life .life-cert{grid-template-columns:minmax(0,1fr) 360px;gap:0 20px}
+  #view-life .life-grid{grid-column:1;grid-row:2 / span 2;grid-template-columns:minmax(0,1fr)}
+  #view-life .cert-body{grid-column:2;grid-row:2}
+  #view-life #lifeMine{grid-column:2;grid-row:3}
+}
+@media (max-width:720px){
+  .v-bar i{width:38px}
+  .ltb-vitals .v-bar:nth-child(n+5){display:none}
+  .ltb-vitals{gap:2px 12px;font-size:12px}
+}
+@media (max-width:720px){ #view-life .ty-event{font-size:16px;gap:8px} #view-life .ty-icon{font-size:24px} }

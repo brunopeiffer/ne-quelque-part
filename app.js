@@ -5298,6 +5298,7 @@ function renderLife() {
     { const a = $('#heroAssetsSub'); if (a) a.textContent = ppp(STATE.life.stats.netAssets); const b2 = $('#heroIncomeSub'); if (b2) b2.textContent = STATE.life.stats.annualIncome ? ppp(STATE.life.stats.annualIncome) + ' · ' + money(STATE.life.stats.annualIncome / 12) + (LANG === 'fr' ? ' par mois' : ' a month') : ''; }
     renderBudget();
     renderFinSide();
+    renderVitals();
     renderLifeGrid();
     renderIndicators();
     renderIdCard();
@@ -7536,7 +7537,7 @@ function wire() {
       situation.id = 'lifeSituation';
       situation.append(...['.cert-age-row', '.cert-meta'].map(q => document.querySelector('#lifeCert ' + q)).filter(Boolean));
       { const ind = document.createElement('div'); ind.id = 'lifeIndicators'; const st0 = $('#lifeStats'); if (st0) st0.appendChild(ind);
-        const idc = document.createElement('div'); idc.id = 'lifeIdCard'; const hero0 = document.querySelector('.life-hero'); if (hero0) hero0.after(idc); const fin0 = $('#finSide'); if (hero0 && fin0) hero0.after(fin0); }
+        const idc = document.createElement('div'); idc.id = 'lifeIdCard'; const hero0 = document.querySelector('.life-hero'); if (hero0) hero0.after(idc); }
       const famLife = document.createElement('div'); famLife.id = 'lifeFamilyLife';
       const budget = document.createElement('div');
       budget.id = 'lifeBudget';
@@ -7551,6 +7552,29 @@ function wire() {
       [...first, ...rest.filter(e => !first.includes(e) && e !== toggle && !isDetail(e)), toggle, ...rest.filter(isDetail)]
         .forEach(e => e && grid.appendChild(e));
       cols.forEach(c => c.remove());
+      // Trois zones : barre fixe (repères), « Maintenant » (à lire) et « Ma vie » (fiches repliables).
+      const cert = document.getElementById('lifeCert');
+      const mine = document.createElement('div'); mine.id = 'lifeMine';
+      mine.innerHTML = '<h3 class="zone-h">' + (LANG === 'fr' ? 'Ma vie' : 'My life') + '</h3>';
+      ['finSide', 'lifeStats', 'lifeFamilyLife', 'lifeGrid', 'lifeIdCard', 'lifeBudget'].forEach(id => { const e = document.getElementById(id); if (e) mine.appendChild(e); });
+      if (cert) cert.appendChild(mine);
+      const nowH = document.createElement('h3'); nowH.className = 'zone-h'; nowH.textContent = LANG === 'fr' ? 'Maintenant' : 'Now';
+      grid.prepend(nowH);
+      const worldH = document.createElement('h3'); worldH.className = 'zone-h'; worldH.textContent = LANG === 'fr' ? 'Le monde' : 'The world';
+      const avr = document.getElementById('lifeActualVsRandom'); if (avr) avr.before(worldH);
+      // Fiches repliables : on clique sur le titre ; l'état est mémorisé.
+      [['finSide', 0], ['lifeStats', 0], ['lifeFamilyLife', 0], ['lifeGrid', 0], ['lifeIdCard', 0], ['lifeBudget', 1], ['lifeActualVsRandom', 1], ['lifeCompanions', 1]].forEach(([id, closed]) => {
+        const el = document.getElementById(id); if (!el) return;
+        el.classList.add('collapsible');
+        let st = null; try { st = localStorage.getItem(STORAGE_KEY + ':fold:' + id); } catch (e) {}
+        if (st === null ? closed : st === '1') el.classList.add('is-collapsed');
+        el.addEventListener('click', (ev) => {
+          const h = ev.target.closest('h4, .id-head');
+          if (!h || h.parentElement !== el || ev.target.closest('button, a, select, input')) return;
+          el.classList.toggle('is-collapsed');
+          try { localStorage.setItem(STORAGE_KEY + ':fold:' + id, el.classList.contains('is-collapsed') ? '1' : '0'); } catch (e) {}
+        });
+      });
     }
   }
   $('#treeBackLife')?.addEventListener('click', () => setView(STATE.life && STATE.life.died ? 'end' : 'life'));
@@ -8165,10 +8189,20 @@ function renderFamilyLife() {
   if (L.illness && L.illness.status !== 'resolved') h += '<div class="fl-row"><span>' + (fr ? 'Santé' : 'Health') + '</span><b>' + ({ cancer: fr ? 'Cancer' : 'Cancer', heart: fr ? 'Maladie du cœur' : 'Heart disease', stroke: 'AVC', diabetes: fr ? 'Diabète' : 'Diabetes' })[L.illness.type] + (L.illness.status === 'remission' ? (fr ? ' · en rémission' : ' · remission') : L.illness.treated === 'none' ? (fr ? ' · non soigné' : ' · untreated') : '') + '</b></div>';
   el.innerHTML = h;
 }
+function renderVitals() {
+  const tb = document.querySelector('#view-life .ltb-inner');
+  if (!tb || !STATE.life) return;
+  let el = document.getElementById('lifeVitals');
+  if (!el) { el = document.createElement('div'); el.id = 'lifeVitals'; el.className = 'ltb-vitals'; tb.appendChild(el); }
+  const L = STATE.life, s = L.stats, fr = LANG === 'fr';
+  const bar = (k, v) => '<span class="v-bar"><small>' + k + '</small><i><u style="width:' + Math.max(0, Math.min(100, Math.round(v))) + '%"></u></i><b>' + Math.round(v) + '</b></span>';
+  el.innerHTML = '<span class="v-money"><small>' + (fr ? 'Patrimoine' : 'Net worth') + '</small><b class="' + (s.netAssets < 0 ? 'neg' : '') + '">' + money(s.netAssets) + '</b></span>'
+    + '<span class="v-money"><small>' + (fr ? 'Revenu/an' : 'Income/yr') + '</small><b>' + (L.age < 18 ? '—' : money(s.annualIncome || 0)) + '</b></span>'
+    + bar(fr ? 'Santé' : 'Health', s.health) + bar(fr ? 'Bonheur' : 'Happy', s.happiness) + bar(fr ? 'Savoir' : 'Know', s.knowledge) + bar(fr ? 'Relations' : 'Social', s.social);
+}
 function renderFinSide() {
   const el = $('#finSide');
   if (!el || !STATE.life) return;
-  { const hero = document.querySelector('.life-hero'); if (hero && el.previousElementSibling !== hero) hero.after(el); }   // juste sous l'âge et le patrimoine, dans la colonne de gauche
   const L = STATE.life, b = L.budget || {}, fr = LANG === 'fr', H = L.housing;
   const row = (k, v, cls) => '<div class="fs-row"><span>' + k + '</span><b' + (cls ? ' class="' + cls + '"' : '') + '>' + v + '</b></div>';
   const sgn = (v) => (v >= 0 ? '+ ' : '− ') + money(Math.abs(v));
