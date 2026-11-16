@@ -14,7 +14,7 @@
 
   // ---------- Chapitres ----------
   const CHAPS = {
-    '1': { d: "Rôles de l'État : solde entre prélèvements et prestations, dépenses sociales, comparaison de cinq États.", pre: [{ n: 'État-providence ↔ État peu présent', p: ['FRA', 'NER'], w: 'Un État qui prélève et redistribue beaucoup face à un État qui le fait très peu.' }, { n: 'Trois modèles sociaux', p: ['FRA', 'USA', 'BRA'], w: 'Dépenses sociales fortes, moyennes et faibles.' }, { n: 'Cinq États', p: ['FRA', 'USA', 'BRA', 'IND', 'NER'], w: 'Le tableau complet de comparaison.' }], g: [{ a: 18, t: "Jusqu'à 18 ans : repérez ce que l'État fournit sans qu'on le voie (école, santé, sécurité)." }, { a: 40, t: "Arrêtez à 40 ans (pause) : calculez le solde avec l'État, c'est-à-dire ce qu'il reçoit moins ce qu'il verse." }, { a: 999, t: "Jusqu'à la fin de la vie : comparez avec l'autre pays dans le tableau « Comparer des États »." }], t: "Chapitre 1 · L'intervention de l'État", q: [
+    '1': { d: "Les rôles de l'État : missions régaliennes, services publics, prestations et prélèvements. La comparaison d'un État-providence (ou interventionniste) et d'un État libéral se lit dans le solde entre ce que l'État prélève et ce qu'il verse.", pre: [{ n: 'État-providence ↔ État libéral', p: ['FRA', 'USA'], w: "France : État-providence, protection sociale étendue. États-Unis : modèle libéral, protection plus limitée et plus marchande." }, { n: 'État interventionniste ↔ État libéral', p: ['FRA', 'HKG'], w: "France : l'État intervient beaucoup (reste à charge en santé ≈ 9 %). Hong Kong : État peu interventionniste (reste à charge ≈ 35 %)." }, { n: 'Trois degrés d’intervention', p: ['FRA', 'USA', 'NER'], w: "État-providence, État libéral, État très peu présent." }], g: [{ a: 18, t: "Jusqu'à 18 ans : lisez la liste « À identifier » : elle se coche quand l'État intervient dans la vie du personnage (école, santé, sécurité, allocations). Regardez aussi le Récit." }, { a: 40, t: "Arrêtez à 40 ans (pause) : dans « Les chiffres », lisez le solde avec l'État (prélèvements moins prestations) et notez-le." }, { a: 999, t: "Jusqu'à la fin de la vie, puis comparez avec l'autre pays : État-providence ou libéral ? Justifiez avec trois chiffres." }], t: "Chapitre 1 · L'intervention de l'État", q: [
       "Quels rôles l'État joue-t-il dans la vie de votre personnage (régalien, redistributeur, producteur de services) ?",
       "Calculez le solde entre ce que votre personnage verse à l'État et ce qu'il en reçoit à 40 ans.",
       "Comparez avec le pays de votre voisin : État-providence ou État gendarme ? Justifiez avec trois chiffres." ] },
@@ -30,7 +30,7 @@
       "Relevez dans le récit une situation qui relie votre personnage à l'étranger (migration, transfert d'argent, emploi à l'étranger). Qui en profite, qui y perd ?",
       "Comparez l'accès à Internet et le niveau de vie des deux pays : que révèle l'insertion dans la mondialisation ?",
       "Le simulateur ne montre pas le commerce de biens : quelles données faudrait-il pour caractériser la balance commerciale ou le rôle des firmes multinationales ?" ] },
-    '4': { d: 'Cotisations et impôts, progressivité, assurance et assistance, redistribution verticale et horizontale, risques sociaux couverts.', pre: [{ n: 'France ↔ Niger', p: ['FRA', 'NER'], w: 'Contraste maximal : prélèvements et protection sociale très différents.' }, { n: 'États-providence', p: ['FRA', 'SWE', 'DEU'], w: 'Comparer des systèmes proches mais distincts.' }, { n: 'France · États-Unis · Brésil', p: ['FRA', 'USA', 'BRA'], w: 'Trois modèles : protection forte, marchande, limitée.' }], g: [{ a: 18, t: "Jusqu'à 18 ans : notez le milieu familial (quartile) et comment les parents financent les besoins." }, { a: 25, t: "Entrée dans la vie active : lisez le détail cotisations, impôts et prestations dans la tuile." }, { a: 40, t: "Arrêtez à 40 ans (pause) : remplissez le tableau 1 de votre fiche et calculez le taux de prélèvement." }, { a: 60, t: "Jusqu'à la retraite : y a-t-il une pension ? Que couvre la protection sociale en cas de maladie ?" }, { a: 999, t: "Jusqu'à la fin de la vie, puis imprimez votre fiche de synthèse." }], t: "Chapitre 4 · Les politiques sociales", q: [
+    '4': { d: 'Cotisations et impôts, progressivité, assurance et assistance, redistribution verticale et horizontale, risques sociaux couverts.', pre: [{ n: 'France ↔ Niger', p: ['FRA', 'NER'], w: 'Contraste maximal : prélèvements et protection sociale très différents.' }, { n: 'États-providence', p: ['FRA', 'SWE', 'DEU'], w: 'Comparer des systèmes proches mais distincts.' }, { n: 'France · États-Unis · Brésil', p: ['FRA', 'USA', 'BRA'], w: 'Trois modèles : protection forte, marchande, limitée.' }], g: [{ a: 18, t: "Jusqu'à 18 ans : dans « Les chiffres », lisez ce que la collectivité verse déjà pour l'enfant (allocations, santé, études) et notez le quartile du milieu familial." }, { a: 25, t: "Entrée dans la vie active : lisez le détail cotisations, impôts et prestations dans la tuile." }, { a: 40, t: "Arrêtez à 40 ans (pause) : remplissez le tableau 1 de votre fiche et calculez le taux de prélèvement." }, { a: 60, t: "Jusqu'à la retraite : y a-t-il une pension ? Que couvre la protection sociale en cas de maladie ?" }, { a: 999, t: "Jusqu'à la fin de la vie, puis imprimez votre fiche de synthèse." }], t: "Chapitre 4 · Les politiques sociales", q: [
       "Calculez le taux de prélèvement obligatoire de votre personnage à 40 ans. Le système est-il progressif ?",
       "Distinguez cotisations sociales et impôts. Quelles prestations relèvent d'une logique d'assurance, lesquelles d'une logique d'assistance ?",
       "Donnez un exemple de redistribution verticale et un de redistribution horizontale observés dans la vie du personnage.",
@@ -42,7 +42,7 @@
     '11': { d: 'Indice de développement estimé (santé, éducation, revenu) et chocs environnementaux vécus.', pre: [{ n: 'Développement élevé · moyen · faible', p: ['NOR', 'BRA', 'NER'], w: 'Santé, éducation et revenu très contrastés.' }, { n: 'France ↔ Niger', p: ['FRA', 'NER'], w: 'Deux niveaux de développement et d\u2019exposition aux chocs.' }], g: [{ a: 40, t: "Vivez jusqu'à 40 ans : notez les chocs environnementaux (sécheresse, inondation, eau)." }, { a: 999, t: "Jusqu'à la fin : comparez l'indice de développement de votre pays avec celui des autres." }], t: "Chapitre 11 · Croissance et développement durable", q: [
       "Comparez l'indice de développement estimé de votre pays avec celui de votre voisin : quels indicateurs expliquent l'écart ?",
       "Quels événements de la vie (sécheresse, inondation, eau, santé) montrent des limites d'une croissance non soutenable ?" ] },
-    '12': { d: 'Seuils de pauvreté absolue et relative, part de la population pauvre, années vécues sous les seuils.', pre: [{ n: 'Pauvreté absolue et relative', p: ['FRA', 'BRA', 'NER'], w: 'France : surtout relative ; Niger : surtout absolue ; Brésil : fortes inégalités.' }, { n: 'Riche · intermédiaire · pauvre', p: ['DEU', 'BRA', 'ETH'], w: 'Trois niveaux de richesse pour voir reculer la pauvreté absolue.' }, { n: 'Inégalités fortes ↔ faibles', p: ['ZAF', 'SVK'], w: 'Un Gini très élevé face à un Gini très faible.' }], g: [{ a: 18, t: "Jusqu'à 18 ans : le niveau de vie dépend du ménage des parents. Notez le quartile du milieu familial." }, { a: 30, t: "Première vie active : le revenu disponible passe-t-il au-dessus des deux seuils ? À quel âge ?" }, { a: 40, t: "Arrêtez à 40 ans (pause) : notez les années passées sous le seuil absolu et sous le seuil relatif." }, { a: 65, t: "Repérez ce qui aggrave ou réduit la pauvreté : santé, études, enfants, dettes." }, { a: 999, t: "Jusqu'à la fin : retraite sans pension ? Comparez avec l'autre pays." }], t: "Chapitre 12 · La réduction de la pauvreté", q: [
+    '12': { d: 'Seuils de pauvreté absolue et relative, part de la population pauvre, années vécues sous les seuils.', pre: [{ n: 'Pauvreté absolue et relative', p: ['FRA', 'BRA', 'NER'], w: 'France : surtout relative ; Niger : surtout absolue ; Brésil : fortes inégalités.' }, { n: 'Riche · intermédiaire · pauvre', p: ['DEU', 'BRA', 'ETH'], w: 'Trois niveaux de richesse pour voir reculer la pauvreté absolue.' }, { n: 'Inégalités fortes ↔ faibles', p: ['ZAF', 'SVK'], w: 'Un Gini très élevé face à un Gini très faible.' }], g: [{ a: 18, t: "Jusqu'à 18 ans : dans « Les chiffres », lisez le revenu du ménage de vos parents face aux deux seuils de pauvreté, et notez le quartile du milieu familial." }, { a: 30, t: "Première vie active : le revenu disponible passe-t-il au-dessus des deux seuils ? À quel âge ?" }, { a: 40, t: "Arrêtez à 40 ans (pause) : notez les années passées sous le seuil absolu et sous le seuil relatif." }, { a: 65, t: "Repérez ce qui aggrave ou réduit la pauvreté : santé, études, enfants, dettes." }, { a: 999, t: "Jusqu'à la fin : retraite sans pension ? Comparez avec l'autre pays." }], t: "Chapitre 12 · La réduction de la pauvreté", q: [
       "Votre personnage est-il pauvre en termes absolus ? en termes relatifs ? À quels âges ?",
       "Pourquoi un même niveau de vie peut-il être « pauvre » dans un pays et pas dans un autre ?",
       "Quels facteurs (famille, études, santé, protection sociale) ont aggravé ou réduit sa pauvreté ?" ] },
@@ -146,10 +146,85 @@
   const chip = (txt, cls) => '<span class="cl-chip ' + (cls || '') + '">' + txt + '</span>';
   const note = (txt) => '<p class="cl-note">' + txt + '</p>';
 
+
+  // ---------- Avant 18 ans : ce que la collectivité verse déjà pour l'enfant (estimations du modèle) ----------
+  function childState(L) {
+    const c = L.countryData, base = 0.55 * (c.ppp || 12000), r = socialRate(c), oop = (c.oop != null ? c.oop : 30) / 100;
+    const hh = probe(L, L.stats.incomeQuartile || 1);
+    return { fam: r * 0.15 * base, hcov: 0.035 * base * (1 - oop), school: Math.min(0.9, r * 3), hhNet: hh.net, hhPrel: hh.taxes, hhGross: hh.gross };
+  }
+  function childTable(L) {
+    const k = childState(L);
+    return '<h5>Ce que la collectivité verse déjà pour vous (estimation par an)</h5>' + table([
+      ['<b>Allocations familiales</b> versées à vos parents <small>(universelles · redistribution horizontale)</small>', money$(k.fam)],
+      ['<b>Santé</b> : soins d\'un enfant pris en charge par la protection sociale <small>(logique d\'assurance)</small>', money$(k.hcov)],
+      ['<b>Études</b> : part des frais d\'études financée par l\'État', pct(k.school)],
+      ['Prélèvements payés par vos parents (cotisations et impôts, estimation)', money$(k.hhPrel)],
+    ]) + note('Votre personnage est mineur : ce sont ses parents qui perçoivent et paient. Les montants dépendent du milieu familial (quartile ' + (L.stats.incomeQuartile || 1) + ' sur 4).');
+  }
+  const logHit = (L, re) => { const e = (L.log || []).filter((x) => re.test(x.text || '')).slice(-1)[0]; return e ? e.age + ' ans : ' + e.text.slice(0, 90) : null; };
+  const carnetHit = (L, re) => { const x = (L.carnet || []).filter((y) => re.test(y.n + ' ' + y.t)).slice(-1)[0]; return x ? x.age + ' ans : ' + x.n : null; };
+  const histHas = (L, fn) => Object.keys(L.hist || {}).some((a) => L.hist[a].b && fn(L.hist[a], +a));
+  // Éléments à identifier selon le chapitre : chacun se coche tout seul quand le jeu en fournit un exemple.
+  function identify(ch, L) {
+    const b = L.budget || {}, c = L.countryData, k = childState(L), adult = L.age >= 18;
+    const I = (t, ex) => ({ t, ok: !!ex, ex: ex || null });
+    const ex = (v) => v || null;
+    switch (String(ch)) {
+      case '1': return [
+        I("Une mission régalienne de l'État (sécurité, justice, défense)", logHit(L, /police|sécurité|tribunal|justice|cambriol|armée|conscription|frontière|violence|guerre|arrêt|vol/i) || 'dans ce pays : ' + c.hom + ' homicides pour 100 000 habitants (la sécurité est une mission de l\'État)'),
+        I("Un service public (école, santé, vaccination)", logHit(L, /école|collège|lycée|universit|vaccin|hôpital|soins|médecin|dépistage|concours/i) || 'dans ce pays : ' + c.eys + ' ans de scolarité attendue, reste à charge en santé ' + c.oop + ' %'),
+        I("Une prestation versée par l'État", adult ? ((b.aid > 0 || b.pension > 0) ? 'cette année : ' + money$((b.aid || 0) + (b.pension || 0)) : logHit(L, /aide|allocation|pension|bourse|prime/i)) : 'allocations familiales estimées : ' + money$(k.fam) + ' par an'),
+        I("Un prélèvement (impôt ou cotisation)", adult ? (b.taxes > 0 ? 'cette année : ' + money$(b.taxes) : null) : 'payé par vos parents : ' + money$(k.hhPrel) + ' par an'),
+      ];
+      case '2': return [
+        I("Une externalité positive", carnetHit(L, /externalité positive|bien public/i)), I("Une externalité négative", carnetHit(L, /externalité négative/i)),
+        I("Une asymétrie d'information", carnetHit(L, /asymétrie|information/i)), I("Un bien public ou un bien commun", carnetHit(L, /bien public|bien commun/i)),
+        I("Une défaillance de l'État", carnetHit(L, /défaillance de l'état|corruption/i)),
+      ];
+      case '3': return [
+        I("Un épisode d'inflation (prix qui montent)", carnetHit(L, /inflation/i) || logHit(L, /inflation|prix/i)),
+        I("Un crédit ou une dette", carnetHit(L, /crédit|prêt/i) || logHit(L, /crédit|emprunt|dette|prêt/i)),
+        I("Le bilan budgétaire (prélèvements et prestations)", adult ? 'cette année : prélèvements ' + money$(b.taxes || 0) + ', prestations ' + money$(b.aid || 0) : null),
+      ];
+      case '4': return [
+        I("Des cotisations sociales", adult && b.cotis > 0 ? money$(b.cotis) + ' cette année' : null),
+        I("Des impôts", adult && b.impots > 0 ? money$(b.impots) + ' cette année' : null),
+        I("Une prestation d'assistance (sous conditions de ressources)", histHas(L, (h) => h.b.aa > 0) ? 'perçue dans la vie du personnage' : null),
+        I("Des prestations familiales", adult ? (histHas(L, (h) => h.b.af > 0) ? 'perçues dans la vie du personnage' : null) : money$(k.fam) + ' par an (estimation)'),
+        I("Un reste à charge en santé", adult && b.health > 0 ? money$(b.health) + ' cette année' : null),
+        I("Une pension de retraite", L.stats.employment === 'retired' && hasPension(L) ? 'pension versée' : null),
+      ];
+      case '5': return [
+        I("Une période d'études", histHas(L, (h) => h.emp === 'university') ? 'études supérieures' : (L.age >= 6 ? 'scolarité depuis 6 ans' : null)),
+        I("Une période d'emploi", histHas(L, (h) => h.emp === 'employed') ? 'oui' : null),
+        I("Une période sans emploi ou inactif", histHas(L, (h, a) => a >= 18 && h.emp === 'none') ? 'oui' : null),
+        I("La retraite, ou un travail sans droit à pension", L.stats.employment === 'retired' || (L.age >= 60 && !hasPension(L)) ? (hasPension(L) ? 'retraite avec pension' : 'sans pension') : null),
+      ];
+      case '8': return [
+        I("Un lien avec l'étranger (migration, transfert d'argent, emploi à l'étranger)", logHit(L, /migr|étranger|passeur|expuls|frontière|transfert|envoy|visa|Golfe/i)),
+        I("L'accès à Internet du pays", c.net != null ? c.net + ' % de la population' : null),
+        I("Un écart de niveau de vie avec un autre pays", 'PIB par habitant : ' + money$(c.ppp) + ' contre ' + money$(countryById('FRA').ppp) + ' en France'),
+      ];
+      case '11': return [
+        I("Un choc environnemental (sécheresse, inondation, incendie, eau)", logHit(L, /sécheresse|inondation|incendie|eau|tremblement|mousson|cyclone/i)),
+        I("L'indice de développement estimé du pays", 'indice ' + idh(c).v.toFixed(2).replace('.', ',')),
+        I("L'espérance de vie et la scolarité du pays", c.le + ' ans · ' + c.eys + ' ans de scolarité attendue'),
+      ];
+      case '12': return [
+        I("Le quartile du milieu familial", 'quartile ' + (L.stats.incomeQuartile || 1) + ' sur 4'),
+        I("Une année sous le seuil de pauvreté absolue", histHas(L, (h, a) => a >= 18 && (h.b.nv != null ? h.b.nv : h.b.net) < Z_ABS) ? 'oui' : null),
+        I("Une année sous le seuil de pauvreté relative", histHas(L, (h, a) => a >= 18 && (h.b.nv != null ? h.b.nv : h.b.net) < zRelOf(c)) ? 'oui' : null),
+        I("Un facteur qui aggrave ou réduit la pauvreté (santé, dettes, études, enfants)", carnetHit(L, /pauvreté|dette|éducation/i) || logHit(L, /dette|chômage|malad|bourse|aide/i)),
+      ];
+      default: return [];
+    }
+  }
+
   // ---------- Observation par chapitre ----------
   function viewCh4(L) {
     const b = L.budget || {}, c = L.countryData;
-    if (L.age < 18) return note("Votre personnage est mineur : ses parents financent ses besoins. Avancez jusqu'à la vie active pour observer cotisations, impôts et prestations.");
+    if (L.age < 18) return childTable(L) + note("Avancez jusqu'à la vie active pour voir cotisations, impôts et prestations du personnage lui-même.");
     const gross = b.gross || 0, prel = b.taxes || 0, taux = gross > 0 ? prel / gross : 0;
     const recu = (b.aid || 0) + (b.healthCovered || 0) + (b.pensionAssist || 0);
     const rows = [
@@ -180,7 +255,7 @@
   }
   function viewCh12(L) {
     const b = L.budget || {}, c = L.countryData, hist = L.hist || {};
-    if (L.age < 18) return note('Avant 18 ans, le niveau de vie dépend du ménage des parents (quartile ' + (L.stats.incomeQuartile || 1) + ' sur 4). Avancez jusqu\'à la vie active.');
+    if (L.age < 18) { const k = childState(L), c0 = L.countryData; return '<h5>Le ménage de vos parents</h5>' + table([['Quartile du milieu familial', (L.stats.incomeQuartile || 1) + ' sur 4'], ['Revenu disponible estimé du ménage', money$(k.hhNet)], ['Seuil de pauvreté absolue', money$(Z_ABS), k.hhNet < Z_ABS ? chip('Sous le seuil', 'no') : chip('Au-dessus', 'ok')], ['Seuil de pauvreté relative', money$(zRelOf(c0)), k.hhNet < zRelOf(c0) ? chip('Sous le seuil', 'no') : chip('Au-dessus', 'ok')], ['Allocations familiales reçues par vos parents (par an)', money$(k.fam)]]) + note("Avant 18 ans, le niveau de vie du personnage est celui de ses parents. Avancez ensuite jusqu'à la vie active."); }
     const net = b.nv != null ? b.nv : (b.net || 0), za = Z_ABS, zr = zRelOf(c);
     let yAbs = 0, yRel = 0, yN = 0;
     Object.keys(hist).forEach((a) => { if (+a >= 18 && hist[a].b) { yN++; const v = hist[a].b.nv != null ? hist[a].b.nv : hist[a].b.net; if (v < za) yAbs++; if (v < zr) yRel++; } });
@@ -200,7 +275,7 @@
   }
   function viewCh1(L) {
     const b = L.budget || {}, c = L.countryData;
-    if (L.age < 18) return note("Votre personnage est mineur : observez le tableau des États ci-dessous et revenez à l'âge adulte.") + compare(L);
+    if (L.age < 18) return childTable(L) + compare(L);
     const paye = b.taxes || 0, recu = (b.aid || 0) + (b.healthCovered || 0) + (b.pension || 0);
     return "<h5>Ce que l'État prend et ce qu'il rend (cette année)</h5>" + table([
       ['Prélèvements (cotisations + impôts)', money$(paye)], ['Prestations, pension et santé prise en charge', money$(recu)],
@@ -282,7 +357,9 @@
     const L0 = STATE.life, gs = ch.g || [];
     let gi = gs.findIndex((x) => L0.age < x.a); if (gi < 0) gi = gs.length - 1;
     const guide = gs.length ? '<div class="cl-guide"><div class="cl-gsteps">' + gs.map((x, k) => '<i class="' + (k < gi ? 'done' : k === gi ? 'on' : '') + '">' + (k + 1) + '</i>').join('') + '</div><div><b>À faire maintenant · étape ' + (gi + 1) + ' sur ' + gs.length + '</b><br>' + esc(gs[gi].t) + '</div></div>' : '';
-    el.innerHTML = '<h4>🎓 Observation · ' + esc(ch.t) + '</h4>' + guide + body + '<details class="cl-q"><summary>Consignes de la séance</summary><ol>' + q + '</ol></details>';
+    const ids = identify(CL.cfg.c, L0), done = ids.filter((x) => x.ok).length;
+    const idHtml = ids.length ? '<div class="cl-ident"><div class="cl-idh"><b>À identifier</b> · ' + done + ' sur ' + ids.length + ' trouvés <span>Les éléments se cochent tout seuls au fil de la vie.</span></div><ul>' + ids.map((x) => '<li class="' + (x.ok ? 'ok' : '') + '"><u>' + (x.ok ? '✔' : '○') + '</u><span>' + esc(x.t) + (x.ok ? '<em>' + esc(x.ex) + '</em>' : '<em>pas encore trouvé : continuez la vie</em>') + '</span></li>').join('') + '</ul></div>' : '';
+    el.innerHTML = '<h4>🎓 Observation · ' + esc(ch.t) + '</h4><p class="cl-where">👀 <b>Où regarder ?</b> Cette carte verte : la mission du moment, puis la liste « À identifier », puis les chiffres. Le Récit, plus bas, donne les événements.</p>' + guide + idHtml + '<h5 class="cl-chiffres">Les chiffres</h5>' + body + '<details class="cl-q"><summary>Consignes de la séance</summary><ol>' + q + '</ol></details>';
   };
 
   // ---------- Graine commune ----------

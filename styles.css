@@ -2932,3 +2932,14 @@ body.classe-on #view-intro .bt-class{grid-row:3}
 .cl-gsteps i{width:24px;height:24px;border-radius:50%;background:#e4dccb;color:#7a6a55;font:700 12px var(--sans,sans-serif);display:flex;align-items:center;justify-content:center;font-style:normal}
 .cl-gsteps i.done{background:#2f9e8f;color:#fff}.cl-gsteps i.on{background:#2a2118;color:#ffd56a}
 .wz-card i{font-style:normal;opacity:.85}
+
+.cl-where{font-size:13px;margin:4px 0 6px;opacity:.9}
+.cl-ident{background:#fff;border-radius:16px;padding:10px 14px;margin:8px 0}
+.cl-idh{font-size:14px;margin-bottom:4px}.cl-idh span{display:block;font-size:12px;opacity:.7;font-weight:400}
+.cl-ident ul{list-style:none;margin:0;padding:0}
+.cl-ident li{display:flex;gap:10px;padding:6px 0;border-top:1px solid rgba(42,33,24,.1);font-size:13.5px}
+.cl-ident li u{text-decoration:none;width:22px;height:22px;border-radius:50%;background:#e4dccb;display:flex;align-items:center;justify-content:center;flex:none;font-size:12px;color:#7a6a55}
+.cl-ident li.ok u{background:#2f9e8f;color:#fff}
+.cl-ident li span{display:flex;flex-direction:column}.cl-ident li em{font-style:normal;font-size:12.5px;color:#5a4d3e}
+.cl-ident li.ok em{color:#1f6f66;font-weight:600}
+#lifeClasse h5.cl-chiffres{margin-top:16px}
