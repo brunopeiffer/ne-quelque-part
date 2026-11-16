@@ -2646,3 +2646,8 @@ body { font-size: 16px; }
   .ar-table td.ar-v::before{content:attr(data-l) " ";font-weight:400}
   .help-fab{width:34px;height:34px;font-size:15px;bottom:12px;right:10px;opacity:.75}
 }
+
+/* ==== Scènes en pixel art ==== */
+.px-scene{display:block;width:100%;height:auto;aspect-ratio:104/34;border-radius:10px;image-rendering:pixelated}
+.ty-scene{margin-bottom:10px;box-shadow:0 6px 18px -10px rgba(0,0,0,.35);border-radius:10px;overflow:hidden}
+#deathReel .dr-card{height:auto;display:block;font-size:inherit;background:none;box-shadow:0 12px 40px #0008;overflow:hidden;border-radius:10px;width:min(560px,86vw);margin:0 auto 16px}

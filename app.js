@@ -4343,7 +4343,7 @@ function showDeathReel(life) {
   const phase = a => a < 13 ? ['#f6c9a6', '#e9a3a0'] : a < 30 ? ['#a8d8ea', '#c6e6a8'] : a < 60 ? ['#cfd8dc', '#e6d3a8'] : ['#e8c9d8', '#c9b8e8'];
   const slides = [
     `<div class="dr-big">${escapeHtml(nm)}</div><div class="dr-sub">${life.year} – ${life.year + life.deathAge}</div><p>Né${sexE} en ${escapeHtml(localize(c).name)} ${c.flag}, vous êtes mort${sexE} à ${life.deathAge} ans.</p><p class="dr-cause">${escapeHtml(causeLabel(life.cause))}</p>${causeExamples(life.cause) ? `<p class="dr-ex">${escapeHtml(causeExamples(life.cause))}</p>` : ''}`,
-    ...ev.map(e => { const [c1, c2] = phase(e.age); return `<div class="dr-card" style="background:linear-gradient(160deg,${c1},${c2})"><span>${e.icon}</span></div><div class="dr-age">${e.age} ans</div><p>${escapeHtml(e.text)}</p>`; })
+    ...ev.map(e => { const [c1, c2] = phase(e.age); return `<div class="dr-card">${window.PX ? PX.scene(PX.keyFor(e, life), life, String(e.age) + (e.text || '').length) : e.icon}</div><div class="dr-age">${e.age} ans</div><p>${escapeHtml(e.text)}</p>`; })
   ];
   const el = document.createElement('div');
   el.id = 'deathReel';
@@ -5387,7 +5387,8 @@ function renderThisYear() {
   const evt = STATE.life.latestEvent;
   const isEn = LANG === 'en';
   if (!evt) { wrap.innerHTML = `<span class="muted">${isEn ? '(no major event this year yet)':LANG === 'fr' ? "(pas encore d'évènement marquant cette année)" : '（今年尚無重大事件）'}</span>`; return; }
-  wrap.innerHTML = `
+  const scene = window.PX ? '<div class="ty-scene">' + PX.scene(PX.keyFor(evt, STATE.life), STATE.life, String(evt.age) + (evt.text || '').length) + '</div>' : '';
+  wrap.innerHTML = scene + `
     <div class="ty-event">
       <span class="ty-icon">${evt.icon}</span>
       <span class="ty-text">${escapeHtml(evt.text)}</span>
@@ -6080,6 +6081,7 @@ function portraitFor(age, sex) {
 
 // 依國家 + 年齡 + 性別生成 SVG 像素頭像
 function pixelPortraitSVG(country, age, sex) {
+  if (window.PX) return PX.portrait(country, age, sex, STATE.life);   // portrait pixel art qui vieillit
   const region = country?.region || 'eap';
   const skinMap = {
     'eap': '#f0d5b1', 'sa': '#c8a47c', 'eca': '#fde0c8', 'mena': '#e0c098',
