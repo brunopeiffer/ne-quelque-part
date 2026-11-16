@@ -497,10 +497,10 @@
     });
     return { act, inac, etu, yAbs, yRel, aid, hc, rate: sumGross > 0 ? sumPrel / sumGross : 0, avgInc: act ? sumInc / act : 0 };
   }
-  const csvHead = 'classe;eleve;pays;sexe;milieu_quartile;age_deces;cause;patrimoine_final;revenu_moyen_actif;taux_prelevement;aides_cumulees;reste_charge_sante_cumule;annees_pauvrete_absolue;annees_pauvrete_relative;pension;annees_actif;annees_etudes;annees_inactif;notions';
+  const csvHead = 'classe;eleve;pays;sexe;milieu_quartile;age_deces;cause;patrimoine_final;revenu_moyen_actif;taux_prelevement;aides_cumulees;reste_charge_sante_cumule;annees_pauvrete_absolue;annees_pauvrete_relative;pension;annees_actif;annees_etudes;annees_inactif;notions;solde_etat_cumule;sante_prise_en_charge_cumulee';
   function csvLine(L) {
     const r = results(L), c = L.countryData;
-    return [CL.cfg ? CL.cfg.n : '', localStorage.getItem(LS_STU) || '', c.id, L.sex, L.stats.incomeQuartile, L.deathAge || L.age, causeLabel(L.cause || ''), Math.round(L.stats.netAssets), Math.round(r.avgInc), (r.rate * 100).toFixed(1), Math.round(r.aid), Math.round(r.hc), r.yAbs, r.yRel, hasPension(L) ? 'oui' : 'non', r.act, r.etu, r.inac, (L.carnet || []).length].join(';');
+    return [CL.cfg ? CL.cfg.n : '', localStorage.getItem(LS_STU) || '', c.id, L.sex, L.stats.incomeQuartile, L.deathAge || L.age, causeLabel(L.cause || ''), Math.round(L.stats.netAssets), Math.round(r.avgInc), (r.rate * 100).toFixed(1), Math.round(r.aid), Math.round(r.hc), r.yAbs, r.yRel, hasPension(L) ? 'oui' : 'non', r.act, r.etu, r.inac, (L.carnet || []).length, Math.round(cumul(L).solde), Math.round(cumul(L).hcov)].join(';');
   }
   CL.renderEnd = () => {
     const L = STATE.life; if (!CL.cfg || !L || !L.classe) return;
@@ -513,11 +513,52 @@
     $('#clCopy', el).addEventListener('click', () => { const t = csvHead + '\n' + csvLine(L); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => { $('#clMsg', el).textContent = 'Résultats copiés : collez-les dans un tableur ou envoyez-les à votre enseignant.'; }).catch(() => { $('#clMsg', el).textContent = t; }); });
     $('#clAgg2', el).addEventListener('click', aggregator);
   };
+  // Ce que la collectivité a prélevé et versé sur toute la vie (somme des années de l'historique).
+  function cumul(L) {
+    const hist = L.hist || {}; let prel = 0, aa = 0, af = 0, hcov = 0, pen = 0, hc = 0, cot = 0, imp = 0;
+    Object.keys(hist).forEach((k) => { const b = hist[k].b; if (!b) return; cot += b.cot; imp += b.imp; prel += b.cot + b.imp; aa += b.aa; af += b.af; hcov += Math.max(0, b.ht - b.hc); pen += b.pen; hc += b.hc; });
+    const recu = aa + af + hcov + pen;
+    return { cot, imp, prel, aa, af, hcov, pen, hc, recu, solde: recu - prel };
+  }
+  // Bloc propre au chapitre, à partir de l'historique de la vie (pas seulement de la dernière année).
+  function chapterBlock(L, ch) {
+    const c = L.countryData, hist = L.hist || {}, cu = cumul(L), k = childState(L), r = results(L);
+    const row3 = (a, b2, c2) => [a, b2, c2 == null ? '' : c2];
+    const evts = (re) => (L.log || []).filter((e) => re.test(e.text || '')).slice(-6).map((e) => '<li>' + e.age + ' ans : ' + esc(e.text) + '</li>').join('') || '<li>Aucun épisode relevé.</li>';
+    switch (String(ch)) {
+      case '1': return '<h2>Ce que l’État a prélevé et versé sur toute la vie</h2>' + table([
+        ['Prélèvements obligatoires (cotisations ' + money$(cu.cot) + ' + impôts ' + money$(cu.imp) + ')', money$(cu.prel)],
+        ['Prestations sous conditions de ressources (assistance)', money$(cu.aa)], ['Prestations familiales à l’âge adulte', money$(cu.af)],
+        ['Santé prise en charge par la protection sociale', money$(cu.hcov)], ['Pensions de retraite', money$(cu.pen)],
+        ['= Total reçu', money$(cu.recu), null, 'cl-sum'], ['Solde avec l’État (reçu − prélevé)', sgn(cu.solde), null, 'cl-key']])
+        + '<p class="cl-small">Pendant l’enfance (estimation, par an) : allocations familiales versées aux parents ' + money$(k.fam) + ' · soins pris en charge ' + money$(k.hcov) + ' · ' + pct(k.school) + ' des frais d’études financés par l’État.</p>'
+        + rolesTable(c) + compare(L);
+      case '3': return '<h2>Inflation, crédit et pouvoir d’achat</h2><ul>' + evts(/inflation|prix|crédit|emprunt|dette|prêt/i) + '</ul>' + table([['Prélèvements sur la vie', money$(cu.prel)], ['Prestations et santé prise en charge', money$(cu.recu - cu.pen)], ['Solde de l’État vis-à-vis du personnage (pensions incluses)', sgn(cu.solde), null, 'cl-key']]) + compare(L);
+      case '4': {
+        const q = [1, 2, 3, 4].map((x) => { const p = probe(L, x); return [x === 1 ? 'Quartile 1 (revenus les plus bas)' : x === 4 ? 'Quartile 4 (revenus les plus hauts)' : 'Quartile ' + x, pct(p.gross ? p.taxes / p.gross : 0, 1)]; });
+        const rr = socialRate(c), oop = c.oop != null ? c.oop : 30;
+        const risks = [['Maladie', (100 - oop) + ' % remboursé'], ['Vieillesse', hasPension(L) ? 'pension contributive' : 'pas de pension'], ['Famille', rr >= 0.05 ? 'prestations familiales' : 'très limitées'], ['Chômage', rr >= 0.12 ? 'indemnisation' : 'peu ou pas'], ['Pauvreté', rr >= 0.08 ? 'aides sous conditions' : 'très limitées']];
+        return '<h2>Progressivité des prélèvements dans ' + esc(localize(c).name) + '</h2>' + table(q) + '<h2>Risques sociaux couverts (estimation du modèle)</h2>' + table(risks)
+          + '<h2>Assurance et assistance sur la vie</h2>' + table([['Cotisations versées (logique d’assurance)', money$(cu.cot)], ['Santé prise en charge', money$(cu.hcov)], ['Pensions reçues', money$(cu.pen)], ['Assistance reçue (sous conditions de ressources)', money$(cu.aa)], ['Prestations familiales reçues', money$(cu.af)]]);
+      }
+      case '5': return '<h2>Statut sur le marché du travail</h2>' + table([['Années d’activité (actif occupé)', r.act + ' ans'], ['Années d’études supérieures', r.etu + ' ans'], ['Années sans emploi ou inactif (hors retraite)', r.inac + ' ans'], ['Droit à une pension', hasPension(L) ? 'oui' : 'non']]) + '<p class="cl-small">Pour un taux d’activité ou d’emploi, utilisez le tableau de classe.</p>';
+      case '8': return '<h2>Liens avec l’étranger</h2><ul>' + evts(/migr|étranger|passeur|expuls|frontière|transfert|envoy|visa|Golfe/i) + '</ul>' + table([['Usage d’Internet dans le pays', c.net != null ? c.net + ' %' : '—'], ['PIB par habitant (parité de pouvoir d’achat)', money$(c.ppp)]]);
+      case '11': { const d = idh(c), f = (v) => v.toFixed(2).replace('.', ','); return '<h2>Indice de développement estimé</h2>' + table([['Santé (espérance de vie ' + c.le + ' ans)', f(d.h)], ['Éducation (scolarité attendue ' + c.eys + ' ans)', f(d.e)], ['Revenu (PIB par habitant)', f(d.i)], ['Indice', f(d.v), null, 'cl-key']]) + '<h2>Chocs environnementaux vécus</h2><ul>' + evts(/sécheresse|inondation|incendie|eau|tremblement|mousson|cyclone/i) + '</ul>'; }
+      case '12': {
+        const ages = [20, 30, 40, 50, 60, 70].filter((a) => hist[a] && hist[a].b);
+        const zr = zRelOf(c), refs = [c, countryById('FRA'), countryById('NER')].filter((x, i2, a) => x && a.findIndex((y) => y.id === x.id) === i2);
+        return '<h2>Niveau de vie et seuils de pauvreté</h2><p class="cl-small">Seuil absolu : ' + money$(Z_ABS) + ' · seuil relatif (60 % du niveau de vie médian) : ' + money$(zr) + '</p>'
+          + table([['Âge', 'Niveau de vie', 'Sous le seuil absolu ?', 'Sous le seuil relatif ?']].concat(ages.map((a) => { const v = hist[a].b.nv != null ? hist[a].b.nv : hist[a].b.net; return [String(a), money$(v), v < Z_ABS ? 'oui' : 'non', v < zr ? 'oui' : 'non']; })))
+          + '<p>Années sous le seuil absolu : <b>' + r.yAbs + '</b> · sous le seuil relatif : <b>' + r.yRel + '</b></p><h2>Part de la population sous les seuils (estimation)</h2>' + table(refs.map((x) => [countryNm(x), 'absolue ' + pct(rateUnder(x, Z_ABS)), 'relative ' + pct(rateUnder(x, zRelOf(x)))]));
+      }
+      default: return '';
+    }
+  }
   function printSheet(L) {
-    const ch = CHAPS[CL.cfg.c] || CHAPS['4'], c = L.countryData, hist = L.hist || {}, r = results(L), d = idh(c);
+    const ch = CHAPS[CL.cfg.c] || CHAPS['4'], c = L.countryData, hist = L.hist || {}, r = results(L), d = idh(c), cu = cumul(L);
     const ages = [20, 30, 40, 50, 60, 70, 80].filter((a) => hist[a] && hist[a].b);
-    const head = "<tr><th>Âge</th><th>Revenu d'activité</th><th>Pension</th><th>Cotisations</th><th>Impôts</th><th>Assistance</th><th>Fam.</th><th>Santé (reste à charge)</th><th>Revenu disponible</th><th>Patrimoine</th></tr>";
-    const rows = ages.map((a) => { const h = hist[a], b = h.b; return '<tr><td>' + a + '</td><td>' + money$(b.inc) + '</td><td>' + money$(b.pen) + '</td><td>' + money$(b.cot) + '</td><td>' + money$(b.imp) + '</td><td>' + money$(b.aa) + '</td><td>' + money$(b.af) + '</td><td>' + money$(b.hc) + '</td><td>' + money$(b.net) + '</td><td>' + money$(h.a) + '</td></tr>'; }).join('');
+    const head = '<tr><th>Âge</th><th>Revenu d’activité</th><th>Pension</th><th>Cotisations</th><th>Impôts</th><th>Assistance</th><th>Prest. familiales</th><th>Santé prise en charge</th><th>Santé reste à charge</th><th>Revenu disponible</th><th>Solde avec l’État</th><th>Patrimoine</th></tr>';
+    const rows = ages.map((a) => { const h = hist[a], b = h.b, hcov = Math.max(0, b.ht - b.hc), solde = b.aa + b.af + hcov + b.pen - b.cot - b.imp; return '<tr><td>' + a + '</td><td>' + money$(b.inc) + '</td><td>' + money$(b.pen) + '</td><td>' + money$(b.cot) + '</td><td>' + money$(b.imp) + '</td><td>' + money$(b.aa) + '</td><td>' + money$(b.af) + '</td><td>' + money$(hcov) + '</td><td>' + money$(b.hc) + '</td><td>' + money$(b.net) + '</td><td>' + sgn(solde) + '</td><td>' + money$(h.a) + '</td></tr>'; }).join('');
     const carnet = (L.carnet || []).map((x) => '<li><b>' + esc(x.n) + '</b> (' + x.age + ' ans, chap. ' + x.ch + ') — ' + esc(x.t) + ' <em>Choix : ' + esc(x.label) + '</em></li>').join('') || '<li>Aucune notion enregistrée.</li>';
     const qs = ch.q.map((x) => '<li>' + esc(x) + '<div class="cl-lines"></div></li>').join('');
     const f = L.sex === 'F' ? 'e' : '';
@@ -526,8 +567,9 @@
     el.innerHTML = '<div class="cp-bar"><button type="button" onclick="window.print()">Imprimer</button><button type="button" onclick="document.getElementById(\'classePrint\').remove()">Fermer</button></div>'
       + '<h1>Né quelque part · Fiche de séance</h1><p><b>' + esc(CL.cfg.n) + '</b> · ' + esc(ch.t) + ' · élève : ' + esc(localStorage.getItem(LS_STU) || '………………') + '</p>'
       + '<h2>Le personnage</h2><p>' + esc(L.name.full || L.name.full_en || '') + ' · ' + (L.sex === 'F' ? 'femme' : 'homme') + ' · né' + f + ' en ' + esc(localize(c).name) + ' (' + (L.stats.birthPlaceType === 'rural' ? 'campagne' : 'ville') + ') · milieu familial : quartile ' + L.stats.incomeQuartile + ' sur 4 · décédé' + f + ' à ' + (L.deathAge || L.age) + ' ans (' + esc(causeLabel(L.cause || '')) + ') · patrimoine final ' + money$(L.stats.netAssets) + '.</p>'
-      + '<h2>Ses ressources, âge par âge</h2><table class="cp-t">' + head + rows + '</table><p class="cl-small">Montants en euros, parité de pouvoir d\'achat. Estimations du modèle du jeu.</p>'
-      + '<h2>Bilan</h2><ul><li>Taux de prélèvement moyen sur la vie : <b>' + pct(r.rate, 1) + '</b></li><li>Prestations d\'assistance et familiales reçues : <b>' + money$(r.aid) + '</b></li><li>Reste à charge de santé cumulé : <b>' + money$(r.hc) + '</b></li><li>Années sous le seuil de pauvreté absolue : <b>' + r.yAbs + '</b> · relative : <b>' + r.yRel + '</b></li><li>Années d\'activité : ' + r.act + ' · d\'études : ' + r.etu + ' · sans emploi ou inactif : ' + r.inac + '</li><li>Droit à une pension de retraite : <b>' + (hasPension(L) ? 'oui' : 'non') + '</b> · indice de développement estimé du pays : <b>' + d.v.toFixed(2).replace('.', ',') + '</b></li></ul>'
+      + '<h2>Ses ressources et ses relations avec la collectivité, âge par âge</h2><table class="cp-t cp-wide">' + head + rows + '</table><p class="cl-small">Montants annuels en euros, parité de pouvoir d’achat. Le solde avec l’État = prestations + santé prise en charge + pension − cotisations − impôts. Estimations du modèle du jeu.</p>'
+      + '<h2>Bilan de la vie</h2><ul><li>Prélèvements obligatoires versés : <b>' + money$(cu.prel) + '</b> (taux moyen ' + pct(r.rate, 1) + ')</li><li>Reçu de la collectivité : <b>' + money$(cu.recu) + '</b> (assistance ' + money$(cu.aa) + ' · prestations familiales ' + money$(cu.af) + ' · santé prise en charge ' + money$(cu.hcov) + ' · pensions ' + money$(cu.pen) + ')</li><li>Solde avec l’État : <b>' + sgn(cu.solde) + '</b></li><li>Reste à charge de santé cumulé : <b>' + money$(cu.hc) + '</b></li><li>Années sous le seuil de pauvreté absolue : <b>' + r.yAbs + '</b> · relative : <b>' + r.yRel + '</b></li><li>Années d’activité : ' + r.act + ' · d’études : ' + r.etu + ' · sans emploi ou inactif : ' + r.inac + '</li><li>Droit à une pension de retraite : <b>' + (hasPension(L) ? 'oui' : 'non') + '</b> · indice de développement estimé du pays : <b>' + d.v.toFixed(2).replace('.', ',') + '</b></li></ul>'
+      + chapterBlock(L, CL.cfg.c)
       + '<h2>Notions rencontrées</h2><ul>' + carnet + '</ul><h2>Questions</h2><ol>' + qs + '</ol>';
     document.body.appendChild(el);
   }

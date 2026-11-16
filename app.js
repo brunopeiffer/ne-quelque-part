@@ -5389,6 +5389,14 @@ function renderLife() {
 /* v5.14：本年最重要事件 */
 function renderThisYear() {
   if (!STATE.life) return;
+  // Bandeau fin dans la barre du haut : le fait marquant de l'année, sur une seule ligne, à côté de l'âge.
+  { const box = document.querySelector('#view-life .ltb-agebox'), ev0 = STATE.life.latestEvent;
+    if (box) {
+      let tk = document.getElementById('ltbEvent');
+      if (!tk) { tk = document.createElement('div'); tk.id = 'ltbEvent'; tk.className = 'ltb-event'; box.after(tk); }
+      if (ev0) { const txt = (ev0.icon || '') + ' ' + ev0.text; if (tk.dataset.ev !== txt) { tk.dataset.ev = txt; tk.title = ev0.age + ' ans : ' + ev0.text; tk.innerHTML = '<b>' + ev0.age + ' ans</b><span>' + escapeHtml(txt) + '</span>'; tk.classList.remove('flash'); void tk.offsetWidth; tk.classList.add('flash'); } }
+      else { tk.innerHTML = ''; tk.dataset.ev = ''; }
+    } }
   const wrap = $('#lifeThisYearBody');
   if (!wrap) return;
   const evt = STATE.life.latestEvent;

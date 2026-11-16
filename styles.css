@@ -2946,3 +2946,40 @@ body.classe-on #view-intro .bt-class{grid-row:3}
 
 .cl-ident li{cursor:pointer}.cl-ident li:hover{background:rgba(217,240,163,.35)}
 .cl-ident li em.hint{color:#8a6d3b;font-weight:400}
+
+/* ==== Fait marquant en bandeau dans la barre du haut ; récit en premier dans « Maintenant » ==== */
+.ltb-event{flex:1 1 280px;min-width:0;display:flex;align-items:center;gap:10px;background:#ffe3a3;border-radius:999px;padding:4px 14px;font-size:14px;line-height:1.2;color:#2a2118;overflow:hidden}
+.ltb-event b{flex:none;font-size:12px;background:#2a2118;color:#ffd56a;border-radius:999px;padding:2px 8px}
+.ltb-event span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.ltb-event:empty{display:none}
+.ltb-event.flash{animation:ltbFlash 1.2s ease-out}
+@keyframes ltbFlash{0%{background:#ffb347;transform:scale(1.02)}100%{background:#ffe3a3;transform:none}}
+body.theme-dark .ltb-event{background:#4a3b1c;color:#ffe3a3}
+@media (max-width:720px){.ltb-event{flex:1 0 100%;order:5}}
+#view-life #lifeThisYear{display:none}
+#view-life .life-grid > .zone-h:first-child{order:0 !important}
+#view-life #lifeEventsFeed{order:1 !important;max-height:420px}
+#view-life #lifeClasse{order:2 !important}
+#view-life #lifeManualDecisions{order:3 !important}
+#view-life .life-grid > .zone-h:not(:first-child){order:4 !important}
+@media (min-width:900px){
+  .life-topbar .ltb-inner{flex-wrap:wrap}
+  .life-topbar .ltb-agebox{min-width:150px;max-width:210px;flex:0 0 auto}
+  .life-topbar .ltb-event{flex:1 1 0;order:0}
+  .life-topbar .ltb-speed{flex:0 0 auto;margin-left:auto}
+  .ltb-vitals{order:9}
+}
+
+@media (min-width:900px){
+  .life-topbar #btnAuto{font-size:0;width:40px;padding:0}
+  .life-topbar #btnAuto::before{content:'⏩';font-size:16px}
+}
+#view-life #lifeActualVsRandom,#view-life #lifeScene,#view-life #lifeCompanions{order:5 !important}
+#view-life .life-grid > .life-meta-controls{order:6 !important}
+#view-life .life-grid > #btnDetailToggle{order:7 !important}
+#view-life .life-grid > .life-detail-only{order:8 !important}
+
+#classePrint .cp-wide{font-size:10px}#classePrint .cp-wide th,#classePrint .cp-wide td{padding:2px 3px}
+#classePrint .cl-t{width:100%;border-collapse:collapse;font-size:12px;margin:4px 0}#classePrint .cl-t td,#classePrint .cl-t th{border:1px solid #999;padding:3px 6px;text-align:left}
+#classePrint .cl-t td:nth-child(2){text-align:right;white-space:nowrap}#classePrint .cl-t tr.cl-sum td{font-weight:700;background:#eee}#classePrint .cl-t tr.cl-key td{font-weight:700}
+#classePrint .cl-small{font-size:11px;color:#444}
