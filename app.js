@@ -886,7 +886,7 @@ const EXTRA_DECISIONS = [
       { k: 'feed', icon: '🍖', fr: "Lui donner à manger, puis le laisser repartir", en: "Feed it, then let it go", fx: { happy: 1 } },
       { k: 'shoo', icon: '🚪', fr: "Fermer la porte", en: "Close the door", fx: { happy: -1 } },
     ] },
-  { id: 'sm_cheat', kind: 'small', min: 10, max: 16, p: 0.10, when: (life) => life.stats.education >= 1,
+  { id: 'sm_cheat', kind: 'small', min: 10, max: 16, p: 0.10, when: (life) => inSchool(life),
     fr: ["Les réponses du contrôle", "Pendant le contrôle, votre voisin de table pousse discrètement sa copie vers vous."],
     en: ["The test answers", "During the test, the pupil next to you quietly slides their paper your way."],
     choices: [
@@ -894,7 +894,7 @@ const EXTRA_DECISIONS = [
       { k: 'refuse', icon: '✋', fr: "Faire le contrôle seul(e)", en: "Do the test on your own", fx: { know: 2 } },
       { k: 'tell', icon: '🧑‍🏫', fr: "Le dire au professeur", en: "Tell the teacher", fx: { know: 1, social: -3 } },
     ] },
-  { id: 'sm_bully', kind: 'small', min: 9, max: 15, p: 0.10, when: (life) => life.stats.education >= 1,
+  { id: 'sm_bully', kind: 'small', min: 9, max: 15, p: 0.10, when: (life) => inSchool(life),
     fr: ["Dans la cour", "Un élève plus petit se fait bousculer par un groupe, tous les jours au même endroit."],
     en: ["In the schoolyard", "A smaller pupil gets shoved around by a group, every day in the same spot."],
     choices: [
@@ -1237,7 +1237,7 @@ const EXTRA_DECISIONS = [
       { k: 'note', icon: '✉️', fr: "Glisser un mot anonyme", en: "Slip an anonymous note", fx: { happy: 1 } },
       { k: 'quiet', icon: '🤐', fr: "Ne rien dire", en: "Say nothing", fx: {} },
     ] },
-  { id: 'de_meet', kind: 'family', min: 17, max: 45, p: 0.2, priority: true, repeat: true, when: (life) => relOf(life) !== 'married' && !life.stats.partner && !arrangedNorm(life),
+  { id: 'de_meet', kind: 'family', min: 17, max: 45, p: 0.35, priority: true, repeat: true, when: (life) => relOf(life) !== 'married' && !life.stats.partner && !arrangedNorm(life),
     fr: ["Une rencontre", "Vous revoyez souvent la même personne. Elle semble chercher votre compagnie, et vous la sienne."],
     en: ["Meeting someone", "You keep running into the same person. They seem to seek your company, and you theirs."],
     choices: [
@@ -1245,7 +1245,7 @@ const EXTRA_DECISIONS = [
       { k: 'friend', icon: '🤝', fr: "Rester ami(e)s", en: "Stay friends", fx: { social: 2 } },
       { k: 'away', icon: '🚶', fr: "Garder vos distances", en: "Keep your distance", fx: {} },
     ] },
-  { id: 'fa_arranged', kind: 'family', min: 18, max: 30, p: 0.18, priority: true, repeat: true, when: (life) => relOf(life) === 'single' && !life.stats.partner && arrangedNorm(life),
+  { id: 'fa_arranged', kind: 'family', min: 18, max: 30, p: 0.5, priority: true, repeat: true, when: (life) => relOf(life) === 'single' && !life.stats.partner && arrangedNorm(life),
     fr: ["Une proposition de mariage", "Vos parents ont rencontré une autre famille. Ils vous présentent quelqu'un qu'ils jugent convenable."],
     en: ["A marriage proposal", "Your parents have met another family. They introduce someone they consider suitable."],
     choices: [
@@ -1272,7 +1272,61 @@ const EXTRA_DECISIONS = [
       { k: 'free', icon: '🕊️', fr: "Rester en union libre", en: "Stay unmarried partners", fx: { happy: 1 } },
       { k: 'split', icon: '💔', fr: "Vous séparer", en: "Split up", fx: { rel: 'single', happy: -8, money: -2000 } },
     ] },
+  // ---- Études, premier emploi, animal, loisir ----
+  { id: 'de_after_school', kind: 'big', min: 17, max: 19, p: 0.6, priority: true, when: (life) => life.stats.education >= 3 && life.stats.employment !== 'university' && life.stats.employment !== 'employed',
+    fr: ["Après le lycée", "Vous avez terminé le lycée. Il faut maintenant choisir la suite."],
+    en: ["After secondary school", "You have finished secondary school. Now you must choose what comes next."],
+    choices: [
+      { k: 'univ', icon: '🎓', fr: "Tenter l'université", en: "Try for university",
+        sub: (life) => (LANG === 'fr' ? "Admission incertaine : places et moyens de la famille" : "Admission uncertain: places and family means"),
+        fx: (life) => roll([Math.max(0.1, Math.min(0.9, (life.countryData?.ter || 30) / 100 + (quartOf(life) - 2) * 0.1)),
+                            { eduUp: 4, know: 3, msg: { fr: "Vous êtes admis{e} à l'université.", en: "You are admitted to university." } }],
+                           [1, { edu: 3, happy: -3, msg: { fr: "Vous n'êtes pas admis{e}. Il faut chercher du travail.", en: "You are not admitted. You have to look for work." } }]) },
+      { k: 'trade', icon: '🔧', fr: "Apprendre un métier", en: "Learn a trade", fx: { edu: 3, know: 4, flag: ['trained', true] } },
+      { k: 'work', icon: '💼', fr: "Travailler tout de suite", en: "Start working right away", fx: { edu: 3, money: 1500 } },
+    ] },
+  { id: 'de_first_job', kind: 'big', min: 14, max: 45, p: 1, priority: true, when: (life) => life.stats.employment === 'employed' && !life.job,
+    fr: ["Votre premier emploi", "Voici les emplois que vous pouvez trouver, avec vos études et là où vous vivez."],
+    en: ["Your first job", "These are the jobs you can find, with your schooling and where you live."],
+    choices: (life) => jobOffers(life).map((j, n) => ({ k: 'job' + n, icon: j.i, fr: j.fr, en: j.en,
+      sub: (l) => money(wageFor(l, j.mult)) + (LANG === 'fr' ? ' par an avant impôts' : ' a year before tax'),
+      fx: { job: j, health: j.health || 0, happy: j.happy || 0 } })) },
+  { id: 'sm_pet', kind: 'small', min: 8, max: 60, p: 0.05, when: comfortable(3000),
+    fr: ["Un animal à la maison ?", "La chienne des voisins a eu des petits. Ils cherchent des familles pour les accueillir."],
+    en: ["A pet at home?", "The neighbours' dog has had puppies. They are looking for families to take them in."],
+    choices: [
+      { k: 'dog', icon: '🐕', fr: "Adopter un chiot", en: "Adopt a puppy", fx: { happy: 5, health: 1, money: -300, flag: ['pet', 'dog'] } },
+      { k: 'cat', icon: '🐈', fr: "Préférer un chat", en: "Get a cat instead", fx: { happy: 4, money: -200, flag: ['pet', 'cat'] } },
+      { k: 'no', icon: '✋', fr: "Pas maintenant", en: "Not now", fx: {} },
+    ] },
+  { id: 'sm_hobby', kind: 'small', min: 10, max: 55, p: 0.06,
+    fr: ["Un nouveau loisir ?", "Vous avez un peu de temps libre et l'envie d'en faire quelque chose."],
+    en: ["A new hobby?", "You have some free time and want to make something of it."],
+    choices: [
+      { k: 'sport', icon: '🏃', fr: "Un sport", en: "A sport", fx: { health: 4, social: 2 } },
+      { k: 'music', icon: '🎸', fr: "La musique", en: "Music", fx: { happy: 4, know: 1 } },
+      { k: 'read', icon: '📚', fr: "La lecture", en: "Reading", fx: { know: 4, happy: 1 } },
+      { k: 'none', icon: '🛋️', fr: "Le repos suffit", en: "Rest is enough", fx: { happy: 1 } },
+    ] },
 ];
+// Emplois proposés au premier poste, selon les études et le lieu de vie. mult module le revenu du pays.
+const JOBS = {
+  lowRural: [{ i: '🌾', fr: "Ouvri{er|ère} agricole", en: 'Farm labourer', mult: 0.8, health: -1 }, { i: '🐄', fr: "Éleveu{r|se}", en: 'Herder', mult: 0.85 }, { i: '🧺', fr: "Vendeu{r|se} sur les marchés", en: 'Market seller', mult: 0.9, happy: 1 }],
+  lowUrban: [{ i: '🛒', fr: "Vendeu{r|se} de rue", en: 'Street vendor', mult: 0.85 }, { i: '🧱', fr: "Manœuvre sur les chantiers", en: 'Building labourer', mult: 1.0, health: -2 }, { i: '🧽', fr: "Employé{e} de maison", en: 'Domestic worker', mult: 0.8 }],
+  mid: [{ i: '🏭', fr: "Ouvri{er|ère} d'usine", en: 'Factory worker', mult: 1.0, health: -1 }, { i: '🏪', fr: "Vendeu{r|se} en magasin", en: 'Shop assistant', mult: 0.95 }, { i: '🚚', fr: "Chauffeu{r|se}", en: 'Driver', mult: 1.05 }, { i: '🍽️', fr: "Serveu{r|se}", en: 'Waiter', mult: 0.85, happy: 1 }, { i: '🔧', fr: "Artisan{e}", en: 'Tradesperson', mult: 1.1 }],
+  high: [{ i: '🧑‍🏫', fr: "Enseignant{e}", en: 'Teacher', mult: 1.0, happy: 2 }, { i: '🩺', fr: "Infirmi{er|ère}", en: 'Nurse', mult: 1.05 }, { i: '📊', fr: "Comptable", en: 'Accountant', mult: 1.15 }, { i: '⚙️', fr: "Ingénieur{e}", en: 'Engineer', mult: 1.4 }],
+};
+function jobOffers(life) {
+  const edu = life.stats.education;
+  const pool = edu >= 4 ? JOBS.high : edu >= 2 ? JOBS.mid : (life.stats.birthPlaceType === 'rural' ? JOBS.lowRural : JOBS.lowUrban);
+  const list = pool.map(j => ({ ...j, mult: j.mult * (life.trained && edu < 4 ? 1.1 : 1) }));
+  return list.sort(() => Math.random() - 0.5).slice(0, 3);
+}
+// Salaire annuel qu'offrirait un emploi à cette personne, d'après le modèle de budget.
+function wageFor(life, mult) {
+  const probe = { ...life, job: { mult }, stats: { ...life.stats, employment: 'employed' } };
+  return yearBudget(probe).income;
+}
 const FX_LABELS = {
   fr: { money: 'Patrimoine', happy: 'Bonheur', health: 'Santé', social: 'Relations', know: 'Savoir' },
   en: { money: 'Wealth', happy: 'Happiness', health: 'Health', social: 'Social', know: 'Knowledge' },
@@ -1300,13 +1354,15 @@ function applyFx(life, fx) {
   if (e.smoker) life.smoker = true;
   if (e.flag) life[e.flag[0]] = e.flag[1];
   if (e.edu != null) life.eduTarget = e.edu === 'stop' ? s.education : Math.min(life.eduTarget ?? 4, e.edu);
+  if (e.eduUp) life.eduTarget = Math.max(life.eduTarget ?? 0, e.eduUp);
+  if (e.job) life.job = { fr: e.job.fr, en: e.job.en, mult: e.job.mult };
   if (e.rel === 'dating' || e.rel === 'cohab') { if (!s.partner) s.partner = newPartner(life, 0); s.relationship = e.rel; }
   if (e.rel === 'single') { s.partner = null; s.married = false; s.relationship = 'single'; }
   if (e.marry && !s.married) { if (!s.partner) s.partner = newPartner(life, life.age < 18 ? 9 : 0); life.pendingMarriage = true; }
   if (e.leave) { s.married = false; s.partner = null; s.relationship = 'divorced'; }
   if (e.migrate) migrateLife(life);
   if (e.msg) {
-    const m = LANG === 'fr' ? e.msg.fr : e.msg.en;
+    const m = genderize(LANG === 'fr' ? e.msg.fr : e.msg.en, life);
     life.log.push({ age: life.age, kind: 'decision', icon: '❗', text: m });
     if (life === STATE.life) { logLife(m); toast(m); }
   }
@@ -1315,7 +1371,8 @@ function applyFx(life, fx) {
 // Petits évènements annuels : condition de plausibilité, indexée par leur texte anglais.
 const never = () => false;
 const hasKids = (life) => (life.stats.kids || []).length > 0;
-const inSchool = (life) => life.stats.education >= 1;
+// Encore scolarisé : entre 6 ans et l'âge de fin du niveau visé (primaire 12, collège 15, lycée 18, université 22).
+const inSchool = (life) => life.age >= 6 && life.age < [6, 12, 15, 18, 22][Math.min(life.eduTarget ?? 2, 4)];
 const isEmployed = (life) => life.stats.employment === 'employed';
 const online = (min) => (life) => (life.countryData?.net || 0) >= min;
 const FLAVOR_GUARDS = {
@@ -1357,12 +1414,14 @@ DECISIONS.forEach(d => {
 EXTRA_DECISIONS.forEach(d => DECISIONS.push({
   id: d.id, kind: d.kind, priority: !!d.priority, repeat: !!d.repeat,
   chance: (life) => life.age >= d.min && life.age <= d.max && (!d.when || d.when(life)) && Math.random() < (typeof d.p === 'function' ? d.p(life) : d.p),
-  show: () => {
+  show: (life) => {
     const fr = LANG === 'fr';
+    const G = (txt) => genderize(txt, life);
+    const choices = typeof d.choices === 'function' ? d.choices(life) : d.choices;
     return {
-      title: fr ? d.fr[0] : d.en[0],
-      body: fr ? d.fr[1] : d.en[1],
-      choices: d.choices.map(c => ({ k: c.k, icon: c.icon, label: fr ? c.fr : c.en, sub: fxSub(c.fx), apply: (life) => applyFx(life, c.fx) })),
+      title: G(fr ? d.fr[0] : d.en[0]),
+      body: G(fr ? d.fr[1] : d.en[1]),
+      choices: choices.map(c => ({ k: c.k, icon: c.icon, label: G(fr ? c.fr : c.en), sub: c.sub ? c.sub(life) : fxSub(c.fx), apply: (l) => applyFx(l, c.fx) })),
     };
   },
 }));
@@ -1639,6 +1698,210 @@ const FR_BY_EN = {
   "apartment": "appartement"
 };
 const enfr = (en, zh) => LANG === 'en' ? en : LANG === 'fr' ? (FR_BY_EN[en] || en) : zh;
+
+/* ==== Récit ====
+   Les textes s'adressent au joueur (« vous ») et s'accordent au sexe du personnage :
+   {e} ajoute un « e » au féminin, {masculin|féminin} choisit l'une des deux formes. */
+function genderize(txt, life) {
+  const f = !!life && life.sex === 'F';
+  return String(txt).replace(/\{([^|{}]*)\|([^{}]*)\}/g, (m, a, b) => (f ? b : a)).replace(/\{e\}/g, f ? 'e' : '');
+}
+Object.assign(FR_BY_EN, {
+  'Learned to walk': "Vous faites vos premiers pas, les bras tendus vers vos parents.",
+  'First word spoken': "Vous prononcez votre premier mot. Toute la maison le répète.",
+  'Had a fever': "Une forte fièvre vous garde au lit plusieurs jours.",
+  'Started recognizing family': "Vous reconnaissez les visages de la famille et leur tendez les bras.",
+  'Started eating solid food': "Vous découvrez les premiers aliments solides, et en mettez partout.",
+  'Clung to a stuffed toy': "Vous ne vous séparez plus de votre doudou.",
+  'Scribbled on the floor': "Vous dessinez par terre avec tout ce qui vous tombe sous la main.",
+  'Slept through the night': "Vous faites enfin vos nuits. Vos parents aussi.",
+  'Made a new friend': "Vous vous faites un{|e} nouvel{|le} ami{e}.",
+  'Won a small competition': "Vous montez sur le podium d'un petit concours.",
+  'Got injured playing': "Vous vous blessez en jouant et rentrez à la maison en boitant.",
+  'Discovered a favorite book': "Vous découvrez un livre que vous relisez dix fois.",
+  'Caught a cold': "Vous attrapez un gros rhume.",
+  'Joined a school club': "Vous rejoignez un club de l'école.",
+  'Got tutoring after school': "Vous suivez des cours de soutien après la classe.",
+  'Went on a class trip': "Vous partez en sortie avec toute la classe.",
+  'Finished a big project': "Vous terminez un travail dont vous êtes fi{er|ère}.",
+  'Got good grades': "Vos notes progressent nettement.",
+  'Discovered favorite music': "Vous découvrez une musique qui ne vous quittera plus.",
+  'First heartbreak': "Vous vivez votre premier chagrin d'amour.",
+  'Got into gaming': "Vous vous passionnez pour les jeux vidéo.",
+  'Biked somewhere new': "Vous partez à vélo explorer un endroit que vous ne connaissiez pas.",
+  'Got sick for a week': "Vous restez malade toute une semaine.",
+  'Joined a school team': "Vous intégrez une équipe de l'école.",
+  'Started a diary': "Vous commencez à tenir un journal intime.",
+  'Got a first part-time job': "Vous décrochez votre premier petit boulot.",
+  'Performed on a stage': "Vous montez sur scène pour la première fois, le cœur battant.",
+  'Won academic award': "Vous recevez un prix pour vos résultats scolaires.",
+  'Graduated': "Vous obtenez votre diplôme.",
+  'Got first job': "Vous commencez votre premier vrai travail.",
+  'Ran a marathon': "Vous terminez votre premier marathon.",
+  'Got driver license': "Vous obtenez le permis de conduire.",
+  'Had health scare': "Une alerte de santé vous inquiète quelques semaines.",
+  'Travelled alone for the first time': "Vous partez en voyage seul{e} pour la première fois.",
+  'Set a long-term goal': "Vous vous fixez un objectif pour les années à venir.",
+  'Posted your first photo online': "Vous publiez votre première photo en ligne.",
+  'Got promoted': "Vous obtenez une promotion.",
+  'Got big promotion': "Vous obtenez une promotion importante.",
+  'Bought a car': "Vous achetez votre première voiture.",
+  'Had health issue': "Un souci de santé vous oblige à lever le pied.",
+  'Started a project outside work': "Vous lancez un projet personnel en dehors du travail.",
+  'Took up a new hobby': "Vous vous trouvez un nouveau loisir.",
+  'Took a work trip abroad': "Votre travail vous envoie à l'étranger pour la première fois.",
+  'Started a regular checkup habit': "Vous prenez l'habitude de faire un bilan de santé chaque année.",
+  'Took a night class': "Vous suivez des cours du soir.",
+  'Family trip': "Vous partez en voyage avec toute la famille.",
+  'Child graduated': "Votre enfant obtient son diplôme. Vous êtes au premier rang.",
+  'Took vacation': "Vous partez en vacances.",
+  'Grandchild born': "Vous devenez grand-{père|mère}.",
+  'Health checkup': "Vous passez un bilan de santé.",
+  'Went back to school': "Vous reprenez des études.",
+  'Lost a loved one': "Vous perdez un être cher.",
+  'The roles reversed with a parent': "Les rôles s'inversent : c'est vous qui veillez maintenant sur vos parents.",
+  'Adopted a pet': "Vous adoptez un animal.",
+  'Started cooking at home': "Vous vous mettez à cuisiner à la maison.",
+  'Learned to use a smartphone': "Vous apprenez à vous servir d'un smartphone.",
+  'Helped the kids with homework': "Vous passez la soirée à aider votre enfant à faire ses devoirs.",
+  'Started thinking about retirement': "Vous commencez à penser à la retraite.",
+  'Grandchildren visit': "Vos petits-enfants viennent passer la journée chez vous.",
+  'Walked in the park': "Vous prenez l'habitude d'une longue promenade.",
+  'Read a great book': "Vous lisez un livre qui vous marque.",
+  'Saw grandchild grow': "Vous regardez vos petits-enfants grandir.",
+  'Had health check': "Vous passez un bilan de santé.",
+  'Sat on a bench watching the street': "Vous passez de longs moments sur un banc à regarder la rue.",
+  'Had tea with an old friend': "Vous prenez le thé avec un{|e} ami{e} de toujours.",
+  'Took up gardening': "Vous vous mettez au jardinage.",
+  'Joined a community class for seniors': "Vous rejoignez un atelier pour les aînés du quartier.",
+  'Danced at a community night': "Vous dansez à la fête du quartier.",
+  'Called up an old friend': "Vous appelez un{|e} ami{e} perdu{e} de vue.",
+  'Learned to knit': "Vous apprenez à tricoter.",
+  'Started writing a memoir': "Vous commencez à écrire vos souvenirs.",
+  'Went to a funeral': "Vous assistez aux obsèques d'une connaissance.",
+  'Kept an old photo on the shelf': "Vous posez une vieille photo sur l'étagère.",
+  'Affected by local unrest': "Des troubles éclatent près de chez vous.",
+});
+const relIs = (life, re) => re.test(String(life.stats.religion || ''));
+const isChristian = (life) => relIs(life, /christ|cathol|protest|orthod/i);
+const isMuslim = (life) => relIs(life, /islam|muslim/i);
+const isHindu = (life) => relIs(life, /hindou|hindu/i);
+const isBuddhist = (life) => relIs(life, /boudd|buddh/i);
+const isRural = (life) => life.stats.birthPlaceType === 'rural';
+// a : âges ; w : poids ; rep : false = une seule fois dans la vie ; fx : effets (voir applyFx)
+const RECIT = [
+  { a: [0, 1], i: '💉', rep: false, en: 'You get your first vaccines.', fr: "Vous recevez vos premiers vaccins." },
+  { a: [1, 3], i: '🍲', rep: false, en: 'You taste the family dish for the first time.', fr: "Vous goûtez pour la première fois au plat que toute la famille adore." },
+  { a: [2, 5], i: '🌧️', en: 'You jump in every puddle on the way.', fr: "Vous sautez à pieds joints dans toutes les flaques du chemin." },
+  { a: [1, 12], i: '🕯️', when: (l) => pppOf(l) < 6000, en: 'The power is out again; the evening goes by lamplight.', fr: "Le courant saute encore : la soirée se passe à la lueur d'une lampe." },
+  { a: [4, 9], i: '🪁', en: 'You play outside with the neighbourhood children until dark.', fr: "Vous jouez dehors avec les enfants du voisinage jusqu'à la tombée de la nuit." },
+  { a: [5, 11], i: '🚶', when: (l) => isRural(l) && pppOf(l) < 8000 && inSchool(l), en: 'School is far: you walk an hour each way.', fr: "L'école est loin : vous faites chaque jour une heure de marche pour vous y rendre." },
+  { a: [5, 11], i: '🚌', when: (l) => pppOf(l) >= 15000 && inSchool(l), en: 'You take the school bus every morning, always in the same seat.', fr: "Vous prenez le car scolaire chaque matin, toujours à la même place." },
+  { a: [5, 13], i: '🥣', when: (l) => pppOf(l) < 5000 && quartOf(l) <= 2, fx: { health: -1 }, en: 'Some evenings there is not enough food for everyone.', fr: "Certains soirs, il n'y a pas assez à manger pour tout le monde." },
+  { a: [6, 12], i: '🧑‍🏫', when: inSchool, fx: { know: 1 }, en: 'A teacher believes in you and gives you a taste for learning.', fr: "Une institutrice croit en vous et vous donne le goût d'apprendre." },
+  { a: [5, 10], i: '🚲', rep: false, when: comfortable(4000), en: 'You learn to ride a bike, knees scraped and grinning.', fr: "Vous apprenez à faire du vélo, les genoux écorchés et le sourire aux lèvres." },
+  { a: [7, 13], i: '🐐', when: (l) => isRural(l) && (l.countryData?.agr || 0) > 30, en: 'After class, you mind the family animals.', fr: "Après la classe, vous gardez les bêtes de la famille." },
+  { a: [7, 14], i: '💧', when: (l) => isRural(l) && pppOf(l) < 5000, en: 'Each morning, you are the one who fetches the water before school.', fr: "Chaque matin, c'est vous qui allez chercher l'eau avant l'école." },
+  { a: [6, 12], i: '🎂', when: comfortable(8000), en: 'For your birthday, the whole class is invited home.', fr: "Pour votre anniversaire, toute la classe est invitée à la maison." },
+  { a: [8, 14], i: '📺', when: online(30), en: 'You spend hours on videos until the screen is taken away.', fr: "Vous passez des heures devant des vidéos, jusqu'à ce qu'on vous confisque l'écran." },
+  { a: [4, 85], i: '🎄', when: isChristian, en: 'The whole family gathers for the Christmas meal.', fr: "Toute la famille se retrouve autour du repas de Noël." },
+  { a: [4, 85], i: '🌙', when: isMuslim, en: 'At the end of Ramadan, you celebrate Eid with the whole family.', fr: "À la fin du ramadan, vous fêtez l'Aïd avec toute la famille." },
+  { a: [4, 85], i: '🪔', when: isHindu, en: 'For Diwali, the house is lit up and sweets are shared.', fr: "Pour Diwali, la maison s'illumine et l'on partage des sucreries." },
+  { a: [4, 85], i: '🛕', when: isBuddhist, en: 'You go to the temple with the family for the New Year.', fr: "Vous accompagnez la famille au temple pour le Nouvel An." },
+  { a: [11, 16], i: '📱', rep: false, when: online(50), en: 'You get your first phone and never put it down.', fr: "Vous recevez votre premier téléphone. Vous ne le lâchez plus." },
+  { a: [11, 17], i: '🏃', en: 'You join the neighbourhood sports team and never miss a practice.', fr: "Vous rejoignez l'équipe de sport du quartier et ne manquez aucun entraînement." },
+  { a: [11, 17], i: '🧹', when: (l) => quartOf(l) <= 2, en: 'At weekends you help your parents at work to make ends meet.', fr: "Le week-end, vous aidez vos parents au travail pour boucler les fins de mois." },
+  { a: [12, 17], i: '😤', en: 'You argue with your parents and slam the door. By morning it is forgotten.', fr: "Vous vous disputez avec vos parents et claquez la porte. Le lendemain, tout est oublié." },
+  { a: [10, 18], i: '👫', rep: false, fx: { social: 3 }, en: 'You form a friendship that will last for years.', fr: "Vous nouez une amitié qui durera des années." },
+  { a: [18, 62], i: '🚌', when: (l) => isEmployed(l) && !isRural(l), en: 'You spend nearly two hours a day commuting.', fr: "Vous passez près de deux heures par jour dans les transports pour aller travailler." },
+  { a: [20, 32], i: '🏠', rep: false, when: (l) => isEmployed(l) && pppOf(l) >= 10000, fx: { money: -1500, happy: 3 }, en: 'You leave the family home for your first place.', fr: "Vous quittez le domicile familial pour votre premier logement." },
+  { a: [20, 35], i: '🏚️', rep: false, when: (l) => pppOf(l) < 10000, en: 'For lack of means, you go on living under the family roof, like most people your age here.', fr: "Faute de moyens, vous continuez de vivre sous le toit familial, comme la plupart des gens de votre âge ici." },
+  { a: [20, 60], i: '💸', when: (l) => isEmployed(l) && pppOf(l) < 15000, fx: { money: -300, social: 2 }, en: 'You send part of your pay to the family back home.', fr: "Vous envoyez une partie de votre paie à la famille restée au village." },
+  { a: [20, 45], i: '🎉', fx: { money: -150, social: 1 }, en: "You are invited to a friend's wedding and chip in.", fr: "Vous êtes invité{e} au mariage d'un ami et participez à la cagnotte." },
+  { a: [18, 75], i: '🤧', fx: { health: -1 }, en: 'A bad flu keeps you in bed for a week.', fr: "Une mauvaise grippe vous cloue au lit toute une semaine." },
+  { a: [20, 70], i: '🦷', when: comfortable(3000), fx: { money: -200 }, en: 'A toothache sends you to the dentist. The bill is yours.', fr: "Une rage de dents vous envoie chez le dentiste. La facture est pour vous." },
+  { a: [20, 70], i: '🦷', when: (l) => pppOf(l) < 3000 && quartOf(l) <= 2, fx: { health: -2 }, en: 'A toothache hurts for weeks: the dentist is too expensive.', fr: "Une rage de dents vous fait souffrir des semaines : le dentiste est trop cher." },
+  { a: [20, 62], i: '📉', w: 6, when: isEmployed, fx: { money: -2500, happy: -3 }, en: 'Your employer closes down. You go months without pay before finding work again.', fr: "Votre employeur ferme. Vous restez plusieurs mois sans salaire avant de retrouver du travail." },
+  { a: [18, 65], i: '🌍', w: 5, when: isEmployed, fx: { money: -800 }, en: 'An economic crisis hits the country: prices rise, your wage does not.', fr: "Une crise économique frappe le pays : les prix montent, votre salaire non." },
+  { a: [15, 70], i: '🚨', when: (l) => heavyOk() && (l.countryData?.hom || 0) > 8, fx: { money: -200, happy: -2 }, en: 'Your bag is snatched in the street.', fr: "On vous arrache votre sac dans la rue." },
+  { a: [20, 70], i: '📦', fx: { social: 2 }, en: 'A neighbour is moving: you spend the day carrying boxes.', fr: "Un voisin déménage : vous passez la journée à porter ses cartons." },
+  { a: [25, 60], i: '🧑‍🤝‍🧑', en: 'You bump into a childhood friend and talk until the middle of the night.', fr: "Vous retrouvez par hasard un{|e} ami{e} d'enfance. Vous parlez jusqu'au milieu de la nuit." },
+  { a: [25, 58], i: '🏋️', when: (l) => isEmployed(l) && l.stats.education <= 2, fx: { health: -2 }, en: 'From carrying heavy loads, your back starts to hurt.', fr: "À force de porter des charges lourdes, votre dos commence à vous faire souffrir." },
+  { a: [18, 80], i: '🍛', when: (l) => !!l.birthOrigin, fx: { social: 2 }, en: 'You cook a dish from your home country for your new neighbours.', fr: "Vous cuisinez un plat de votre pays natal pour vos nouveaux voisins." },
+  { a: [18, 80], i: '📞', when: (l) => !!l.birthOrigin, en: 'On the phone with family back home, you sometimes search for words in your mother tongue.', fr: "Au téléphone avec la famille restée au pays, vous cherchez parfois vos mots dans votre langue maternelle." },
+  { a: [22, 50], i: '👣', when: hasKids, en: 'Your child takes a few steps towards you.', fr: "Votre enfant fait quelques pas vers vous, les bras tendus." },
+  { a: [28, 60], i: '🎭', when: hasKids, en: "You watch your child's end-of-year show, moved.", fr: "Vous assistez, ému{e}, au spectacle de fin d'année de votre enfant." },
+  { a: [38, 50], i: '🪞', rep: false, en: 'You spot your first grey hairs in the mirror.', fr: "Vous remarquez vos premiers cheveux blancs dans le miroir." },
+  { a: [40, 55], i: '👓', rep: false, when: comfortable(3000), en: 'The doctor prescribes reading glasses.', fr: "Le médecin vous prescrit des lunettes pour lire." },
+  { a: [40, 65], i: '🧓', when: (l) => anyParentAlive(l), en: 'You spend more and more time looking after your ageing parents.', fr: "Vous passez de plus en plus de temps à vous occuper de vos parents vieillissants." },
+  { a: [65, 95], i: '📖', en: 'You tell the young ones about your childhood; they barely listen.', fr: "Vous racontez votre enfance aux plus jeunes, qui écoutent à peine." },
+  { a: [65, 95], i: '🦵', fx: { health: -1 }, en: 'Your knees complain on the stairs.', fr: "Vos genoux protestent dans les escaliers." },
+  { a: [65, 95], i: '😴', en: 'You nap every afternoon, without the slightest guilt.', fr: "Vous faites la sieste chaque après-midi, sans la moindre culpabilité." },
+  { a: [62, 85], i: '🧺', when: (l) => pppOf(l) < 8000, en: 'With no pension, you keep working as long as your strength allows.', fr: "Faute de retraite, vous continuez à travailler tant que vos forces le permettent." },
+];
+// Décès dans la famille : annoncés l'année où ils surviennent.
+function familyDeathEvents(life, age) {
+  if (age < 3 || !life.family) return [];
+  const year = life.year + life.yearOffset;
+  const fr = LANG === 'fr';
+  const out = [];
+  const died = (p) => p && p.death && p.death.year === year && p.birth;
+  (life.family.parents || []).filter(died).forEach(p => {
+    const who = fr ? (p.sex === 'M' ? 'Votre père' : 'Votre mère') : (p.sex === 'M' ? 'Your father' : 'Your mother');
+    life.stats.happiness = Math.max(0, life.stats.happiness - 8);
+    out.push({ age, kind: 'heavy', icon: '🕯️', text: fr ? who + ' meurt à ' + (year - p.birth.year) + ' ans.' : who + ' dies at ' + (year - p.birth.year) + '.' });
+  });
+  const father = (life.family.parents || []).find(p => p.sex === 'M');
+  (life.family.grandparents || []).filter(died).forEach(g => {
+    const side = fr ? (father && g.childOf === father.id ? 'paternel' : 'maternel') : (father && g.childOf === father.id ? 'paternal' : 'maternal');
+    const who = fr ? (g.sex === 'M' ? 'Votre grand-père ' + side : 'Votre grand-mère ' + side + 'le') : 'Your ' + side + (g.sex === 'M' ? ' grandfather' : ' grandmother');
+    life.stats.happiness = Math.max(0, life.stats.happiness - 3);
+    out.push({ age, kind: 'heavy', icon: '🕯️', text: fr ? who + ' meurt à ' + (year - g.birth.year) + ' ans.' : who + ' dies at ' + (year - g.birth.year) + '.' });
+  });
+  return out;
+}
+// Première ligne du récit : la naissance, racontée au joueur.
+function birthIntro(life) {
+  const c = localize(life.countryData);
+  if (LANG !== 'fr') return t('event.birth', '');
+  const q = ['très modeste', 'modeste', 'plutôt aisée', 'aisée'][quartOf(life) - 1];
+  const mother = (life.family?.parents || []).find(p => p.sex === 'F');
+  return genderize("Vous naissez " + (isRural(life) ? 'à la campagne' : 'en ville') + ', ' + c.flag + ' ' + c.name + ", dans une famille " + q + '.'
+    + (mother && life.motherDetail ? ' Votre mère a ' + life.motherDetail.age + ' ans.' : ''), life);
+}
+// Tirage du pays : les noms défilent, ralentissent, puis s'arrêtent sur le pays de naissance.
+function rollCountry(target, done) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) { done(); return; }
+  const fr = LANG === 'fr';
+  const total = COUNTRIES.reduce((a, c) => a + (c.births || 0), 0) || 1;
+  const ov = document.createElement('div');
+  ov.className = 'country-roll';
+  ov.innerHTML = '<p class="cr-label"></p><p class="cr-name" aria-live="polite"></p><p class="cr-prob"></p>';
+  ov.querySelector('.cr-label').textContent = fr ? 'Le hasard choisit où vous naissez…' : 'Chance picks where you are born…';
+  document.body.appendChild(ov);
+  const name = ov.querySelector('.cr-name');
+  const delays = [70, 70, 80, 90, 100, 120, 150, 190, 240, 300, 380, 480, 600];
+  let i = 0, finished = false, timer = null;
+  const finish = () => { if (finished) return; finished = true; clearTimeout(timer); ov.remove(); done(); };
+  const step = () => {
+    if (i < delays.length) {
+      const c = localize(COUNTRIES[Math.floor(Math.random() * COUNTRIES.length)]);
+      name.textContent = c.flag + ' ' + c.name;
+      timer = setTimeout(step, delays[i++]);
+    } else {
+      const c = localize(target);
+      const share = (target.births || 0) / total * 100;
+      name.textContent = c.flag + ' ' + c.name;
+      ov.classList.add('cr-done');
+      ov.querySelector('.cr-prob').textContent = fr
+        ? share.toFixed(2).replace('.', ',') + ' % des naissances dans le monde'
+        : share.toFixed(2) + '% of births worldwide';
+      timer = setTimeout(finish, 1500);
+    }
+  };
+  ov.addEventListener('click', finish);
+  step();
+}
 const REGIONS_FR = { eap: 'Asie de l\'Est et Pacifique', eca: 'Europe et Asie centrale', hi: 'Pays à revenu élevé', lac: 'Amérique latine et Caraïbes', mena: 'Moyen-Orient et Afrique du Nord', sa: 'Asie du Sud', ssa: 'Afrique subsaharienne' };
 const FR_REGION_NAMES = new Intl.DisplayNames(['fr'], { type: 'region' });
 // Le drapeau emoji encode le code ISO à 2 lettres : on s'en sert pour demander le nom français au navigateur.
@@ -2595,10 +2858,16 @@ function milestoneEvents(life, newAge) {
     life.financeAgeAvailable = newAge;
   }
   // v5.14：每年保底事件（其他里程碑未觸發時）
-  if (events.length === 0 && newAge >= 4) {
+  events.push(...familyDeathEvents(life, newAge));
+  // Jusqu'à deux petits évènements par an, dès la première année de vie.
+  for (let n = events.length; n < 2 && newAge >= 1; n++) {
     const evt = generateYearlyEvent(life);
     if (evt) {
-      const text = enfr(evt.en, evt.zh);
+      let text = genderize(LANG === 'fr' && evt.fr ? evt.fr : enfr(evt.en, evt.zh), life);
+      if (evt.fx) {
+        if (evt.fx.money) text += ' (' + (evt.fx.money < 0 ? '− ' : '+ ') + money(Math.abs(evt.fx.money * moneyScale(life))) + ')';
+        applyFx(life, evt.fx);
+      }
       events.push({ age: newAge, kind: 'milestone', icon: evt.icon, text, zh: evt.zh });
       life.latestEvent = { age: newAge, icon: evt.icon, text };
     }
@@ -2642,7 +2911,7 @@ function startLife(countryCode, life) {
   if (!STATE.life) return;
   if (!LANG.startsWith('zh')) STATE.life.currency = LANG === 'fr' ? '€' : 'US$';   // les montants sont en dollars PPA ; NT$ seulement pour les interfaces chinoises
   { const lbl = $('#currencyLabel'); if (lbl) lbl.textContent = STATE.life.currency || 'NT$'; }
-  STATE.life.log.push({ age: 0, kind: 'birth', icon: '👶', text: t('event.birth', '') });
+  STATE.life.log.push({ age: 0, kind: 'birth', icon: '👶', text: birthIntro(STATE.life) });
   logLife(t('log.born_in', localize(STATE.life.countryData).name, ''));
   STATE.paused = false;
   STATE.speed = 1;
@@ -3153,6 +3422,7 @@ function generateYearlyEvent(life) {
   const focus = life.focusThisYear;
   // 隨機事件池（依年齡分層）
   const events = [];
+  RECIT.forEach(r => { if (age >= r.a[0] && age <= r.a[1] && (!r.when || r.when(life))) events.push({ weight: r.w || 14, icon: r.i, en: r.en, zh: r.en, fr: r.fr, rep: r.rep !== false, fx: r.fx }); });
 // v5.89：每個年齡層的池子都補到「夠撐過整個年齡層」的大小。
   // 舊版 65+ 只有 5 條、其中 4 條可重複，於是二十幾年的老年就在那幾條裡輪流；
   // 實測 60 條人生的最後 20 年有 45% 的 feed 是看過的舊句、376 次「四年內又見同一句」。
@@ -3708,8 +3978,7 @@ function hideBirthCertModal() {
 function startLifeWithCert() {
   const c = chooseCountry(STATE.birthMode);
   if (!c) return;
-  // 顯示出生卡 modal，等使用者按「開始人生」才正式 startLife
-  showBirthCertModal(c);
+  rollCountry(c, () => showBirthCertModal(c));
 }
 
 function renderLife() {
@@ -3750,7 +4019,7 @@ function renderLife() {
   const educLabels = ['—', t('edu.0')+'（'+t('edu.pre')+'）', t('edu.1'), t('edu.2'), t('edu.3'), t('edu.4')];
   $('#lifeEduc').textContent = educLabels[Math.min(STATE.life.stats.education + 1, educLabels.length - 1)];
   // 工作：顯示 sector + 是否在職
-  $('#lifeJob').textContent = STATE.life.stats.employment === 'employed' ? (LANG === 'fr' ? jobLabel('employed') : `${jobLabel('employed')} · ${LANG==='en'?'employed':'在職'}`) : jobLabel(STATE.life.stats.employment);
+  $('#lifeJob').textContent = STATE.life.stats.employment === 'employed' ? (STATE.life.job ? genderize(LANG === 'fr' ? STATE.life.job.fr : STATE.life.job.en, STATE.life) : LANG === 'fr' ? jobLabel('employed') : `${jobLabel('employed')} · ${LANG==='en'?'employed':'在職'}`) : jobLabel(STATE.life.stats.employment);
   // 伴侶：顯示名字 + 年齡
   if (STATE.life.stats.partner) {
     const p = STATE.life.stats.partner;
@@ -4378,7 +4647,7 @@ function renderFamilySummary() {
   else if (f.fosterCare === 'foster') parts.push(`<span class="fam-flag">🏠 ${LANG==='en'?'Foster':LANG === 'fr' ? "Famille d'accueil" : '寄養家庭'}</span>`);
   // 跨國遷徙
   if (STATE.life.birthOrigin) {
-    parts.push(`<span class="fam-flag">${STATE.life.birthOrigin.flag}→${c.flag} ${LANG==='en'?'migrated':LANG === 'fr' ? 'a migré' : '遷徙'}</span>`);
+    parts.push(`<span class="fam-flag">${STATE.life.birthOrigin.flag}→${STATE.life.countryData.flag} ${LANG==='en'?'migrated':LANG === 'fr' ? 'a migré' : '遷徙'}</span>`);
   }
   wrap.innerHTML = parts.map(p => `<div class="fam-row">${p}</div>`).join('');
   if (goBtn) {
@@ -6303,7 +6572,7 @@ function yearBudget(life) {
   if (s.employment === 'employed') {
     const edu = [0.6, 0.75, 0.9, 1.0, 1.4][Math.min(s.education, 4)] ?? 0.9;
     const experience = Math.min(1, 0.6 + (age - 18) * 0.02);
-    income = base * Math.pow(quartileShare(c, q), 0.7) * edu * experience;
+    income = base * Math.pow(quartileShare(c, q), 0.7) * edu * experience * (life.job?.mult || 1);
     life.lastWage = income;
   }
   const pension = s.employment === 'retired' ? (life.lastWage || base * 0.6) * Math.min(0.7, r * 2.3) : 0;
