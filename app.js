@@ -158,6 +158,7 @@ function showDecision({ id, kind, age, title, body, fact, hint, choices, hasNote
       // 記錄（v5.78：連 label / icon 一起存，訃聞頁才組得出這一生做過的決定）
       STATE.life.decisions = STATE.life.decisions || [];
       STATE.life.decisions.push({ id, age, key: k, label: choice.label, icon: choice.icon || '', note: noteText, lang: LANG });
+      if (window.CLASSE) CLASSE.onChoice(STATE.life, { id, age, key: k, label: choice.label, title });
       // 寫進 log（讓使用者往後看得到）
       STATE.life.log.push({ age, kind: 'decision', icon: choice.icon || '✦', text: title + ' → ' + choice.label });
       logLife(t('dec.log', choice.label));
@@ -175,6 +176,7 @@ function showDecision({ id, kind, age, title, body, fact, hint, choices, hasNote
     STATE.life.decisions = STATE.life.decisions || [];
     STATE.life.decisions.push({ id, age, key: first.k, label: first.label, icon: first.icon || '', note: '（自動抉擇）' });
     try { first.apply && first.apply(STATE.life, { note: '' }); } catch (e) { console.warn('auto-decide apply failed', id, e); }
+    if (window.CLASSE) CLASSE.onChoice(STATE.life, { id, age, key: first.k, label: first.label, title });
     STATE.life.log.push({ age, kind: 'decision', icon: first.icon || '✦', text: title + ' → ' + first.label + (LANG === 'fr' ? ' (auto)' : '（自動）') });
     modal.setAttribute('hidden', '');
     return true;
@@ -4183,6 +4185,7 @@ function startLife(countryCode, life) {
   STATE.speed = 1;
   STATE.tickMs = (STATE.paceSec || 5) * 1000;   // rythme choisi sur l'acte de naissance : secondes par année
   if (bgMusic) { stopMusic(); try { startMusic(musicStyleKey(STATE.life.countryData)); } catch (e) {} }
+  if (window.CLASSE) CLASSE.onStart(STATE.life);
   setView('life');
   renderAll();
   startTicker();
@@ -4323,7 +4326,8 @@ function tick() {
   // Instantané de l'année pour la grille de vie.
   {
     const Lh2 = STATE.life, b = Lh2.budget || {};
-    (Lh2.hist || (Lh2.hist = {}))[Lh2.age] = { h: Lh2.stats.happiness, he: Lh2.stats.health, a: Lh2.stats.netAssets, saved: b.saved || 0, habit: b.habit || 0 };
+    (Lh2.hist || (Lh2.hist = {}))[Lh2.age] = { h: Lh2.stats.happiness, he: Lh2.stats.health, a: Lh2.stats.netAssets, saved: b.saved || 0, habit: b.habit || 0,
+      emp: Lh2.stats.employment, b: { inc: Math.round(b.income || 0), pen: Math.round(b.pension || 0), cot: Math.round(b.cotis || 0), imp: Math.round(b.impots || 0), aa: Math.round(b.aidAssist || 0), af: Math.round(b.aidFamily || 0), hc: Math.round(b.health || 0), ht: Math.round(b.healthTotal || 0), net: Math.round(b.net || 0), nv: Math.round(b.nv || 0) } };
   }
   // v5.55：通用決策 — 在每年 tick 末尾試一個未觸發過的事件
   setTimeout(() => tryTriggerDecision(STATE.life, STATE.life.age), 120);
@@ -4371,6 +4375,7 @@ function dieNow(forcedCause) {
   STATE.life.log.push({ age: STATE.life.age, kind: 'death', icon: '🕯️', text: t('log.died_of', cause) });
   savePastLife(STATE.life);
   stopTicker();
+  if (window.CLASSE) CLASSE.onEnd(STATE.life);
   showDeathReel(STATE.life);
   // v5.43：用 setView() 才會真的切換 .view 面板的顯示（原本直接賦值 STATE.view 只更新資料、不換畫面）
   setView('end');
@@ -5299,6 +5304,7 @@ function renderLife() {
     renderBudget();
     renderFinSide();
     renderVitals();
+    if (window.CLASSE) CLASSE.render();
     renderLifeGrid();
     renderIndicators();
     renderIdCard();
@@ -6003,6 +6009,7 @@ function renderEnd() {
   renderEndDecisions();
   // v5.31：前世紀錄面板
   renderEndPastRecords(past);
+  if (window.CLASSE) CLASSE.renderEnd();
 }
 
 /* v5.31：前世紀錄面板 — 顯示最近 5 段人生 + 全部操作按鈕 */
@@ -7954,7 +7961,14 @@ function yearBudget(life) {
   const habit = Math.min(habitRaw, Math.max(0, net - living - health - school));
   const priCost = ({ health: 0.02, growth: 0.015, leisure: 0.02, family: 0.01 })[life.priority] || 0;
   const comfort = Math.max(0, net - living - health - school - habit) * 0.5 + Math.min(priCost * base, Math.max(0, net - living - health - school - habit) * 0.4);
-  return { income, pension, taxes, aid, living, health, school, habit, comfort, saved: net - living - health - school - habit - comfort, r };
+  // Détail pour l'observation en classe : cotisations / impôts, assistance / prestations familiales, dépense de santé collective.
+  const cotis = Math.min(taxes, income * Math.min(0.22, r * 0.75));
+  const aidFamily = r * 0.15 * base * kidsAtHome;
+  const pensionAssist = s.employment === 'retired' && !hasPension(life) ? pension : 0;
+  const healthOwn = Math.max(0, health - insPremium);
+  const healthTotal = healthOwn / Math.max(0.08, (c.oop ?? 30) / 100);
+  return { income, pension, taxes, aid, living, health, school, habit, comfort, saved: net - living - health - school - habit - comfort, r,
+           gross, net, nv: net * (couple ? 1.33 : 1) / (1 + 0.3 * kidsAtHome), cotis, impots: taxes - cotis, aidFamily, aidAssist: aid - aidFamily, pensionAssist, healthTotal, healthCovered: Math.max(0, healthTotal - healthOwn) };
 }
 function applyYearBudget(life) {
   const b = yearBudget(life);
