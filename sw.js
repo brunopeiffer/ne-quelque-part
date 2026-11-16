@@ -2,7 +2,7 @@
  * Cache-first strategy for the static app shell + countries/i18n JSON.
  * Falls back to network when cache misses, then caches the response.
  */
-const CACHE_NAME = 'born-somewhere-v6.12-fr36';
+const CACHE_NAME = 'born-somewhere-v6.12-fr37';
 const APP_VERSION = '6.12.0';
 
 // Files we want in the offline shell. List both the entry HTML and the data

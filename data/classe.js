@@ -14,27 +14,27 @@
 
   // ---------- Chapitres ----------
   const CHAPS = {
-    '1': { t: "Chapitre 1 · L'intervention de l'État", q: [
+    '1': { d: "Rôles de l'État : solde entre prélèvements et prestations, dépenses sociales, comparaison de cinq États.", rec: 1, t: "Chapitre 1 · L'intervention de l'État", q: [
       "Quels rôles l'État joue-t-il dans la vie de votre personnage (régalien, redistributeur, producteur de services) ?",
       "Calculez le solde entre ce que votre personnage verse à l'État et ce qu'il en reçoit à 40 ans.",
       "Comparez avec le pays de votre voisin : État-providence ou État gendarme ? Justifiez avec trois chiffres." ] },
-    '2': { t: "Chapitre 2 · Défaillances du marché et de l'État", q: [
+    '2': { d: "Externalités, asymétries d'information, biens publics, défaillances de l'État : un carnet de notions se remplit à chaque décision.", rec: 2, t: "Chapitre 2 · Défaillances du marché et de l'État", q: [
       "Relevez dans le carnet deux situations d'externalités (une positive, une négative) et expliquez-les.",
       "Relevez une asymétrie d'information (assurance, santé, crédit) : qui sait quoi ?",
       "Quelle intervention publique corrige la défaillance ? Observez-vous aussi une défaillance de l'État ?" ] },
-    '4': { t: "Chapitre 4 · Les politiques sociales", q: [
+    '4': { d: 'Cotisations et impôts, progressivité, assurance et assistance, redistribution verticale et horizontale, risques sociaux couverts.', rec: 0, t: "Chapitre 4 · Les politiques sociales", q: [
       "Calculez le taux de prélèvement obligatoire de votre personnage à 40 ans. Le système est-il progressif ?",
       "Distinguez cotisations sociales et impôts. Quelles prestations relèvent d'une logique d'assurance, lesquelles d'une logique d'assistance ?",
       "Donnez un exemple de redistribution verticale et un de redistribution horizontale observés dans la vie du personnage.",
       "Quels risques sociaux sont couverts dans son pays, lesquels ne le sont pas ? Quelles conséquences sur sa vie ?" ] },
-    '5': { t: "Chapitres 5 à 7 · Emploi et chômage", q: [
+    '5': { d: "Statut sur le marché du travail âge par âge, travail informel, absence de pension. Le tableau de classe donne un taux d'emploi approché.", rec: 2, t: "Chapitres 5 à 7 · Emploi et chômage", q: [
       "Retracez le statut de votre personnage sur le marché du travail (actif occupé, inactif…) âge par âge.",
       "Repérez des situations de sous-emploi, de travail informel ou d'absence de protection.",
       "Avec le tableau de classe, calculez un taux d'activité et un taux d'emploi sur l'ensemble des personnages." ] },
-    '11': { t: "Chapitre 11 · Croissance et développement durable", q: [
+    '11': { d: 'Indice de développement estimé (santé, éducation, revenu) et chocs environnementaux vécus.', rec: 2, t: "Chapitre 11 · Croissance et développement durable", q: [
       "Comparez l'indice de développement estimé de votre pays avec celui de votre voisin : quels indicateurs expliquent l'écart ?",
       "Quels événements de la vie (sécheresse, inondation, eau, santé) montrent des limites d'une croissance non soutenable ?" ] },
-    '12': { t: "Chapitre 12 · La réduction de la pauvreté", q: [
+    '12': { d: 'Seuils de pauvreté absolue et relative, part de la population pauvre, années vécues sous les seuils.', rec: 0, t: "Chapitre 12 · La réduction de la pauvreté", q: [
       "Votre personnage est-il pauvre en termes absolus ? en termes relatifs ? À quels âges ?",
       "Pourquoi un même niveau de vie peut-il être « pauvre » dans un pays et pas dans un autre ?",
       "Quels facteurs (famille, études, santé, protection sociale) ont aggravé ou réduit sa pauvreté ?" ] },
@@ -274,7 +274,7 @@
       const ch = CHAPS[CL.cfg.c] || CHAPS['4'];
       el.innerHTML = '<h3>🎓 Mode classe actif</h3><p><b>' + esc(CL.cfg.n || 'Séance') + '</b> · ' + esc(ch.t) + '</p>'
         + '<p class="cl-stu"><label>Votre prénom ou binôme <input id="clStudent" type="text" maxlength="40" value="' + esc(localStorage.getItem(LS_STU) || '') + '"></label></p>'
-        + '<p>Naître dans le pays attribué :</p><div class="cl-btns">' + CL.cfg.p.map((id) => { const c = countryById(id); return c ? '<button type="button" class="cl-go" data-id="' + id + '">' + countryNm(c) + '</button>' : ''; }).join('') + '</div>'
+        + '<p class="cl-small">Vous êtes dans la séance. Cliquez sur <b>le pays que votre professeur vous a attribué</b> pour naître (si rien n’a été précisé, prenez le premier).</p><div class="cl-btns">' + CL.cfg.p.map((id) => { const c = countryById(id); return c ? '<button type="button" class="cl-go" data-id="' + id + '">' + countryNm(c) + '</button>' : ''; }).join('') + '</div>'
         + '<p class="cl-small">' + (CL.cfg.m ? 'Même hasard pour tous : à choix identiques, les vies sont comparables.' : 'Hasard différent selon le pays.') + '</p>'
         + '<div class="cl-btns"><button type="button" class="ghost" id="clAgg">Tableau de classe</button><button type="button" class="ghost" id="clLeave">Quitter le mode classe</button></div>';
       el.querySelectorAll('.cl-go').forEach((b) => b.addEventListener('click', () => { const v = ($('#clStudent') || {}).value || ''; try { localStorage.setItem(LS_STU, v); } catch (e) {} CL.begin(b.dataset.id); }));
@@ -282,29 +282,85 @@
       $('#clAgg', el).addEventListener('click', aggregator);
       return;
     }
-    const chOpts = Object.keys(CHAPS).map((k) => '<option value="' + k + '">' + esc(CHAPS[k].t) + '</option>').join('');
-    const all = (typeof COUNTRIES !== 'undefined' ? COUNTRIES : []).slice().sort((a, b) => localize(a).name.localeCompare(localize(b).name, 'fr')).map((c) => '<option value="' + c.id + '">' + countryNm(c) + '</option>').join('');
-    el.innerHTML = '<details class="cl-wrap"><summary><b>🎓 Vous êtes en classe ?</b> Rejoindre une séance avec un code, ou en créer une (enseignant)</summary><p>Séance guidée sur un chapitre du programme : pays attribués, même hasard pour toute la classe, observation, fiche de synthèse.</p>'
-      + '<div class="cl-row"><label>Code de séance <input id="clCode" type="text" placeholder="NQ…"></label><button type="button" id="clJoin">Rejoindre</button></div><p class="cl-err" id="clErr" hidden></p>'
-      + '<details class="cl-creator"><summary>Je suis enseignant : créer une séance</summary>'
-      + '<label>Nom de la séance <input id="clName" type="text" value="Séance du jour"></label>'
-      + '<label>Chapitre observé <select id="clCh">' + chOpts + '</select></label>'
-      + '<div class="cl-btns">' + PRESETS.map((p, i) => '<button type="button" class="ghost cl-pre" data-i="' + i + '">' + esc(p.n) + '</button>').join('') + '</div>'
-      + '<label>Pays attribués (Ctrl/Cmd pour en choisir plusieurs) <select id="clCountries" multiple size="7">' + all + '</select></label>'
-      + '<label class="cl-chk"><input type="checkbox" id="clSame" checked> Même hasard pour tous les élèves</label>'
-      + '<button type="button" id="clMake">Générer le code</button><div id="clOut" hidden></div></details>'
-      + '<button type="button" class="ghost" id="clAgg0">Tableau de classe</button></details>';
-    $('#clJoin', el).addEventListener('click', () => { const cfg = dec($('#clCode', el).value), er = $('#clErr', el); if (!cfg) { er.textContent = 'Code non reconnu.'; er.hidden = false; return; } activate(cfg); });
-    el.querySelectorAll('.cl-pre').forEach((b) => b.addEventListener('click', () => { const ids = PRESETS[+b.dataset.i].p; [...$('#clCountries', el).options].forEach((o) => { o.selected = ids.includes(o.value); }); }));
-    $('#clMake', el).addEventListener('click', () => {
-      const out = $('#clOut', el), p = [...$('#clCountries', el).selectedOptions].map((o) => o.value);
-      if (!p.length) { out.hidden = false; out.textContent = 'Choisissez au moins un pays.'; return; }
-      const cfg = { n: $('#clName', el).value.trim() || 'Séance', c: $('#clCh', el).value, p, s: 1 + Math.floor(Math.random() * 99999), m: $('#clSame', el).checked ? 1 : 0 };
-      const code = enc(cfg), url = location.origin + location.pathname + '?classe=' + code;
-      out.hidden = false; out.innerHTML = '<p>Code à donner aux élèves :</p><input readonly value="' + code + '" onclick="this.select()"><p>Ou ce lien direct :</p><input readonly value="' + url + '" onclick="this.select()"><button type="button" id="clTest">Essayer la séance moi-même</button>';
-      $('#clTest', el).addEventListener('click', () => activate(cfg));
-    });
+    el.innerHTML = '<h3>🎓 Vous êtes en classe ?</h3><p>Le mode classe donne à chaque élève un pays et un chapitre à observer, pour comparer des vies et en tirer des notions du cours.</p>'
+      + '<div class="cl-btns cl-big"><button type="button" id="clStu">👩‍🎓 Je suis élève<small>J’ai un code de séance</small></button><button type="button" id="clTea">🧑‍🏫 Je suis enseignant<small>Créer une séance en 4 étapes</small></button></div>'
+      + '<button type="button" class="ghost" id="clAgg0">Tableau de classe</button>';
+    $('#clStu', el).addEventListener('click', joinModal);
+    $('#clTea', el).addEventListener('click', wizard);
     $('#clAgg0', el).addEventListener('click', aggregator);
+  }
+
+  // ---------- Fenêtre « Rejoindre » (élève) ----------
+  function overlay(id, html) {
+    let m = $('#' + id); if (m) m.remove();
+    m = document.createElement('div'); m.id = id; m.className = 'cl-ov';
+    m.innerHTML = '<div class="cl-ovc"><button type="button" class="ca-x" aria-label="Fermer">×</button>' + html + '</div>';
+    document.body.appendChild(m);
+    $('.ca-x', m).addEventListener('click', () => m.remove());
+    m.addEventListener('click', (e) => { if (e.target === m) m.remove(); });
+    return m;
+  }
+  function joinModal() {
+    const m = overlay('clJoinOv', '<h3>Rejoindre la séance</h3><ol class="cl-steps"><li>Demandez le <b>code de séance</b> à votre professeur (il commence par NQ).</li><li>Collez-le ci-dessous, puis cliquez sur <b>Rejoindre</b>.</li><li>Choisissez ensuite le <b>pays qui vous est attribué</b> et cliquez sur « Naître ».</li></ol>'
+      + '<label>Code de séance<input id="jCode" type="text" placeholder="NQ…" autocomplete="off"></label><p class="cl-err" id="jErr" hidden></p><button type="button" class="cl-main" id="jGo">Rejoindre la séance</button>');
+    $('#jCode', m).focus();
+    const go = () => { const cfg = dec($('#jCode', m).value), er = $('#jErr', m); if (!cfg) { er.textContent = 'Ce code n’est pas reconnu. Vérifiez qu’il est complet (il commence par NQ).'; er.hidden = false; return; } m.remove(); activate(cfg); };
+    $('#jGo', m).addEventListener('click', go);
+    $('#jCode', m).addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
+  }
+
+  // ---------- Assistant enseignant en 4 étapes ----------
+  function wizard() {
+    const st = { step: 1, c: '4', pre: 0, custom: null, name: '', same: true };
+    const today = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+    const m = overlay('clWizard', '<div id="wzBody"></div>');
+    const countriesOf = () => st.custom && st.custom.length ? st.custom : PRESETS[st.pre].p;
+    const dots = () => '<div class="wz-dots">' + ['Chapitre', 'Pays', 'Réglages', 'Code'].map((x, k) => '<span class="' + (k + 1 === st.step ? 'on' : k + 1 < st.step ? 'done' : '') + '"><b>' + (k + 1) + '</b>' + x + '</span>').join('') + '</div>';
+    const nav = (back, next, nextLbl) => '<div class="wz-nav">' + (back ? '<button type="button" class="ghost" id="wzBack">← Retour</button>' : '<span></span>') + (next ? '<button type="button" class="cl-main" id="wzNext">' + nextLbl + '</button>' : '') + '</div>';
+    const draw = () => {
+      const body = $('#wzBody', m); let h = dots();
+      if (st.step === 1) {
+        h += '<h3>Que voulez-vous faire observer ?</h3><p class="cl-small">Choisissez le chapitre : le jeu affichera, pendant la vie, les indicateurs qui s’y rapportent.</p><div class="wz-cards">'
+          + Object.keys(CHAPS).map((k) => '<button type="button" class="wz-card' + (st.c === k ? ' on' : '') + '" data-c="' + k + '"><b>' + esc(CHAPS[k].t) + '</b><span>' + esc(CHAPS[k].d) + '</span></button>').join('') + '</div>' + nav(false, true, 'Suivant →');
+      } else if (st.step === 2) {
+        h += '<h3>Quels pays attribuer ?</h3><p class="cl-small">Chaque élève ou binôme naîtra dans l’un de ces pays. Comparer deux pays très différents rend les notions visibles. Conseil pour ce chapitre : <b>' + esc(PRESETS[CHAPS[st.c].rec].n) + '</b>.</p><div class="wz-cards">'
+          + PRESETS.map((p, k) => '<button type="button" class="wz-card' + (!st.custom && st.pre === k ? ' on' : '') + '" data-p="' + k + '"><b>' + esc(p.n) + (k === CHAPS[st.c].rec ? ' <em>conseillé</em>' : '') + '</b><span>' + p.p.map((id) => { const c = countryById(id); return c ? countryNm(c) : id; }).join(' · ') + '</span></button>').join('') + '</div>'
+          + '<details class="wz-more"' + (st.custom ? ' open' : '') + '><summary>Choisir d’autres pays</summary><label>Maintenez Ctrl (ou Cmd) pour en sélectionner plusieurs<select id="wzCtry" multiple size="7">' + (typeof COUNTRIES !== 'undefined' ? COUNTRIES.slice().sort((a, b) => localize(a).name.localeCompare(localize(b).name, 'fr')).map((c) => '<option value="' + c.id + '"' + (st.custom && st.custom.includes(c.id) ? ' selected' : '') + '>' + countryNm(c) + '</option>').join('') : '') + '</select></label></details>'
+          + nav(true, true, 'Suivant →');
+      } else if (st.step === 3) {
+        h += '<h3>Derniers réglages</h3><label>Nom de la séance<input id="wzName" type="text" value="' + esc(st.name || (CHAPS[st.c].t.split(' · ')[0] + ' · ' + today)) + '"></label>'
+          + '<label class="cl-chk wz-chk"><input type="checkbox" id="wzSame"' + (st.same ? ' checked' : '') + '><span><b>Même hasard pour tous les élèves</b> (recommandé)<br><small>À choix identiques, deux élèves d’un même pays obtiennent exactement la même vie, et les vies de pays différents restent comparables : vous pouvez dire « toutes choses égales par ailleurs ».</small></span></label>'
+          + '<div class="wz-sum"><b>Récapitulatif</b><br>' + esc(CHAPS[st.c].t) + '<br>Pays : ' + countriesOf().map((id) => { const c = countryById(id); return c ? countryNm(c) : id; }).join(' · ') + '</div>' + nav(true, true, 'Générer le code →');
+      } else {
+        const cfg = { n: ($('#wzName', m) ? $('#wzName', m).value : st.name).trim() || 'Séance', c: st.c, p: countriesOf(), s: 1 + Math.floor(Math.random() * 99999), m: st.same ? 1 : 0 };
+        st.cfg = st.cfg || cfg; const code = enc(st.cfg), url = location.origin + location.pathname + '?classe=' + code;
+        const names = st.cfg.p.map((id) => { const c = countryById(id); return c ? localize(c).name : id; });
+        const repart = names.map((n, k) => 'binômes ' + (k === 0 ? '1, ' + (names.length + 1) + ', …' : (k + 1) + ', ' + (names.length + k + 1) + ', …') + ' : ' + n).join(' · ');
+        h += '<h3>✅ Votre séance est prête</h3><div class="wz-code"><label>Code de séance<input readonly id="wzCode" value="' + code + '"></label><button type="button" id="wzCopy">Copier le code</button></div>'
+          + '<div class="wz-code"><label>Lien direct (les élèves arrivent déjà dans la séance)<input readonly id="wzUrl" value="' + url + '"></label><button type="button" id="wzCopyU">Copier le lien</button></div><p class="cl-small" id="wzMsg"></p>'
+          + '<h4>Maintenant, avec la classe</h4><ol class="cl-steps"><li><b>Donnez le code ou le lien</b> aux élèves (projetez-le au tableau).</li><li>Ils ouvrent le site, cliquent sur <b>« Je suis élève »</b> et collent le code.</li><li><b>Répartissez les pays</b> : ' + esc(repart) + '.</li><li>Laissez-les vivre jusqu’à <b>40 ans</b> (5 à 15 minutes selon le rythme et les décisions), puis faites-les observer la tuile verte « Observation ».</li><li>En fin de vie, chaque élève clique sur <b>« Copier mes résultats »</b> ; collez toutes les lignes dans le <b>Tableau de classe</b>.</li></ol>'
+          + '<div class="cl-btns"><button type="button" class="cl-main" id="wzTry">Essayer en tant qu’élève</button><button type="button" class="ghost" id="wzAgg">Ouvrir le tableau de classe</button><button type="button" class="ghost" id="wzNew">Créer une autre séance</button></div>';
+      }
+      body.innerHTML = h;
+      body.querySelectorAll('.wz-card[data-c]').forEach((b) => b.addEventListener('click', () => { st.c = b.dataset.c; st.pre = CHAPS[st.c].rec; st.custom = null; draw(); }));
+      body.querySelectorAll('.wz-card[data-p]').forEach((b) => b.addEventListener('click', () => { st.pre = +b.dataset.p; st.custom = null; draw(); }));
+      const bk = $('#wzBack', body), nx = $('#wzNext', body);
+      if (bk) bk.addEventListener('click', () => { st.step--; st.cfg = null; draw(); });
+      if (nx) nx.addEventListener('click', () => {
+        if (st.step === 2) { const sel = $('#wzCtry', body); if (sel && sel.selectedOptions.length) st.custom = [...sel.selectedOptions].map((o) => o.value); }
+        if (st.step === 3) { st.name = $('#wzName', body).value; st.same = $('#wzSame', body).checked; }
+        st.step++; draw();
+      });
+      if (st.step === 4) {
+        const cp = (id, msg) => { const inp = $(id, body); inp.select(); (navigator.clipboard ? navigator.clipboard.writeText(inp.value) : Promise.reject()).then(() => { $('#wzMsg', body).textContent = msg; }).catch(() => { $('#wzMsg', body).textContent = 'Sélectionnez le texte et copiez-le (Ctrl ou Cmd + C).'; }); };
+        $('#wzCopy', body).addEventListener('click', () => cp('#wzCode', 'Code copié.'));
+        $('#wzCopyU', body).addEventListener('click', () => cp('#wzUrl', 'Lien copié.'));
+        $('#wzTry', body).addEventListener('click', () => { m.remove(); activate(st.cfg); });
+        $('#wzAgg', body).addEventListener('click', () => { m.remove(); aggregator(); });
+        $('#wzNew', body).addEventListener('click', () => { st.step = 1; st.cfg = null; draw(); });
+      }
+    };
+    draw();
   }
 
   // ---------- Fiche de synthèse (écran de fin) ----------
