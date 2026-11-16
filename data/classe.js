@@ -284,7 +284,7 @@
     }
     const chOpts = Object.keys(CHAPS).map((k) => '<option value="' + k + '">' + esc(CHAPS[k].t) + '</option>').join('');
     const all = (typeof COUNTRIES !== 'undefined' ? COUNTRIES : []).slice().sort((a, b) => localize(a).name.localeCompare(localize(b).name, 'fr')).map((c) => '<option value="' + c.id + '">' + countryNm(c) + '</option>').join('');
-    el.innerHTML = '<h3>🎓 Mode classe</h3><p>Séance guidée sur un chapitre du programme : pays attribués, même hasard pour toute la classe, observation, fiche de synthèse.</p>'
+    el.innerHTML = '<details class="cl-wrap"><summary><b>🎓 Vous êtes en classe ?</b> Rejoindre une séance avec un code, ou en créer une (enseignant)</summary><p>Séance guidée sur un chapitre du programme : pays attribués, même hasard pour toute la classe, observation, fiche de synthèse.</p>'
       + '<div class="cl-row"><label>Code de séance <input id="clCode" type="text" placeholder="NQ…"></label><button type="button" id="clJoin">Rejoindre</button></div><p class="cl-err" id="clErr" hidden></p>'
       + '<details class="cl-creator"><summary>Je suis enseignant : créer une séance</summary>'
       + '<label>Nom de la séance <input id="clName" type="text" value="Séance du jour"></label>'
@@ -293,7 +293,7 @@
       + '<label>Pays attribués (Ctrl/Cmd pour en choisir plusieurs) <select id="clCountries" multiple size="7">' + all + '</select></label>'
       + '<label class="cl-chk"><input type="checkbox" id="clSame" checked> Même hasard pour tous les élèves</label>'
       + '<button type="button" id="clMake">Générer le code</button><div id="clOut" hidden></div></details>'
-      + '<button type="button" class="ghost" id="clAgg0">Tableau de classe</button>';
+      + '<button type="button" class="ghost" id="clAgg0">Tableau de classe</button></details>';
     $('#clJoin', el).addEventListener('click', () => { const cfg = dec($('#clCode', el).value), er = $('#clErr', el); if (!cfg) { er.textContent = 'Code non reconnu.'; er.hidden = false; return; } activate(cfg); });
     el.querySelectorAll('.cl-pre').forEach((b) => b.addEventListener('click', () => { const ids = PRESETS[+b.dataset.i].p; [...$('#clCountries', el).options].forEach((o) => { o.selected = ids.includes(o.value); }); }));
     $('#clMake', el).addEventListener('click', () => {

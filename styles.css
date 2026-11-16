@@ -2867,3 +2867,31 @@ body.classe-on #birthCertReroll{display:none}
 @media print{body > *:not(#classePrint){display:none!important}#classePrint{position:static;overflow:visible;padding:0}.cp-bar{display:none}}
 .cl-t td:nth-child(2){white-space:nowrap}
 body.classe-on #view-intro .bt-class{grid-row:3}
+
+/* ==== Accueil plus clair : une action, trois étapes, le reste en retrait ==== */
+.intro-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--bento-gap);grid-column:1/-1}
+.bt-step{position:relative;padding:18px 20px 18px 62px}
+.bt-step b{position:absolute;left:18px;top:16px;width:32px;height:32px;border-radius:50%;background:#2a2118;color:#fff;display:flex;align-items:center;justify-content:center;font:700 16px var(--sans,sans-serif)}
+.bt-step h4{margin:0 0 4px;font-size:16px;font-weight:750;color:var(--ink-tile)}
+.bt-step p{margin:0;font-size:13.5px;line-height:1.45;color:rgba(42,33,24,.85)}
+.bt-step.s1{background:#bcd9f6}.bt-step.s2{background:#ffd56a}.bt-step.s3{background:#f8c4de}
+.bt-cta .cta-btn{font-size:21px;padding:16px 34px}
+.bt-cta .cta-hint{font-size:14px}
+.bt-pick .country-info .ci-row:nth-child(n+3){display:none}
+.bt-pick .country-info{display:flex;gap:6px 24px;flex-wrap:wrap}
+.cl-wrap > summary{cursor:pointer;list-style:none;font-size:15px}
+.cl-wrap > summary::-webkit-details-marker{display:none}
+.cl-wrap[open] > summary{margin-bottom:8px}
+#view-intro .bt-class{padding:14px 22px}
+@media (min-width:861px){
+  #view-intro .bt-title{grid-column:1/9;grid-row:1}
+  #view-intro .bt-illus{grid-column:9/13;grid-row:1/3}
+  #view-intro .bt-cta{grid-column:1/9;grid-row:2}
+  #view-intro .intro-steps{grid-row:3}
+  #view-intro .bt-pick{grid-column:1/9;grid-row:4}
+  #view-intro .bt-opt{grid-column:9/13;grid-row:4}
+  #view-intro .bt-class{grid-row:5}
+  body.classe-on #view-intro .bt-class{grid-row:2}
+  #view-intro .bt-warn{grid-row:6}
+}
+@media (max-width:860px){ .intro-steps{grid-template-columns:1fr} }
