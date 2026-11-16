@@ -1906,6 +1906,116 @@ EXTRA_DECISIONS.push(
       { k: 'save', icon: '🐐', fr: "Mettre de côté ce que vous pouvez (bétail, terre, or)", sub: () => "Un petit capital pour les vieux jours", fx: { pppx: -0.05, happy: 1, flag: ['noPensionAsked', true] } },
     ] },
 );
+// ==== Décisions du cœur : des proches en jeu, 3 ou 4 voies, des suites durables ====
+EXTRA_DECISIONS.push(
+  { id: 'de_friend_crisis', kind: 'family', min: 22, max: 65, p: 0.1, when: (l) => hasFriends(l) && !l.friendCrisis,
+    fr: ["{ami1} ne va pas bien", "{ami1} ne donne plus de nouvelles depuis quelques semaines. Quand vous vous voyez enfin, vous lui trouvez les yeux creux, et son « tout va bien » sonne faux."],
+    choices: [
+      { k: 'stay', icon: '🫂', fr: "Tout laisser pour être là", sub: () => "Du temps, de la fatigue, un lien qui peut devenir indestructible", fx: { social: 5, happy: 2, health: -2, flag: ['friendCrisis', true] } },
+      { k: 'help', icon: '💶', fr: "L'aider financièrement", sub: (l) => `Environ ${priceTxt(l, 0.06)} · cela soulage, mais ne règle pas tout`, fx: { pppx: -0.06, social: 3, flag: ['friendCrisis', true] } },
+      { k: 'listen', icon: '☎️', fr: "Rester disponible, sans le brusquer", sub: () => "Un appel de temps en temps", fx: { social: 2, flag: ['friendCrisis', true] } },
+      { k: 'away', icon: '🚪', fr: "Prendre vos distances", sub: () => "Vous protégez votre tranquillité, au prix d'un regret possible", fx: { social: -4, happy: -2, flag: ['friendCrisis', true] } },
+    ] },
+  { id: 'de_partner_move', kind: 'big', min: 26, max: 55, p: 0.09, priority: false, when: (l) => hasPartner(l) && (l.stats.married || l.stats.relationship === 'cohab') && !l.partnerMove,
+    fr: ["Un nouveau départ pour {conj}", "{conj} a reçu une belle proposition dans une autre ville. Elle change tout pour lui ou pour elle, mais elle vous arrache à vos habitudes, vos proches et votre quartier."],
+    choices: [
+      { k: 'follow', icon: '🚚', fr: "Le ou la suivre", sub: () => "Une nouvelle vie à deux, loin des vôtres", fx: { social: -3, happy: 2, pppx: 0.1, flag: ['partnerMove', true] } },
+      { k: 'refuse', icon: '🏠', fr: "Refuser de partir", sub: () => "Vous gardez vos racines, au risque de la rancœur", fx: { social: 2, happy: -3, flag: ['partnerMove', true] } },
+      { k: 'distance', icon: '🚆', fr: "Essayer de vivre à distance", sub: () => "De longs trajets, des retrouvailles intenses", fx: { happy: -1, social: -1, pppx: -0.05, flag: ['partnerMove', true] } },
+      { k: 'talk', icon: '💬', fr: "Chercher un compromis, quelques années pour chacun", sub: () => "Du dialogue et de la patience", fx: { happy: 3, social: 1, flag: ['partnerMove', true] } },
+    ] },
+  { id: 'de_work_credit', kind: 'big', min: 24, max: 58, p: 0.09, when: (l) => isEmployed(l) && !l.creditStolen,
+    fr: ["Votre travail, son nom", "Vous découvrez que {coll1} a présenté votre travail comme le sien devant la direction. Tout le monde s'est empressé de féliciter {coll1}, et personne ne vous regarde."],
+    choices: [
+      { k: 'confront', icon: '🗣️', fr: "L'affronter en face", sub: () => "Une explication franche, avec un risque de tension", fx: () => roll([0.55, { happy: 3, social: -1, flag: ['creditStolen', true] }], [0.45, { happy: -3, social: -3, flag: ['creditStolen', true] }]) },
+      { k: 'report', icon: '📨', fr: "En parler à votre responsable", sub: () => "Une reconnaissance possible, des représailles aussi", fx: () => roll([0.6, { happy: 2, pppx: 0.05, flag: ['creditStolen', true] }], [0.4, { happy: -4, social: -2, flag: ['creditStolen', true] }]) },
+      { k: 'swallow', icon: '😶', fr: "Ne rien dire", sub: () => "Rien ne change, mais cela vous ronge", fx: { happy: -3, flag: ['creditStolen', true] } },
+      { k: 'leave', icon: '🧭', fr: "Chercher ailleurs un endroit qui vous reconnaisse", sub: () => "Un nouveau départ, un peu d'incertitude", fx: () => roll([0.6, { happy: 4, pppx: 0.1, flag: ['creditStolen', true] }], [0.4, { happy: -2, pppx: -0.1, flag: ['creditStolen', true] }]) },
+    ] },
+  { id: 'de_dream_back', kind: 'big', min: 28, max: 55, p: 0.08, when: (l) => !!(l.traits && l.traits.dream) && !l.dreamAsked,
+    fr: ["Le rêve de l'enfance", (l) => `Un souvenir vous traverse : enfant, vous rêviez d'être ${String(l.traits.dream).toLowerCase()}. Tout cela semble loin, et pourtant quelque chose en vous bat encore.`],
+    choices: [
+      { k: 'try', icon: '✨', fr: "Y consacrer vos soirées", sub: () => "Du temps volé au repos, une joie qui revient", fx: { happy: 5, health: -2, social: 1, flag: ['dreamAsked', true] } },
+      { k: 'kids', icon: '🧒', fr: "Le transmettre à vos proches", sub: () => "Ce que vous n'avez pas pu faire, quelqu'un d'autre le vivra", fx: { social: 3, happy: 3, flag: ['dreamAsked', true] } },
+      { k: 'join', icon: '🤝', fr: "Rejoindre un groupe ou une association", sub: () => "Un peu de cotisation, de nouveaux visages", fx: { pppx: -0.02, social: 4, happy: 3, flag: ['dreamAsked', true] } },
+      { k: 'forget', icon: '🕰️', fr: "Le ranger dans un tiroir", sub: () => "La vie réelle d'abord", fx: { happy: -2, flag: ['dreamAsked', true] } },
+    ] },
+  { id: 'de_neighbor_loss', kind: 'family', min: 35, max: 85, p: 0.09, when: (l) => !l.neighborLoss,
+    fr: ["Le deuil d'à côté", "Une personne que vous côtoyez depuis toujours dans le quartier est décédée cette nuit. Sa famille est loin, sa maison est vide, et tout le quartier vous regarde pour savoir ce qu'on fait."],
+    choices: [
+      { k: 'organise', icon: '🕯️', fr: "Organiser les adieux avec le quartier", sub: () => "Une soirée à la fois triste et unie", fx: { social: 5, happy: 1, health: -1, flag: ['neighborLoss', true] } },
+      { k: 'attend', icon: '🌹', fr: "Venir à la cérémonie et rester auprès de la famille", sub: () => "Une présence discrète", fx: { social: 3, flag: ['neighborLoss', true] } },
+      { k: 'note', icon: '✉️', fr: "Envoyer quelques mots", sub: () => "Un geste simple, de loin", fx: { social: 1, flag: ['neighborLoss', true] } },
+      { k: 'none', icon: '🚪', fr: "Ne pas vous mêler de cela", sub: () => "Chacun son chagrin", fx: { social: -2, flag: ['neighborLoss', true] } },
+    ] },
+  { id: 'de_loneliness', kind: 'family', min: 60, max: 92, p: 0.14, when: (l) => aloneNow(l) && !l.lonelyAsked,
+    fr: ["Les journées sont longues", "Vos proches sont occupés, les amis disparaissent un à un. Les journées s'étirent, et le téléphone sonne de moins en moins."],
+    choices: [
+      { k: 'club', icon: '🎲', fr: "Rejoindre un club ou un groupe de paroisse, de mosquée, de quartier", sub: () => "Se déplacer, retrouver des visages", fx: { social: 5, happy: 3, flag: ['lonelyAsked', true] } },
+      { k: 'pet', icon: '🐕', fr: "Adopter un animal", sub: () => "Une présence quotidienne, un peu de soin à donner", fx: { social: 1, happy: 4, flag: ['pet', 'dog'], } },
+      { k: 'call', icon: '📞', fr: "Appeler les vieux amis que vous avez perdus de vue", sub: () => "Un peu de courage pour recoller les morceaux", fx: () => roll([0.7, { social: 4, happy: 3, flag: ['lonelyAsked', true] }], [0.3, { social: -1, happy: -2, flag: ['lonelyAsked', true] }]) },
+      { k: 'stay', icon: '🪑', fr: "Rester dans le silence", sub: () => "Rien ne change, rien ne se brise", fx: { happy: -4, health: -2, flag: ['lonelyAsked', true] } },
+    ] },
+  { id: 'de_teen_crush', kind: 'small', min: 13, max: 17, p: 0.14, when: (l) => inSchool(l) && !l.crushAsked,
+    fr: ["Quelqu'un dans la classe", "Depuis des semaines, vous ne pensez qu'à une personne de la classe. Elle ne s'en doute pas, ou fait comme si."],
+    choices: [
+      { k: 'say', icon: '💬', fr: "Tout lui dire", sub: () => "Le cœur dans la gorge", fx: () => roll([0.4, { happy: 5, social: 2, flag: ['crushAsked', true] }], [0.6, { happy: -4, social: -1, flag: ['crushAsked', true] }]) },
+      { k: 'friend', icon: '🤝', fr: "Devenir d'abord son ami", sub: () => "Plus lent, plus doux", fx: { social: 3, happy: 1, flag: ['crushAsked', true] } },
+      { k: 'letter', icon: '💌', fr: "Écrire une lettre anonyme", sub: () => "Un mot dans un cahier, et l'attente", fx: { happy: 1, flag: ['crushAsked', true] } },
+      { k: 'keep', icon: '🤐', fr: "Garder le secret", sub: () => "Un tourment discret", fx: { happy: -2, flag: ['crushAsked', true] } },
+    ] },
+  { id: 'de_exam_pressure', kind: 'family', min: 13, max: 19, p: 0.15, when: (l) => inSchool(l) && !l.pressureAsked && (motherAlive(l) || fatherAlive(l)),
+    fr: ["Les attentes de la famille", "Vos parents comptent sur vos résultats, ils l'ont dit plusieurs fois. Ils se sacrifient pour que vous puissiez étudier, et la peur de les décevoir vous serre la gorge."],
+    choices: [
+      { k: 'work', icon: '📚', fr: "Travailler jour et nuit", sub: () => "Des résultats, de la fatigue", fx: { know: 4, health: -3, happy: -2, flag: ['pressureAsked', true] } },
+      { k: 'talk', icon: '🗣️', fr: "Leur dire ce que vous ressentez", sub: () => "Une conversation difficile, un poids qui s'allège", fx: { happy: 3, social: 2, flag: ['pressureAsked', true] } },
+      { k: 'help', icon: '🧑‍🏫', fr: "Demander de l'aide à un professeur ou à un ami", sub: () => "Apprendre à ne pas rester seul", fx: { know: 3, social: 2, flag: ['pressureAsked', true] } },
+      { k: 'ease', icon: '🌿', fr: "Prendre du recul", sub: () => "Moins de pression, un risque sur les résultats", fx: { know: -2, happy: 3, flag: ['pressureAsked', true] } },
+    ] },
+  { id: 'de_sibling_quarrel', kind: 'family', min: 28, max: 70, p: 0.09, when: (l) => sibs(l) && !l.sibQuarrel,
+    fr: ["{frere1} et vous", "Une vieille dispute avec {frere1} n'a jamais été réglée. Vous ne vous parlez plus que lors des fêtes, et chacun attend que l'autre appelle."],
+    choices: [
+      { k: 'call', icon: '📞', fr: "Appeler le premier", sub: () => "Avaler un peu de fierté", fx: () => roll([0.75, { social: 5, happy: 4, flag: ['sibQuarrel', true] }], [0.25, { social: -1, happy: -2, flag: ['sibQuarrel', true] }]) },
+      { k: 'letter', icon: '✉️', fr: "Lui écrire une longue lettre", sub: () => "Dire enfin ce qui n'a jamais été dit", fx: { social: 3, happy: 2, flag: ['sibQuarrel', true] } },
+      { k: 'wait', icon: '⏳', fr: "Attendre un événement familial", sub: () => "Un enterrement ou un mariage rapproche souvent", fx: { happy: -1, flag: ['sibQuarrel', true] } },
+      { k: 'pride', icon: '🧱', fr: "Tenir bon sur votre position", sub: () => "Vous aurez raison, mais seul", fx: { social: -3, happy: -2, flag: ['sibQuarrel', true] } },
+    ] },
+  { id: 'de_anniversary', kind: 'family', min: 26, max: 70, p: 0.08, when: (l) => hasPartner(l) && l.stats.married && !l.anniversaryForgot,
+    fr: ["Un anniversaire oublié", "Vous réalisez, en voyant le visage de {conj}, que vous avez oublié votre anniversaire de mariage. Rien n'est dit, mais le regard dit tout."],
+    choices: [
+      { k: 'sorry', icon: '💐', fr: "Reconnaître votre oubli sans détour", sub: () => "Un moment gênant, puis un moment tendre", fx: { happy: 2, social: 2, flag: ['anniversaryForgot', true] } },
+      { k: 'surprise', icon: '🎁', fr: "Improviser une soirée pour vous deux", sub: (l) => `Environ ${priceTxt(l, 0.02)}`, fx: { pppx: -0.02, happy: 4, social: 2, flag: ['anniversaryForgot', true] } },
+      { k: 'letter', icon: '💌', fr: "Écrire à votre conjoint tout ce que vous ne dites plus", sub: () => "Des mots qui font du bien", fx: { happy: 5, social: 3, flag: ['anniversaryForgot', true] } },
+      { k: 'pretend', icon: '🎭', fr: "Faire comme si de rien n'était", sub: () => "Vous espérez qu'il ou elle oubliera aussi", fx: { happy: -3, social: -2, flag: ['anniversaryForgot', true] } },
+    ] },
+  { id: 'de_mother_letters', kind: 'family', min: 35, max: 75, p: 0.1, when: (l) => !l.lettersFound && ((l.family && l.family.parents) || []).some(p => p.sex === 'F') && !motherAlive(l),
+    fr: ["Les lettres de {mere}", "En vidant la maison de {mere}, vous retrouvez une boîte de lettres jamais envoyées. Certaines vous sont adressées."],
+    choices: [
+      { k: 'read', icon: '📖', fr: "Les lire seul{e}, ce soir", sub: () => "Une nuit de larmes et de mots enfin dits", fx: { happy: 4, social: 1, flag: ['lettersFound', true] } },
+      { k: 'share', icon: '👨‍👩‍👧', fr: "Les lire avec vos frères et sœurs", sub: () => "Un deuil partagé", fx: { social: 5, happy: 3, flag: ['lettersFound', true] } },
+      { k: 'keep', icon: '📦', fr: "Les garder fermées", sub: () => "Vous n'êtes pas encore prêt(e)", fx: { happy: -2, flag: ['lettersFound', true] } },
+    ] },
+);
+// Choix supplémentaires pour des décisions qui n'en avaient que deux : une voie plus humaine, plus nuancée.
+const ENRICH = {
+  de_screening: [{ k: 'talk', icon: '💬', fr: "En parler à un proche avant de décider", sub: () => "Une présence pour vous accompagner", fx: { social: 2, happy: 1 } }],
+  de_quit_smoking: [{ k: 'support', icon: '🫂', fr: "Demander à un proche de vous soutenir", sub: () => "Plus de chances, et un lien plus fort", fx: () => roll([0.55, { flag: ['smoker', false], exSmoker: true, health: 4, happy: 3, social: 2, msg: { fr: "Avec le soutien des vôtres, vous tenez bon : vous ne fumez plus.", en: "With support you quit." } }], [0.45, { social: 1, happy: -1 }]) }],
+  de_car: [{ k: 'used', icon: '🚙', fr: "Acheter une voiture d'occasion", sub: () => "Moins chère, plus d'entretien", fx: { money: -1800, happy: 1, flag: ['hasCar', true] } }],
+  de_motorbike: [{ k: 'share', icon: '🤝', fr: "Partager la moto d'un cousin", sub: () => "Moins cher, des liens renforcés", fx: { happy: 1, social: 2 } }],
+  de_elder_home: [{ k: 'rota', icon: '🔄', fr: "Alterner chez chacun de vos proches", sub: () => "Un peu de fatigue pour tous, un peu de présence partout", fx: { social: 3, happy: 1 } }],
+  de_gym: [{ k: 'walk', icon: '🚶', fr: "Marcher chaque matin avec un voisin", sub: () => "Gratuit, et une amitié en plus", fx: { health: 1, social: 2 } }],
+  de_hypertension: [{ k: 'family', icon: '👨‍👩‍👧', fr: "Faire du suivi un projet de famille", sub: () => "Manger mieux ensemble, marcher le soir", fx: { health: 2, social: 2 } }],
+  de_workplace_mockery: [{ k: 'ally', icon: '🤝', fr: "En parler à un collègue de confiance", sub: () => "Ne plus porter cela seul", fx: { social: 3, happy: 1 } }],
+  de_gambling: [{ k: 'confide', icon: '🫂', fr: "En parler à un proche avant qu'il ne soit trop tard", sub: () => "Un aveu difficile, une vraie aide", fx: { happy: 2, social: 2 } }],
+  de_bednet: [{ k: 'share', icon: '🛏️', fr: "En acheter aussi pour les voisins", sub: () => "Plus cher, mais tout le quartier est protégé", fx: { pppx: -0.02, social: 3, health: 1 } }],
+  de_vaccination: [{ k: 'family', icon: '💉', fr: "Y aller avec vos proches", sub: () => "Moins de peur ensemble", fx: { health: 2, social: 2 } }],
+  de_overtime: [{ k: 'negotiate', icon: '🗣️', fr: "Négocier un autre rythme", sub: () => "Un risque de tension, une chance de souffler", fx: () => roll([0.55, { happy: 3, social: 1 }], [0.45, { happy: -1 }]) }],
+  de_exam: [{ k: 'friend', icon: '📚', fr: "Réviser avec un ami", sub: () => "Se motiver à deux", fx: { know: 3, social: 2 } }],
+  de_second_job: [{ k: 'partner', icon: '👥', fr: "En discuter avec votre famille d'abord", sub: () => "Décider ensemble", fx: { social: 2, happy: 1 } }],
+  de_study_abroad: [{ k: 'scholar', icon: '🎓', fr: "Chercher une bourse avant de décider", sub: () => "Du temps, des démarches, moins de risque", fx: { know: 2, happy: 1 } }],
+  de_move_city: [{ k: 'visit', icon: '🧭', fr: "Aller visiter d'abord", sub: () => "Se faire une idée avant de s'engager", fx: { happy: 1, pppx: -0.01 } }],
+};
+EXTRA_DECISIONS.forEach(d => { const extra = ENRICH[d.id]; if (extra && Array.isArray(d.choices)) extra.forEach(c => { if (!d.choices.some(x => x.k === c.k)) d.choices.push(c); }); });
 // Emplois proposés au premier poste, selon les études et le lieu de vie. mult module le revenu du pays.
 const JOBS = {
   lowRural: [{ i: '🌾', fr: "Ouvri{er|ère} agricole", en: 'Farm labourer', mult: 0.8, health: -1 }, { i: '🐄', fr: "Éleveu{r|se}", en: 'Herder', mult: 0.85 }, { i: '🧺', fr: "Vendeu{r|se} sur les marchés", en: 'Market seller', mult: 0.9, happy: 1 }],
@@ -2317,18 +2427,27 @@ const enfr = (en, zh) => LANG === 'en' ? en : LANG === 'fr' ? (FR_BY_EN[en] || e
 function genderize(txt, life) {
   const f = !!life && life.sex === 'F';
   let out = String(txt).replace(/\{([^|{}]*)\|([^{}]*)\}/g, (m, a, b) => (f ? b : a)).replace(/\{e\}/g, f ? 'e' : '');
-  if (life && /\{(ami|frere|conj|collegue|age_mere|animal)\}/.test(out)) {
+  if (life && /\{(ami1?|frere1?|conj|collegue|coll1|age_mere|animal|mere|pere|enfant|reve)\}/.test(out)) {
     const yr = life.year + life.yearOffset;
     const rnd = (a) => a[Math.floor(Math.random() * a.length)];
     const sibs = ((life.family && life.family.siblings) || []).map(x => String(x.name).split(' ')[0]);
     const mother = ((life.family && life.family.parents) || []).find(x => x.sex === 'F');
     const pet = (life.pets || []).filter(x => x.to == null).pop();
+    // {ami1}, {frere1}, {coll1} : le même prénom dans tout le texte d'une même année (titre et corps d'une décision).
+    const tk = (life._tk && life._tk.age === life.age) ? life._tk : (life._tk = { age: life.age });
+    out = out.replace(/\{ami1\}/g, () => tk.ami || (tk.ami = (life.friends && life.friends.length ? rnd(life.friends).name : "un ami d'enfance")))
+      .replace(/\{frere1\}/g, () => tk.frere || (tk.frere = (sibs.length ? rnd(sibs) : 'votre frère')))
+      .replace(/\{coll1\}/g, () => tk.coll || (tk.coll = randomName(life.countryData, Math.random() < 0.5 ? 'M' : 'F').first));
     out = out.replace(/\{ami\}/g, () => (life.friends && life.friends.length ? rnd(life.friends).name : "un ami d'enfance"))
       .replace(/\{frere\}/g, () => (sibs.length ? rnd(sibs) : 'votre frère'))
       .replace(/\{conj\}/g, () => (life.stats && life.stats.partner && life.stats.partner.name ? String(life.stats.partner.name.first || life.stats.partner.name.full || '').split(' ')[0] || 'votre conjoint' : 'votre conjoint'))
       .replace(/\{collegue\}/g, () => randomName(life.countryData, Math.random() < 0.5 ? 'M' : 'F').first)
       .replace(/\{age_mere\}/g, () => (mother && mother.birth ? yr - mother.birth.year : '60'))
-      .replace(/\{animal\}/g, () => (pet ? pet.name : 'votre animal'));
+      .replace(/\{animal\}/g, () => (pet ? pet.name : 'votre animal'))
+      .replace(/\{mere\}/g, () => (mother && mother.name ? String(mother.name).split(' ')[0] : 'votre mère'))
+      .replace(/\{pere\}/g, () => { const f = ((life.family && life.family.parents) || []).find(x => x.sex === 'M'); return f && f.name ? String(f.name).split(' ')[0] : 'votre père'; })
+      .replace(/\{enfant\}/g, () => { const ks = (life.stats && life.stats.kids) || [], fk = (life.family && life.family.kids) || []; let bi = -1; ks.forEach((k, i) => { if (bi < 0 || k.bornAt > ks[bi].bornAt) bi = i; }); return fk[bi] && fk[bi].name ? String(fk[bi].name).split(' ')[0] : 'votre enfant'; })
+      .replace(/\{reve\}/g, () => String((life.traits && life.traits.dream) || 'votre rêve').toLowerCase());
   }
   return out;
 }
@@ -2584,6 +2703,52 @@ const hasPartner = (l) => !!(l.stats && l.stats.partner);
 const herdOf = (l) => !!l.herd;
 const renting = (l) => l.housing && l.housing.type === 'rent';
 const owning = (l) => l.housing && ['own', 'mortgage'].includes(l.housing.type);
+// ==== Scènes de vie plus intimes : des proches nommés, des souvenirs, des gestes qui comptent ====
+const youngKid = (a, b) => (l) => { const ks = (l.stats && l.stats.kids) || []; if (!ks.length) return false; const y = ks.reduce((m, k) => k.bornAt > m.bornAt ? k : m, ks[0]); const ag = l.age - y.bornAt; return ag >= a && ag <= b; };
+const aloneNow = (l) => !l.stats.married && ['single', 'divorced'].includes(l.stats.relationship || 'single');
+RECIT.push(
+  // enfance
+  { a: [4, 9], i: '🌙', w: 5, rep: true, when: motherAlive, fx: { happy: 2, social: 1 }, fr: "Un soir d'orage, vous vous glissez dans le lit de {mere}. Elle ne dit rien, elle vous serre contre elle, et l'orage n'a plus d'importance." },
+  { a: [5, 11], i: '🥣', w: 4, when: (l) => motherAlive(l) || fatherAlive(l), fx: { happy: 2 }, fr: "Vous êtes malade, et quelqu'un de la maison veille près de vous toute la nuit. Vous vous rappellerez longtemps la fraîcheur de sa main sur votre front." },
+  { a: [6, 12], i: '🎒', w: 4, rep: false, when: (l) => inSchool(l), fx: { happy: 1 }, fr: "Vous oubliez votre cahier le jour du contrôle. Votre voisin de classe vous prête le sien sans rien demander : vous en faites votre meilleur ami." },
+  { a: [7, 13], i: '🧸', w: 3, rep: false, when: (l) => sibs(l), fx: { social: 2, happy: 1 }, fr: "{frere} et vous inventez un jeu avec trois bouts de ficelle et des cartons. Vous ne saviez pas que vous parleriez encore de cet après-midi trente ans plus tard." },
+  { a: [8, 14], i: '🏆', w: 3, rep: false, when: (l) => inSchool(l) && (motherAlive(l) || fatherAlive(l)), fx: { happy: 3, know: 1 }, fr: "À la remise des prix, vous cherchez dans la salle le visage de vos parents. Quand vous le trouvez, il est déjà mouillé de larmes." },
+  { a: [9, 15], i: '🐕', w: 3, rep: false, when: (l) => !(l.pets || []).length && !reg('hi')(l), fx: { happy: 2 }, fr: "Un chien errant vous suit jusqu'à la maison trois jours de suite. Vous lui laissez un bol d'eau, puis un peu de pain, puis une place." },
+  { a: [11, 16], i: '💌', w: 4, rep: false, when: (l) => inSchool(l), fx: { happy: -1, social: 1 }, fr: "Vous écrivez un mot à quelqu'un que vous n'osez pas aborder, puis vous le déchirez en mille morceaux. Le cœur bat encore longtemps après." },
+  { a: [12, 17], i: '🪞', w: 3, rep: false, fx: { happy: -2 }, fr: "Vous vous comparez à tout le monde et vous trouvez que vous ne valez pas grand-chose. Personne ne le saura, et pourtant c'est l'été le plus long de votre vie." },
+  // jeunesse
+  { a: [16, 22], i: '🚪', w: 4, rep: false, when: (l) => motherAlive(l) || fatherAlive(l), fx: { social: 1, happy: 1 }, fr: "La veille de votre départ de la maison, {mere} range votre valise une deuxième fois, en silence. Vous comprenez à ce geste tout ce qu'elle ne sait pas dire." },
+  { a: [18, 26], i: '📞', w: 4, rep: true, when: (l) => hasFriends(l), fx: { social: 2 }, fr: "{ami} vous appelle à minuit, juste pour prendre de vos nouvelles. Vous restez au téléphone une heure, sans rien de particulier à raconter." },
+  { a: [18, 28], i: '🌅', w: 3, rep: false, fx: { happy: 2 }, fr: "Vous passez une nuit blanche à discuter de la vie avec des amis, et le soleil vous surprend sur un toit. Vous aurez rarement été aussi léger." },
+  { a: [19, 30], i: '💔', w: 4, rep: false, when: (l) => l.stats.relationship === 'dating' || l.stats.relationship === 'cohab', fx: { happy: -3, social: -1 }, fr: "{conj} et vous vous disputez violemment pour une broutille. En claquant la porte, vous savez déjà que le vrai sujet est ailleurs." },
+  { a: [20, 35], i: '🤝', w: 3, rep: false, when: (l) => hasPartner(l) && l.stats.relationship !== 'single', fx: { happy: 3, social: 1 }, fr: "Après une longue dispute, c'est {conj} qui fait le premier pas. Vous vous réconciliez en riant de votre entêtement." },
+  { a: [22, 35], i: '🎂', w: 3, rep: true, when: (l) => hasPartner(l) && l.stats.relationship !== 'single', fx: { happy: 2 }, fr: "{conj} a préparé votre repas préféré, avec la nappe des grands jours. Vous ne savez pas quoi dire, alors vous la regardez longtemps." },
+  // vie adulte
+  { a: [25, 55], i: '🍂', w: 4, rep: true, when: (l) => motherAlive(l), fx: { social: 1 }, fr: "Vous remarquez que {mere} répète les mêmes histoires, et qu'elle a un peu rapetissé. Ce jour-là, vous écoutez chaque mot comme si c'était la première fois." },
+  { a: [30, 65], i: '📷', w: 3, rep: true, fx: { happy: 2, social: 1 }, fr: "En triant de vieilles photos, vous retrouvez un visage que vous aviez presque oublié. Vous restez longtemps à regarder ceux que vous étiez." },
+  { a: [28, 60], i: '🤗', w: 3, rep: true, when: (l) => hasKids(l), fx: { happy: 3 }, fr: "Un soir, {enfant} vous serre dans ses bras sans raison, juste parce que l'envie lui en a pris. Vous n'avez rien fait pour le mériter, et c'est exactement ce qui vous bouleverse." },
+  { a: [30, 70], i: '🧶', w: 3, rep: false, when: (l) => hasKids(l) && youngKid(0, 5)(l), fx: { happy: 2 }, fr: "{enfant} vous offre un dessin : trois bonshommes et un soleil trop jaune. Vous l'accrochez au mur, bien en vue, et vous le garderez toujours." },
+  { a: [30, 70], i: '🛌', w: 4, rep: true, when: (l) => hasKids(l) && youngKid(0, 3)(l), fx: { health: -1, happy: 1 }, fr: "{enfant} a pleuré toute la nuit. Vous marchez dans le couloir en le berçant, épuisé{e} et pourtant incapable de lui en vouloir." },
+  { a: [35, 70], i: '🏫', w: 3, rep: false, when: (l) => hasKids(l) && youngKid(6, 14)(l), fx: { happy: 2, social: 1 }, fr: "À la fête de l'école, {enfant} vous cherche des yeux dans le public, vous fait un signe de la main, et vous comprenez que vous comptez beaucoup pour {enfant}." },
+  { a: [38, 70], i: '🎓', w: 3, rep: false, when: (l) => hasKids(l) && youngKid(18, 26)(l), fx: { happy: 4 }, fr: "{enfant} a fini ses études. Vous qui n'avez jamais su dire votre fierté, vous trouvez enfin les mots, et vous pleurez un peu." },
+  { a: [40, 70], i: '🪟', w: 3, rep: false, when: (l) => hasKids(l) && youngKid(18, 30)(l), fx: { social: -1, happy: -1 }, fr: "La chambre de {enfant} est vide depuis hier. Vous passez devant la porte plusieurs fois par jour, sans oser y entrer." },
+  { a: [35, 65], i: '🕊️', w: 3, rep: false, when: (l) => hasPartner(l) && l.stats.married, fx: { happy: 3, social: 1 }, fr: "Vous réalisez que {conj} connaît toutes vos manies, et que c'est précisément pour cela que vous l'aimez." },
+  { a: [30, 60], i: '🧳', w: 3, rep: false, when: (l) => hasPartner(l) && l.stats.married, fx: { happy: 2, pppx: -0.02 }, fr: "{conj} et vous partez deux jours au bord de l'eau, sans enfants, sans téléphone. Vous vous redécouvrez comme au premier jour." },
+  { a: [30, 65], i: '🌧️', w: 3, rep: false, when: (l) => isEmployed(l), fx: { happy: -2 }, fr: "Vous sortez du bureau sous la pluie en vous demandant si c'est vraiment cela que vous vouliez de la vie. Personne ne vous répond." },
+  { a: [25, 60], i: '🍵', w: 3, rep: true, when: (l) => isEmployed(l) && !reg('hi')(l), fx: { social: 1 }, fr: "À la pause, {collegue} vous raconte ses soucis, et vous lui racontez les vôtres. Vous repartez travailler avec un poids en moins." },
+  { a: [30, 70], i: '🔔', w: 3, rep: false, when: hasFriends, fx: { social: 2 }, fr: "{ami} frappe à votre porte avec un gâteau, sans prévenir : « Je passais par là. » Vous savez très bien que ce n'est pas un hasard." },
+  // parents et grands-parents
+  { a: [40, 70], i: '📻', w: 3, rep: false, when: (l) => fatherAlive(l), fx: { happy: 1 }, fr: "Vous retrouvez {pere} penché sur son vieux poste de radio, comme quand vous étiez petit{e}. Vous vous asseyez à côté de lui sans parler." },
+  { a: [40, 75], i: '🍲', w: 3, rep: true, when: (l) => motherAlive(l), fx: { happy: 2, social: 1 }, fr: "{mere} vous prépare le plat de votre enfance. Vous n'en avez plus faim, mais vous mangez jusqu'à la dernière bouchée pour la voir sourire." },
+  { a: [45, 75], i: '🕯️', w: 3, rep: false, when: (l) => !motherAlive(l) && ((l.family && l.family.parents) || []).some(p => p.sex === 'F'), fx: { happy: -2 }, fr: "En ouvrant le tiroir de {mere}, vous retrouvez une odeur que vous croyiez perdue. Vous restez agenouillé{e}, un vêtement entre les mains." },
+  { a: [45, 80], i: '✉️', w: 3, rep: false, when: (l) => !fatherAlive(l) && ((l.family && l.family.parents) || []).some(p => p.sex === 'M'), fx: { happy: -1, social: 1 }, fr: "Vous relisez les rares lettres de {pere}. Elles sont maladroites, mal écrites, et vous y entendez enfin sa voix." },
+  // vieillesse
+  { a: [60, 90], i: '🪑', w: 4, rep: true, when: (l) => aloneNow(l), fx: { happy: -2 }, fr: "Le silence de la maison devient lourd. Vous laissez la radio allumée pour qu'il y ait une voix." },
+  { a: [60, 90], i: '📖', w: 3, rep: true, when: (l) => hasKids(l), fx: { happy: 2, social: 1 }, fr: "{enfant} vous demande de raconter votre jeunesse, et vous parlez des heures. Vous réalisez que vous ne vous étiez jamais livré{e} ainsi." },
+  { a: [60, 90], i: '🌻', w: 3, rep: true, fx: { happy: 2 }, fr: "Un matin de printemps, vous restez longtemps à regarder le soleil entrer par la fenêtre. Vous vous sentez, sans raison, reconnaissant{e}." },
+  { a: [65, 90], i: '🎞️', w: 3, rep: false, when: (l) => hasPartner(l), fx: { happy: 2, social: 1 }, fr: "{conj} et vous regardez ensemble d'anciennes photos. Vous riez des coiffures, puis vous vous taisez longuement, la main dans la main." },
+  { a: [65, 90], i: '👵', w: 3, rep: false, when: (l) => hasKids(l) && l.age >= 60, fx: { happy: 3 }, fr: "Vos petits-enfants s'invitent chez vous et mettent la maison sens dessus dessous. Quand ils repartent, vous avez les larmes aux yeux, de bonheur et de silence." },
+);
 RECIT.push(
   // bétail
   { a: [18, 75], i: '🐑', w: 5, when: herdOf, fx: () => ({ pppx: 0.04, happy: 1 }), fr: "Votre troupeau a grandi : de nouveaux petits sont nés ce printemps, et vous en vendez quelques-uns au marché." },
