@@ -366,7 +366,7 @@ const DECISIONS = [
         { k: 'final', icon: '📜',
           label: t('de.divorce.final'),
           sub: t('de.divorce.final.sub'),
-          apply: (life) => { life.stats.married = false; life.stats.partner = null; life.stats.netAssets *= 0.5; life.stats.happiness += 4; logLife(t('de.divorce.final.log')); } },
+          apply: (life) => { life.stats.married = false; life.stats.partner = null; life.stats.relationship = 'divorced'; life.stats.netAssets *= 0.5; life.stats.happiness += 4; logLife(t('de.divorce.final.log')); } },
       ],
       hasNote: true,
     }),
@@ -838,7 +838,7 @@ const DECISIONS = [
      2) 避開其他 modal：別的中斷（財務 / 暫停）在 INTERRUPT_GAP 年內就不再出決策。
    注意：財務 modal 是 setTimeout 延遲開啟的，觸發那年跟真正打斷那年會差一歲，
    所以這裡用「區間」而不是「同年」，並且在 modal 真正開啟時才記錄中斷。 */
-const DECISION_COOLDOWN = 4;
+const DECISION_COOLDOWN = 3;
 const INTERRUPT_GAP = 2;
 
 /* ==== Évènements à choix supplémentaires ====
@@ -856,6 +856,18 @@ const heavyOk = () => !STATE.softMode && !STATE.eduMode;
 // Part de musulmans dans le pays, lue dans le champ `rel` (ex. « C55,N33,M9 »).
 const muslimShare = (c) => { const m = /(?:^|,)\s*M(\d+)/.exec((c && c.rel) || ''); return m ? +m[1] : 0; };
 const MIGRATION_DEST = { lac: ['USA', 'ESP'], ssa: ['FRA', 'GBR', 'ITA'], mena: ['FRA', 'DEU'], sa: ['GBR', 'USA'], eap: ['JPN', 'AUS', 'KOR'], eca: ['DEU', 'POL'] };
+function newPartner(life, older) {
+  const sex = life.sex === 'M' ? 'F' : 'M';
+  return { name: randomName(life.countryData, sex), sex, birth: { year: life.year + life.yearOffset - life.age - older + Math.floor(Math.random() * 8) - 3 } };
+}
+// Pays où le mariage est le plus souvent arrangé par les familles : Asie du Sud et pays très majoritairement musulmans.
+const arrangedNorm = (life) => life.countryData?.region === 'sa' || muslimShare(life.countryData) >= 70;
+const relOf = (life) => life.stats.married ? 'married' : (life.stats.relationship || 'single');
+function relLabel(life) {
+  const fr = { single: 'Célibataire', dating: 'En couple', cohab: 'En concubinage', married: 'Marié(e)', divorced: 'Divorcé(e)' };
+  const en = { single: 'Single', dating: 'Dating', cohab: 'Living together', married: 'Married', divorced: 'Divorced' };
+  return (LANG === 'fr' ? fr : en)[relOf(life)];
+}
 function migrateLife(life) {
   const from = life.countryData;
   const dest = countryById(pick(MIGRATION_DEST[from.region] || ['USA']));
@@ -1214,6 +1226,52 @@ const EXTRA_DECISIONS = [
       { k: 'dig', icon: '⛏️', fr: "Creuser un nouveau puits avec les voisins", en: "Dig a new well with the neighbours", fx: { social: 5, health: -2 } },
       { k: 'buy', icon: '🚚', fr: "Acheter l'eau au camion-citerne", en: "Buy water from the tanker", fx: { pppx: -0.05 } },
     ] },
+  // ---- Vie amoureuse ----
+  { id: 'sm_first_love', kind: 'small', min: 13, max: 18, p: 0.12, priority: true,
+    fr: ["Premier amour", "Quelqu'un de votre âge vous plaît depuis des semaines. Vous y pensez tout le temps."],
+    en: ["First love", "You have liked someone your age for weeks. You think about it all the time."],
+    choices: [
+      { k: 'tell', icon: '💌', fr: "Vous déclarer", en: "Say how you feel",
+        fx: () => roll([0.5, { happy: 6, msg: { fr: "C'est réciproque : votre premier amour.", en: "The feeling is mutual: your first love." } }],
+                       [0.5, { happy: -3, msg: { fr: "Ce n'est pas réciproque.", en: "The feeling is not mutual." } }]) },
+      { k: 'note', icon: '✉️', fr: "Glisser un mot anonyme", en: "Slip an anonymous note", fx: { happy: 1 } },
+      { k: 'quiet', icon: '🤐', fr: "Ne rien dire", en: "Say nothing", fx: {} },
+    ] },
+  { id: 'de_meet', kind: 'family', min: 17, max: 45, p: 0.2, priority: true, repeat: true, when: (life) => relOf(life) !== 'married' && !life.stats.partner && !arrangedNorm(life),
+    fr: ["Une rencontre", "Vous revoyez souvent la même personne. Elle semble chercher votre compagnie, et vous la sienne."],
+    en: ["Meeting someone", "You keep running into the same person. They seem to seek your company, and you theirs."],
+    choices: [
+      { k: 'date', icon: '❤️', fr: "Commencer une relation", en: "Start a relationship", fx: { rel: 'dating', happy: 6, social: 2 } },
+      { k: 'friend', icon: '🤝', fr: "Rester ami(e)s", en: "Stay friends", fx: { social: 2 } },
+      { k: 'away', icon: '🚶', fr: "Garder vos distances", en: "Keep your distance", fx: {} },
+    ] },
+  { id: 'fa_arranged', kind: 'family', min: 18, max: 30, p: 0.18, priority: true, repeat: true, when: (life) => relOf(life) === 'single' && !life.stats.partner && arrangedNorm(life),
+    fr: ["Une proposition de mariage", "Vos parents ont rencontré une autre famille. Ils vous présentent quelqu'un qu'ils jugent convenable."],
+    en: ["A marriage proposal", "Your parents have met another family. They introduce someone they consider suitable."],
+    choices: [
+      { k: 'accept', icon: '💍', fr: "Accepter le mariage", en: "Accept the marriage", fx: { marry: true, pppx: -0.4, happy: 2, social: 4 } },
+      { k: 'know', icon: '🗣️', fr: "Demander à mieux connaître la personne", en: "Ask to get to know them first",
+        fx: () => roll([0.6, { marry: true, pppx: -0.4, happy: 4, social: 2, msg: { fr: "Après plusieurs rencontres, vous acceptez.", en: "After several meetings, you accept." } }],
+                       [0.4, { social: -2, msg: { fr: "L'autre famille retire sa proposition.", en: "The other family withdraws the proposal." } }]) },
+      { k: 'refuse', icon: '✋', fr: "Refuser", en: "Refuse", fx: { social: -5, happy: 1 } },
+    ] },
+  { id: 'de_move_in', kind: 'family', min: 18, max: 46, p: 0.3, priority: true, repeat: true, when: (life) => relOf(life) === 'dating',
+    fr: ["Vivre ensemble", "Votre relation dure. La question de vivre sous le même toit se pose."],
+    en: ["Living together", "Your relationship is lasting. The question of sharing a home comes up."],
+    choices: [
+      { k: 'cohab', icon: '🏠', fr: "Emménager ensemble", en: "Move in together", fx: { rel: 'cohab', happy: 4, money: -1500 } },
+      { k: 'marry', icon: '💍', fr: "Vous marier", en: "Get married", fx: { marry: true, pppx: -0.25, happy: 5, social: 3 } },
+      { k: 'wait', icon: '⏳', fr: "Garder chacun son logement", en: "Keep separate homes", fx: {} },
+      { k: 'break', icon: '💔', fr: "Rompre", en: "Break up", fx: { rel: 'single', happy: -6 } },
+    ] },
+  { id: 'de_proposal', kind: 'family', min: 20, max: 50, p: 0.2, priority: true, repeat: true, when: (life) => relOf(life) === 'cohab',
+    fr: ["Se marier ?", "Vous vivez ensemble depuis un moment. Votre entourage demande à quand le mariage."],
+    en: ["Getting married?", "You have been living together for a while. People around you ask when the wedding will be."],
+    choices: [
+      { k: 'marry', icon: '💍', fr: "Vous marier", en: "Get married", fx: { marry: true, pppx: -0.25, happy: 5, social: 3 } },
+      { k: 'free', icon: '🕊️', fr: "Rester en union libre", en: "Stay unmarried partners", fx: { happy: 1 } },
+      { k: 'split', icon: '💔', fr: "Vous séparer", en: "Split up", fx: { rel: 'single', happy: -8, money: -2000 } },
+    ] },
 ];
 const FX_LABELS = {
   fr: { money: 'Patrimoine', happy: 'Bonheur', health: 'Santé', social: 'Relations', know: 'Savoir' },
@@ -1242,11 +1300,10 @@ function applyFx(life, fx) {
   if (e.smoker) life.smoker = true;
   if (e.flag) life[e.flag[0]] = e.flag[1];
   if (e.edu != null) life.eduTarget = e.edu === 'stop' ? s.education : Math.min(life.eduTarget ?? 4, e.edu);
-  if (e.marry && !s.married) {
-    s.married = true;
-    s.partner = { name: randomName(c, life.sex === 'M' ? 'F' : 'M'), birth: { year: life.year + life.yearOffset - life.age - 9 } };
-  }
-  if (e.leave) { s.married = false; s.partner = null; }
+  if (e.rel === 'dating' || e.rel === 'cohab') { if (!s.partner) s.partner = newPartner(life, 0); s.relationship = e.rel; }
+  if (e.rel === 'single') { s.partner = null; s.married = false; s.relationship = 'single'; }
+  if (e.marry && !s.married) { if (!s.partner) s.partner = newPartner(life, life.age < 18 ? 9 : 0); life.pendingMarriage = true; }
+  if (e.leave) { s.married = false; s.partner = null; s.relationship = 'divorced'; }
   if (e.migrate) migrateLife(life);
   if (e.msg) {
     const m = LANG === 'fr' ? e.msg.fr : e.msg.en;
@@ -1255,6 +1312,27 @@ function applyFx(life, fx) {
   }
   if (e.die) setTimeout(() => { if (STATE.life === life && !life.died) dieNow(e.die); }, 80);
 }
+// Petits évènements annuels : condition de plausibilité, indexée par leur texte anglais.
+const never = () => false;
+const hasKids = (life) => (life.stats.kids || []).length > 0;
+const inSchool = (life) => life.stats.education >= 1;
+const isEmployed = (life) => life.stats.employment === 'employed';
+const online = (min) => (life) => (life.countryData?.net || 0) >= min;
+const FLAVOR_GUARDS = {
+  'Fell in love': never, 'Got married': never, 'Had a child': never, 'Got divorced': never, 'Bought a home': never,   // gérés par l'état réel de la vie
+  'Child graduated': hasKids, 'Helped the kids with homework': hasKids,
+  'Grandchild born': (life) => hasKids(life) && life.age >= 50, 'Grandchildren visit': (life) => hasKids(life) && life.age >= 50, 'Saw grandchild grow': (life) => hasKids(life) && life.age >= 50,
+  'Joined a school club': inSchool, 'Went on a class trip': inSchool, 'Got good grades': inSchool, 'Joined a school team': inSchool, 'Won academic award': inSchool,
+  'Got tutoring after school': (life) => inSchool(life) && comfortable(5000)(life),
+  'Graduated': (life) => life.stats.education >= 3, 'Got first job': isEmployed, 'Got promoted': isEmployed, 'Got big promotion': isEmployed,
+  'Started a project outside work': isEmployed, 'Took a work trip abroad': (life) => isEmployed(life) && pppOf(life) >= 10000,
+  'Bought a car': comfortable(10000), 'Got driver license': comfortable(6000), 'Ran a marathon': comfortable(8000),
+  'Took vacation': comfortable(8000), 'Family trip': comfortable(8000), 'Travelled alone for the first time': comfortable(8000),
+  'Went back to school': comfortable(5000), 'Took a night class': comfortable(5000),
+  'Started a regular checkup habit': comfortable(5000), 'Health checkup': comfortable(5000), 'Had health check': comfortable(5000),
+  'Started thinking about retirement': (life) => pppOf(life) >= 8000, 'Joined a community class for seniors': (life) => pppOf(life) >= 10000,
+  'Posted your first photo online': online(40), 'Got into gaming': online(40), 'Learned to use a smartphone': online(20),
+};
 // Conditions ajoutées aux évènements d'origine : ils supposaient tous un pays riche.
 const ORIGINAL_GUARDS = {
   de_health_warning: comfortable(5000),                                   // un médecin qui fait un bilan
@@ -1277,7 +1355,7 @@ DECISIONS.forEach(d => {
   d.chance = (life) => guard(life) && base(life);
 });
 EXTRA_DECISIONS.forEach(d => DECISIONS.push({
-  id: d.id, kind: d.kind,
+  id: d.id, kind: d.kind, priority: !!d.priority, repeat: !!d.repeat,
   chance: (life) => life.age >= d.min && life.age <= d.max && (!d.when || d.when(life)) && Math.random() < (typeof d.p === 'function' ? d.p(life) : d.p),
   show: () => {
     const fr = LANG === 'fr';
@@ -1308,14 +1386,16 @@ function tryTriggerDecision(life, newAge) {
   // 實測 de_mental_health 排在第 10 位，200 條人生一次都沒出現過。
   const eligible = [];
   for (const dec of DECISIONS) {
-    if (done.has(dec.id)) continue;
+    if (done.has(dec.id) && !dec.repeat) continue;   // une rencontre peut se représenter après un refus ou une rupture
     let ok = false;
     try { ok = dec.chance(life); } catch (e) { continue; }
     if (ok) eligible.push(dec);
   }
   if (!eligible.length) return false;
   // 每年最多一個
-  const dec = eligible[Math.floor(Math.random() * eligible.length)];
+  const prio = eligible.filter(d => d.priority);   // la vie amoureuse passe avant les autres évènements
+  const from = prio.length ? prio : eligible;
+  const dec = from[Math.floor(Math.random() * from.length)];
   try {
     const payload = dec.show(life);
     if (payload) {
@@ -2300,6 +2380,15 @@ function generateFamily(countryCode, selfSex, fc) {
     const gm = randomName(parentCountryData, 'F');
     grandparents.push({ id:'gm_'+Math.random().toString(36).slice(2,8), name: gm.full||gm.full_en||'?', sex:'F', country: parentCountry, countryData: parentCountryData, note: parentNote, birth:{year: mother.birth.year - 26}, death:{year: mother.birth.year + 38} });
   }
+  // Les deux grands-parents de chaque côté (avant : un seul grand-père paternel et une seule grand-mère maternelle).
+  grandparents.forEach(g => { g.childOf = g.sex === 'M' ? father?.id : mother?.id; });
+  [[father, 'F', fatherName], [mother, 'M', motherName]].forEach(([par, sex, parName]) => {
+    if (!par || Math.random() >= gpChance) return;
+    const nm = randomName(parentCountryData, sex, sex === 'M' ? parName.last : undefined);
+    grandparents.push({ id: 'g' + sex + '2_' + Math.random().toString(36).slice(2, 8), name: nm.full || nm.full_en || '?', sex,
+      country: parentCountry, countryData: parentCountryData, note: parentNote, childOf: par.id,
+      birth: { year: par.birth.year - 27 }, death: { year: par.birth.year + 37 } });
+  });
   return { parents, siblings, grandparents, familyLast, partner: null, kids: [], fosterCare: fc?.type || null, adoptedFrom: fc?.type === 'adopt' ? countryCode : null };
 }
 
@@ -2365,10 +2454,13 @@ function milestoneEvents(life, newAge) {
   if (life.stats.employment === 'university' && newAge >= 24 && newAge <= 27) {
     life.stats.employment = 'employed';              // 研究所/大學畢業後進入職場
   }
-  if (newAge >= 25 && newAge <= 35 && !life.stats.married && chance(0.15) && (life.stats.employment === 'university' || life.stats.employment === 'employed')) {
+  // Le mariage ne tombe plus du ciel : il vient d'un choix du joueur (rencontre, vie commune, demande, mariage arrangé).
+  if (life.pendingMarriage && !life.stats.married) {
+    life.pendingMarriage = false;
     life.stats.married = true;
-    const partnerName = randomName(life.countryData, life.sex === 'M' ? 'F' : 'M');
-    life.stats.partner = { name: partnerName, sex: life.sex === 'M' ? 'F' : 'M', birth: { year: life.year + life.yearOffset - life.age + Math.floor(Math.random() * 8) - 3 } };
+    life.stats.relationship = 'married';
+    if (!life.stats.partner) life.stats.partner = newPartner(life, 0);
+    const partnerName = life.stats.partner.name;
     if (life.family) {
       life.family.partner = {
         id: 'p_' + Math.random().toString(36).slice(2,8),
@@ -2383,7 +2475,8 @@ function milestoneEvents(life, newAge) {
     }
     events.push({ age: newAge, kind: 'milestone', icon: '💍', text: t('event.marriage', partnerName.full || partnerName.full_en || '') });
   }
-  if (life.stats.married && life.stats.kids.length < 3 && newAge >= 25 && newAge <= 45 && chance(0.12)) {
+  // Enfants : en couple marié ou non, à un rythme et jusqu'à un nombre qui suivent la fécondité du pays.
+  if ((life.stats.married || life.stats.relationship === 'cohab') && life.stats.kids.length < Math.min(8, Math.round((life.countryData?.tfr || 2) + 1.5)) && newAge >= 18 && newAge <= 45 && chance(Math.min(0.3, (life.countryData?.tfr || 2) / 14))) {
     const sex = Math.random() < 0.5 ? 'M' : 'F';
     const child = { sex, bornAt: newAge };
     life.stats.kids.push(child);
@@ -2626,22 +2719,7 @@ function tick() {
   // 基準對齊原作 incomeAt(c, pct) ≈ c.ppp * 0.9，再依教育、家境分位調整。
   // 生活開銷依「自己的收入」而非人均 GDP 計算（否則低教育的人生會被壓成負資產）；
   // 儲蓄率隨分位提高 — 高收入家庭本來就存得比較多。
-  if (STATE.life.stats.employment === 'employed') {
-    const ppp = Number.isFinite(c?.ppp) ? c.ppp : 12000;
-    const eduMult = [0.45, 0.6, 0.75, 0.9, 1.25][Math.min(STATE.life.stats.education, 4)] ?? 0.75;
-    const q = Math.min(Math.max(STATE.life.stats.incomeQuartile, 1), 4);
-    const qMult = [0.55, 0.8, 1.15, 1.9][q - 1] ?? 1;
-    const saveRate = [0.15, 0.22, 0.28, 0.40][q - 1] ?? 0.25;   // 分位 1→4
-    const gross = ppp * 0.9 * eduMult * qMult;
-    STATE.life.stats.annualIncome = Math.round(gross);
-    STATE.life.stats.netAssets += Math.round(gross * saveRate);
-  } else {
-    STATE.life.stats.annualIncome = 0;
-    // à la retraite, on vit sur son épargne : sans cela le patrimoine grossissait sans fin
-    if (STATE.life.stats.employment === 'retired' && STATE.life.stats.netAssets > 0) {
-      STATE.life.stats.netAssets -= Math.round(STATE.life.stats.netAssets * 0.04);
-    }
-  }
+  applyYearBudget(STATE.life);
   // 知識隨教育成長
   if (STATE.life.stats.education >= 2 && STATE.life.stats.knowledge < 90) STATE.life.stats.knowledge = Math.min(100, STATE.life.stats.knowledge + 0.5);
   // v5.59：幸福會慢慢回到「當下處境決定的水位」— 沒有這個，happiness 只會被玩家的
@@ -2846,7 +2924,7 @@ function showFinanceModal(forceOpt) {
   if (!modal) return;
   const currency = life.currency || 'NT$';
   const netAssets = Math.round(s.netAssets || 0);
-  const currentInvest = life.investChoice || 'global';
+  const currentInvest = life.investChoice || 'savings';
   // v5.42：修掉 ReferenceError — `auto` 未宣告，應讀 life.autoInvest
   const auto = life.autoInvest ? 'active' : '';
   const annualCost = Math.round(netAssets * 0.02);   // même taux que la dépense automatique  // 假設生活方式成本 3%
@@ -2906,7 +2984,7 @@ function showFinanceModal(forceOpt) {
 function applyInvestmentReturn() {
   if (!STATE.life || !STATE.life.stats) return;
   const life = STATE.life;
-  const choice = life.investChoice || 'global';
+  const choice = life.investChoice || 'savings';
   const opt = INVEST_OPTIONS.find(o => o.id === choice);
   if (!opt || life.stats.netAssets <= 0) return;
   // 真實報酬率（含通膨），每年變動
@@ -3191,6 +3269,8 @@ function generateYearlyEvent(life) {
   const lastRep = {};
   for (const r of repSeen) lastRep[r.en] = r.age;
   const pool = events.filter(e => {
+    const plausible = FLAVOR_GUARDS[e.en];
+    if (plausible && !plausible(life)) return false;
     if (!e.rep) return !seen.includes(e.en);
     const last = lastRep[e.en];
     return last === undefined || (age - last) >= REP_COOLDOWN;
@@ -3650,6 +3730,7 @@ function renderLife() {
     const age = STATE.life.age || 0;
     const ha = $('#heroAge'); if (ha) ha.textContent = age;
     const hw = $('#heroAssets'); if (hw) hw.textContent = money(STATE.life.stats.netAssets);
+    renderBudget();
     const hi = $('#heroIncome'); if (hi) hi.textContent = STATE.life.stats.annualIncome ? money(STATE.life.stats.annualIncome) : '—';
     const hb = $('#heroYearBar');
     if (hb) {
@@ -3671,13 +3752,13 @@ function renderLife() {
   // 工作：顯示 sector + 是否在職
   $('#lifeJob').textContent = STATE.life.stats.employment === 'employed' ? (LANG === 'fr' ? jobLabel('employed') : `${jobLabel('employed')} · ${LANG==='en'?'employed':'在職'}`) : jobLabel(STATE.life.stats.employment);
   // 伴侶：顯示名字 + 年齡
-  if (STATE.life.stats.married && STATE.life.stats.partner) {
+  if (STATE.life.stats.partner) {
     const p = STATE.life.stats.partner;
     const pName = p.name?.full || p.name?.full_en || '';
     const pAge = p.age || ((STATE.life.year + STATE.life.yearOffset) - (p.birth?.year || 0));
-    $('#lifePartner').textContent = `${pName}（${pAge} ${t('unit.years')}）`;
+    $('#lifePartner').textContent = ['fr', 'en'].includes(LANG) ? `${pName} (${pAge} ${t('unit.years')}) · ${relLabel(STATE.life)}` : `${pName}（${pAge} ${t('unit.years')}）`;
   } else {
-    $('#lifePartner').textContent = t('partner.no');
+    $('#lifePartner').textContent = ['fr', 'en'].includes(LANG) ? relLabel(STATE.life) : t('partner.no');
   }
   // 子女：顯示數量 + 最長子年齡
   if (STATE.life.stats.kids.length) {
@@ -5863,7 +5944,9 @@ function wire() {
       const situation = document.createElement('div');
       situation.id = 'lifeSituation';
       situation.append(...['.cert-age-row', '.cert-meta'].map(q => document.querySelector('#lifeCert ' + q)).filter(Boolean));
-      const first = [document.getElementById('lifeThisYear'), document.getElementById('lifeEventsFeed'), situation,
+      const budget = document.createElement('div');
+      budget.id = 'lifeBudget';
+      const first = [document.getElementById('lifeThisYear'), document.getElementById('lifeEventsFeed'), situation, budget,
         ...['lifeManualDecisions', 'certFamily', 'lifeFamilyDetail', 'lifeActualVsRandom', 'lifeScene', 'lifeCompanions'].map(id => document.getElementById(id))]
         .filter(Boolean);
       const toggle = document.getElementById('btnDetailToggle');
@@ -5873,6 +5956,7 @@ function wire() {
       cols.forEach(c => c.remove());
     }
   }
+  $('#treeBackLife')?.addEventListener('click', () => setView(STATE.life && STATE.life.died ? 'end' : 'life'));
   // Rythme choisi au lancement : secondes par année de vie
   const paceBtns = $$('#paceSeg [data-pace]');
   const setPace = (sec) => {
@@ -6191,6 +6275,77 @@ function continueOldLife(pastLife) {
 }
 
 /* v5.22：貨幣切換 — 即時換算 netAssets */
+/* ==== Budget annuel ====
+   Modèle volontairement simple, en dollars PPA. Ce sont des ordres de grandeur, pas des statistiques officielles.
+   - Revenu : revenu moyen par adulte du pays (55 % du PIB par habitant), modulé par la place de la famille dans
+     l'échelle des revenus (indice de Gini), le niveau d'études et l'expérience.
+   - Redistribution : part de la richesse nationale consacrée aux dépenses sociales. Elle fixe à la fois les
+     impôts et cotisations (progressifs), les aides aux bas revenus et aux familles, et la retraite.
+   - Dépenses : logement, alimentation, énergie ; santé restant à charge (donnée `oop` du pays) ; études ; loisirs. */
+const SOCIAL_RATE = { FRA: .31, ITA: .30, AUT: .29, FIN: .29, BEL: .29, ESP: .28, DEU: .27, DNK: .26, JPN: .25, PRT: .25, GRC: .24, SWE: .24,
+  USA: .23, POL: .23, GBR: .22, NOR: .21, NLD: .18, CHE: .17, KOR: .15, IRL: .13, TUR: .12, MEX: .07 };
+function socialRate(c) { return SOCIAL_RATE[c.id] ?? Math.max(0.03, Math.min(0.2, 0.03 + 0.17 * (c.ppp || 0) / 50000)); }
+// Revenu d'un quart de la population rapporté à la moyenne du pays, déduit de l'indice de Gini (loi log-normale).
+function quartileShare(c, q) {
+  const g = Math.min(0.7, Math.max(0.2, c.gi || 0.38));
+  const pr = (g + 1) / 2;
+  const sigma = Math.SQRT2 * 4.91 * (Math.pow(pr, 0.14) - Math.pow(1 - pr, 0.14));   // approximation de la loi normale inverse
+  return Math.exp(sigma * [-1.15, -0.319, 0.319, 1.15][q - 1] - sigma * sigma / 2);
+}
+function yearBudget(life) {
+  const c = life.countryData || {}, s = life.stats, age = life.age;
+  const base = 0.55 * (c.ppp || 12000);
+  const r = socialRate(c);
+  const q = Math.min(4, Math.max(1, s.incomeQuartile || 2));
+  const zero = { income: 0, pension: 0, taxes: 0, aid: 0, living: 0, health: 0, school: 0, comfort: 0, saved: 0, r };
+  if (age < 18) return zero;
+  let income = 0;
+  if (s.employment === 'employed') {
+    const edu = [0.6, 0.75, 0.9, 1.0, 1.4][Math.min(s.education, 4)] ?? 0.9;
+    const experience = Math.min(1, 0.6 + (age - 18) * 0.02);
+    income = base * Math.pow(quartileShare(c, q), 0.7) * edu * experience;
+    life.lastWage = income;
+  }
+  const pension = s.employment === 'retired' ? (life.lastWage || base * 0.6) * Math.min(0.7, r * 2.3) : 0;
+  const gross = income + pension;
+  const taxes = gross * Math.min(0.5, r * [0.6, 0.9, 1.15, 1.5][q - 1]);
+  const kidsAtHome = (s.kids || []).filter(k => age - k.bornAt < 20).length;
+  const aid = r * 1.5 * Math.max(0, 0.6 * base - gross) + r * 0.15 * base * kidsAtHome;
+  const net = gross - taxes + aid;
+  const couple = s.married || s.relationship === 'cohab';
+  const fullLiving = 0.42 * base * (s.birthPlaceType === 'rural' ? 0.85 : 1.15) * (couple ? 0.8 : 1) * (1 + 0.2 * kidsAtHome);
+  const living = Math.min(fullLiving, Math.max(0, net * 0.9));      // les plus pauvres se privent : on ne dépense pas ce qu'on n'a pas
+  const health = 0.07 * base * (age < 40 ? 0.5 : age < 60 ? 1 : age < 75 ? 1.8 : 2.6) * (c.oop ?? 30) / 100;
+  const school = s.employment === 'university' ? 0.25 * base * (1 - Math.min(0.9, r * 3)) : 0;
+  const comfort = Math.max(0, net - living - health - school) * 0.5;
+  return { income, pension, taxes, aid, living, health, school, comfort, saved: net - living - health - school - comfort, r };
+}
+function applyYearBudget(life) {
+  const b = yearBudget(life);
+  life.budget = b;
+  life.stats.annualIncome = Math.round(b.income + b.pension);
+  life.stats.netAssets += Math.round(b.saved);
+}
+function renderBudget() {
+  const el = $('#lifeBudget');
+  if (!el || !STATE.life) return;
+  const T = LANG === 'fr'
+    ? { title: "Budget de l'année", child: "Vos parents subviennent à vos besoins jusqu'à 18 ans.", income: 'Revenu du travail', pension: 'Pension de retraite', aid: 'Aides et prestations sociales',
+        taxes: 'Impôts et cotisations', living: 'Logement, alimentation, énergie', health: 'Santé (reste à charge)', school: "Frais d'études", comfort: 'Loisirs et équipement', saved: "Épargne de l'année",
+        note: 'Dépenses sociales du pays : environ {r} % de la richesse nationale (estimation). Plus ce taux est élevé, plus les impôts, les aides et la retraite pèsent dans le budget.' }
+    : { title: "This year's budget", child: 'Your parents provide for you until 18.', income: 'Work income', pension: 'Retirement pension', aid: 'Benefits and allowances',
+        taxes: 'Taxes and contributions', living: 'Housing, food, energy', health: 'Health (out of pocket)', school: 'Tuition', comfort: 'Leisure and equipment', saved: "This year's savings",
+        note: "The country's social spending: about {r}% of national income (estimate). The higher it is, the more taxes, benefits and pensions weigh in the budget." };
+  const b = STATE.life.budget;
+  if (!b || STATE.life.age < 18) { el.innerHTML = '<h4>💶 ' + T.title + '</h4><p class="muted">' + T.child + '</p>'; return; }
+  const row = (label, v, sign) => Math.round(v) ? '<div class="bud-row"><span>' + label + '</span><b class="' + (sign > 0 ? 'bud-plus' : 'bud-minus') + '">' + (sign > 0 ? '+ ' : '− ') + money(Math.abs(v)) + '</b></div>' : '';
+  el.innerHTML = '<h4>💶 ' + T.title + '</h4>'
+    + row(T.income, b.income, 1) + row(T.pension, b.pension, 1) + row(T.aid, b.aid, 1)
+    + row(T.taxes, b.taxes, -1) + row(T.living, b.living, -1) + row(T.health, b.health, -1) + row(T.school, b.school, -1) + row(T.comfort, b.comfort, -1)
+    + '<div class="bud-row bud-total"><span>' + T.saved + '</span><b>' + (b.saved < 0 ? '− ' : '+ ') + money(Math.abs(b.saved)) + '</b></div>'
+    + '<p class="muted bud-note">' + T.note.replace('{r}', Math.round(b.r * 100)) + '</p>';
+}
+
 // Les montants du jeu sont en dollars PPA ; taux fixes approximatifs pour l'affichage.
 const CURRENCY_RATES = { 'NT$': 30, 'HK$': 7.8, 'MOP$': 8.05, 'CNY': 7.2, 'US$': 1, '€': 0.92 };
 function money(usd) {
@@ -6918,7 +7073,8 @@ function treePeopleGraph() {
     if (parents[1]) edges.push({ parentId: parents[1].id, childId: s.id, kind: 'parent' });
   });
   (f.grandparents||[]).forEach(gp => {
-    const par = parents.find(p => p.sex === gp.sex && Math.abs((p.birth?.year||0) - (gp.birth?.year||0)) < 35);
+    const par = gp.childOf ? parents.find(p => p.id === gp.childOf)
+      : parents.find(p => p.sex === gp.sex && Math.abs((p.birth?.year||0) - (gp.birth?.year||0)) < 35);
     if (par) edges.push({ parentId: gp.id, childId: par.id, kind: 'parent' });
   });
   if (f.partner) edges.push({ parentId: 'self', childId: f.partner.id, kind: 'spouse' });

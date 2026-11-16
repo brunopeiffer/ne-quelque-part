@@ -2512,3 +2512,15 @@ body { font-size: 16px; }
 #view-life .life-cert { overflow: visible; }
 #view-life #lifeScene { grid-column: 1 / -1; }
 @media (min-width: 1000px) { #view-life .cert-body { top: 148px; } }
+
+/* Budget de l'année, bouton de retour depuis l'arbre, bouton d'exécution automatique lisible */
+#view-life #lifeBudget { grid-column: 1 / -1; }
+.bud-row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
+.bud-row b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bud-plus { color: var(--good); }
+.bud-minus { color: var(--ink); }
+.bud-total { border-bottom: 0; border-top: 2px solid var(--ink); margin-top: 4px; font-size: 17px; font-weight: 650; }
+.bud-note { font-size: 13px; margin: 8px 0 0; }
+.tree-back { min-height: 44px; margin: 0 0 16px; }
+.fin-auto button { background: var(--bg-2); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; min-height: 44px; padding: 8px 16px; font-size: 15px; }
+.fin-auto button.active { background: var(--accent); color: #fff; border-color: var(--accent); }

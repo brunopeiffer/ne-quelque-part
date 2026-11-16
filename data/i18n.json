@@ -778,7 +778,8 @@
     "intro.bc.fatherAbsent": "出生前已不在",
     "intro.bc.motherAbsent": "生產時去世",
     "intro.pace": "節奏：每一年",
-    "life.income": "年收入"
+    "life.income": "年收入",
+    "tree.back": "← 回到人生"
   },
   "zh-Hans": {
     "title": "选出生地 · 人生模拟",
@@ -1559,7 +1560,8 @@
     "intro.bc.fatherAbsent": "出生前已不在",
     "intro.bc.motherAbsent": "生產時去世",
     "intro.pace": "節奏：每一年",
-    "life.income": "年收入"
+    "life.income": "年收入",
+    "tree.back": "← 回到人生"
   },
   "en": {
     "title": "Born Somewhere · Life Simulator",
@@ -2340,7 +2342,8 @@
     "intro.bc.fatherAbsent": "Gone before you were born",
     "intro.bc.motherAbsent": "Died when you were born",
     "intro.pace": "Pace: one year every",
-    "life.income": "Annual income"
+    "life.income": "Annual income",
+    "tree.back": "← Back to the life"
   },
   "ko": {
     "title": "태어난 곳 · 인생 시뮬레이션",
@@ -3121,7 +3124,8 @@
     "intro.bc.fatherAbsent": "Gone before you were born",
     "intro.bc.motherAbsent": "Died when you were born",
     "intro.pace": "Pace: one year every",
-    "life.income": "Annual income"
+    "life.income": "Annual income",
+    "tree.back": "← Back to the life"
   },
   "ja": {
     "title": "出生地 · 人生シミュレーション",
@@ -3902,7 +3906,8 @@
     "intro.bc.fatherAbsent": "Gone before you were born",
     "intro.bc.motherAbsent": "Died when you were born",
     "intro.pace": "Pace: one year every",
-    "life.income": "Annual income"
+    "life.income": "Annual income",
+    "tree.back": "← Back to the life"
   },
   "vi": {
     "title": "Nơi sinh · Mô phỏng cuộc đời",
@@ -4683,7 +4688,8 @@
     "intro.bc.fatherAbsent": "Gone before you were born",
     "intro.bc.motherAbsent": "Died when you were born",
     "intro.pace": "Pace: one year every",
-    "life.income": "Annual income"
+    "life.income": "Annual income",
+    "tree.back": "← Back to the life"
   },
   "fr": {
     "title": "Né quelque part · Simulateur de vie",
@@ -4721,7 +4727,7 @@
     "event.school.start": "Entrée à l'école primaire",
     "event.school.middle": "Entrée au collège",
     "event.education.low": "Décrochage scolaire",
-    "event.school.graduate": "Baccalauréat",
+    "event.school.graduate": "Diplôme de fin de lycée",
     "event.education.university": "Entrée à l'université",
     "event.work.start": "Premier emploi",
     "event.marriage": "Mariage avec {}",
@@ -5486,7 +5492,8 @@
     "causeEx.中風": "Caillot ou hémorragie dans le cerveau.",
     "causeEx.自行結束": "Vous avez arrêté cette vie vous-même avec le bouton ■.",
     "intro.pace": "Rythme : une année toutes les",
-    "life.income": "Revenu annuel"
+    "life.income": "Revenu annuel",
+    "tree.back": "← Retour à la vie"
   },
   "th": {
     "title": "เกิดที่ไหน · จำลองชีวิต",
@@ -6267,7 +6274,8 @@
     "intro.bc.fatherAbsent": "Gone before you were born",
     "intro.bc.motherAbsent": "Died when you were born",
     "intro.pace": "Pace: one year every",
-    "life.income": "Annual income"
+    "life.income": "Annual income",
+    "tree.back": "← Back to the life"
   },
   "es": {
     "title": "Nacido en algún lugar · Simulador de vida",
@@ -7048,6 +7056,7 @@
     "intro.bc.fatherAbsent": "Gone before you were born",
     "intro.bc.motherAbsent": "Died when you were born",
     "intro.pace": "Pace: one year every",
-    "life.income": "Annual income"
+    "life.income": "Annual income",
+    "tree.back": "← Back to the life"
   }
 }
