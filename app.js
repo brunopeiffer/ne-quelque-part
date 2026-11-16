@@ -1589,7 +1589,7 @@ const EXTRA_DECISIONS = [
       { k: 'dollar', icon: '💵', fr: "Changer en devises fortes", fx: { pppx: 0.03 } },
       { k: 'keep', icon: '🏦', fr: "Laisser l'argent à la banque", fx: { pppx: -0.1, happy: -1 } },
     ] },
-  { id: 'de_build_house', kind: 'big', min: 28, max: 55, p: 0.07, when: (life) => !life.ownsHome && reg('ssa', 'lac', 'sa', 'mena')(life) && pppOf(life) < 12000 && isEmployed(life),
+  { id: 'de_build_house', kind: 'big', min: 28, max: 55, p: 0.07, when: (life) => !life.ownsHome && !life.housing && reg('ssa', 'lac', 'sa', 'mena')(life) && pppOf(life) < 12000 && isEmployed(life),
     fr: ["Construire sa maison", "Comme beaucoup autour de vous, vous pourriez construire votre maison brique après brique, au fil des salaires."],
     choices: [
       { k: 'build', icon: '🧱', fr: "Commencer les travaux", fx: { pppx: -0.5, happy: 3, flag: ['ownsHome', true] } },
@@ -1674,6 +1674,89 @@ const EXTRA_DECISIONS = [
       { k: 'work', icon: '💼', fr: "Chercher du travail", sub: () => "Un emploi sans le diplôme visé", fx: { univWork: true } },
     ] },
 ];
+/* ==== Logement, transport, bétail : coûts exprimés en multiples du revenu moyen du pays (PPA) ==== */
+const priceTxt = (life, mult) => money(mult * pppOf(life) / moneyScale(life)) + ' (aux prix français)';
+const HERD = {
+  goat:  { fr: 'chèvres', icon: '🐐', cost: 0.06, inc: 0.05, why: "Les chèvres se reproduisent vite, donnent du lait et se vendent en cas de coup dur : c'est une épargne vivante." },
+  sheep: { fr: 'moutons', icon: '🐑', cost: 0.1, inc: 0.07, why: "Les moutons fournissent la laine, la viande et un capital qui grandit chaque année." },
+  cow:   { fr: 'une vache', icon: '🐄', cost: 0.35, inc: 0.16, why: "Une vache donne du lait chaque jour, des veaux chaque année, et sert d'assurance quand la récolte échoue." },
+  buffalo: { fr: 'une bufflonne', icon: '🐃', cost: 0.4, inc: 0.18, why: "Le lait de bufflonne est très recherché et ses veaux se vendent bien ; elle travaille aussi les champs." },
+  camel: { fr: 'un dromadaire', icon: '🐪', cost: 0.9, inc: 0.25, why: "Un dromadaire supporte la sécheresse, porte les charges et donne du lait là où presque rien d'autre ne survit." },
+  yak:   { fr: 'des yaks', icon: '🐂', cost: 0.3, inc: 0.14, why: "Les yaks donnent lait, laine et viande en altitude, là où les autres bêtes ne tiennent pas." },
+};
+const herdKinds = (life) => {
+  const r = (life.countryData || {}).region;
+  if (['MNG', 'NPL', 'BTN', 'KGZ', 'TJK'].includes(life.country)) return ['sheep', 'yak', 'goat'];
+  if (['NER', 'MLI', 'TCD', 'SOM', 'MRT', 'DJI', 'SDN', 'ERI', 'KEN', 'ETH', 'SAU', 'EGY', 'MAR', 'DZA', 'LBY', 'YEM', 'OMN'].includes(life.country)) return ['camel', 'sheep', 'goat'];
+  if (r === 'sa') return ['buffalo', 'goat', 'cow'];
+  if (r === 'ssa') return ['goat', 'cow', 'sheep'];
+  if (r === 'mena') return ['sheep', 'goat', 'camel'];
+  if (r === 'lac') return ['cow', 'sheep', 'goat'];
+  return ['goat', 'cow', 'sheep'];
+};
+const CYCLING = ['NLD', 'DNK', 'DEU', 'BEL', 'SWE', 'FIN', 'NOR', 'CHE', 'AUT', 'JPN', 'CHN'];
+EXTRA_DECISIONS.push(
+  { id: 'de_housing', kind: 'big', min: 24, max: 44, p: 0.14, priority: true, when: (life) => !life.housing && !life.ownsHome && isEmployed(life),
+    fr: ["Où habiter ?", (life) => `Vous avez un revenu stable, et la question du logement se pose. Dans ce pays, un logement coûte en moyenne environ ${priceTxt(life, comfortable(15000)(life) ? 6 : 3)}.`],
+    choices: (life) => {
+      const rich = comfortable(15000)(life);
+      const ch = [];
+      if (rich) ch.push({ k: 'mortgage', icon: '🏡', fr: "Acheter avec un prêt sur 20 ans",
+        sub: (l) => `Mensualités d'environ ${money(0.35 * pppOf(l) / moneyScale(l) / 12)} par mois · frais et travaux · stabilité`,
+        fx: (l) => ({ pppx: -0.3, happy: 3, social: 1, flag: ['housing', { type: 'mortgage', annual: 0.35 * pppOf(l), end: l.age + 20 }] }) });
+      else ch.push({ k: 'build', icon: '🧱', fr: "Construire petit à petit sur un terrain de la famille",
+        sub: (l) => `Environ ${priceTxt(l, 1.5)}, étalé sur plusieurs années · on y est chez soi`,
+        fx: { pppx: -0.6, happy: 3, social: 1, flag: ['housing', { type: 'own' }] } });
+      ch.push({ k: 'rent', icon: '🔑', fr: "Rester locataire",
+        sub: (l) => `Loyer d'environ ${money(0.25 * pppOf(l) / moneyScale(l) / 12)} par mois · aucune mise de départ · mais on ne possède rien`,
+        fx: { happy: 0, flag: ['housing', { type: 'rent' }] } });
+      ch.push({ k: 'family', icon: '👨‍👩‍👧', fr: "Rester chez vos parents ou en colocation",
+        sub: () => "Très économique, mais moins d'intimité",
+        fx: { social: 2, happy: -2, pppx: 0.05, flag: ['housing', { type: 'family' }] } });
+      return ch;
+    } },
+  { id: 'de_bike', kind: 'small', min: 12, max: 45, p: 0.1, when: (life) => !life.hasBike && (poorish(life) || CYCLING.includes(life.country)),
+    fr: [(life) => poorish(life) ? "Un vélo pour aller plus loin" : "Le vélo au quotidien", (life) => poorish(life) ? "Le travail, l'école et le marché sont à plusieurs kilomètres. Un vélo coûte cher, mais il changerait vos journées." : "Ici, beaucoup de gens se rendent au travail à vélo : c'est rapide en ville, bon pour la santé et peu coûteux."],
+    choices: [
+      { k: 'buy', icon: '🚲', fr: "L'acheter", sub: (l) => `${priceTxt(l, poorish(l) ? 0.05 : 0.02)} · santé et gain de temps`, fx: (l) => ({ pppx: poorish(l) ? -0.05 : -0.02, health: 2, happy: 1, flag: ['hasBike', true] }) },
+      { k: 'no', icon: '🚶', fr: "Continuer à pied", sub: () => "Rien à payer, mais plus de temps perdu", fx: {} },
+    ] },
+  { id: 'de_livestock', kind: 'big', min: 18, max: 55, p: 0.14, priority: true, when: (life) => !life.herd && pppOf(life) < 22000 && ['ssa', 'sa', 'mena', 'lac', 'eap', 'eca'].includes(life.countryData?.region) && (life.stats.birthPlaceType === 'rural' || (life.countryData?.agr || 0) > 35),
+    fr: ["Acheter du bétail ?", "Dans votre région, beaucoup de familles placent leurs économies dans des bêtes plutôt qu'à la banque : un troupeau grandit tout seul, se vend en cas de besoin et fournit du lait ou de la laine."],
+    choices: (life) => herdKinds(life).map(k => ({ k, icon: HERD[k].icon, fr: 'Acheter ' + (/^(une?|des) /.test(HERD[k].fr) ? HERD[k].fr : 'quelques ' + HERD[k].fr),
+      sub: (l) => `${priceTxt(l, HERD[k].cost)} · ${HERD[k].why}`,
+      fx: { pppx: -HERD[k].cost * 0.1, happy: 1, flag: ['herd', { type: k, since: null }] } })).concat([{ k: 'no', icon: '💰', fr: "Garder l'argent", sub: () => "Pas de risque de maladie ou de sécheresse, mais l'argent perd de la valeur avec l'inflation", fx: {} }]) },
+);
+EXTRA_DECISIONS.push(
+  { id: 'de_path_18', kind: 'big', min: 17, max: 19, p: 0.9, priority: true, when: (l) => !l.pathChosen && l.stats.education <= 3,
+    fr: ["Quelle voie choisir ?", "Vous avez fini le lycée ou vous en êtes sorti. Chacun autour de vous a un avis sur ce qu'il faut faire."],
+    choices: (l) => [
+      { k: 'work', icon: '💼', fr: "Chercher du travail tout de suite", sub: () => "Un revenu rapidement, mais moins de diplôme", fx: { pppx: 0.05, happy: 1, flag: ['pathChosen', true] } },
+      { k: 'trade', icon: '🛠️', fr: "Apprendre un métier", sub: (l2) => `Formation courte pour un revenu stable · coût ${priceTxt(l2, 0.1)}`, fx: { pppx: -0.1, know: 3, flag: ['trained', true] } },
+      ...(comfortable(8000)(l) ? [{ k: 'uni', icon: '🎓', fr: "Viser l'université", sub: () => "Trois ou quatre ans de plus, et de meilleurs revenus ensuite", fx: { eduUp: 4, know: 4, flag: ['pathChosen', true] } }] : []),
+    ] },
+  { id: 'de_parent_decline', kind: 'family', min: 45, max: 65, p: 0.15, repeat: false, when: (l) => motherAlive(l) || fatherAlive(l),
+    fr: ["Un parent qui décline", "Votre parent a de plus en plus de mal à vivre seul. Il faut décider qui s'en occupe, et à quel prix."],
+    choices: (l) => [
+      { k: 'home', icon: '🏠', fr: "L'accueillir chez vous", sub: () => "Plus de présence, moins d'argent et d'intimité", fx: { social: 3, happy: 1, pppx: -0.05, flag: ['housedParent', true] } },
+      { k: 'visit', icon: '🚶', fr: "Passer le voir tous les jours", sub: () => "Du temps et de la fatigue", fx: { social: 2, health: -2 } },
+      ...(comfortable(12000)(l) ? [{ k: 'care', icon: '🏥', fr: "Payer une aide ou une maison de retraite", sub: (l2) => `Environ ${priceTxt(l2, 0.4)} par an`, fx: { pppx: -0.4, happy: -1 } }] : []),
+    ] },
+  { id: 'de_midlife', kind: 'big', min: 38, max: 50, p: 0.12, when: (l) => isEmployed(l),
+    fr: ["Un tournant à la quarantaine", "Vous regardez où vous en êtes. Le travail, les proches, les rêves d'avant : quelque chose doit peut-être changer."],
+    choices: [
+      { k: 'stay', icon: '⚓', fr: "Rester sur la même voie", sub: () => "Stabilité, mais peut-être des regrets", fx: { happy: 0 } },
+      { k: 'change', icon: '🧭', fr: "Changer de métier", sub: () => "Un risque de revenu, une chance de s'épanouir", fx: () => roll([0.6, { happy: 6, pppx: -0.1, know: 3 }], [0.4, { happy: -3, pppx: -0.3 }]) },
+      { k: 'family', icon: '👪', fr: "Passer plus de temps avec vos proches", sub: () => "Moins de revenu mais plus de liens", fx: { social: 4, happy: 3, pppx: -0.05 } },
+    ] },
+  { id: 'de_retire_plan', kind: 'big', min: 58, max: 66, p: 0.14, when: (l) => isEmployed(l) && !l.retirePlanned,
+    fr: ["Préparer la retraite", "Il reste quelques années avant l'âge de la retraite. Le moment de regarder ce qu'on a mis de côté."],
+    choices: [
+      { k: 'save', icon: '💰', fr: "Mettre le maximum de côté", sub: () => "Une retraite plus confortable", fx: { pppx: 0.05, happy: -1, flag: ['retireSaver', true] } },
+      { k: 'enjoy', icon: '🌴', fr: "Profiter de ces années", sub: () => "Des souvenirs maintenant, une pension plus modeste", fx: { pppx: -0.1, happy: 3 } },
+      { k: 'work', icon: '⏳', fr: "Travailler le plus longtemps possible", sub: () => "Un meilleur revenu mais moins de repos", fx: { pppx: 0.1, health: -2 } },
+    ] },
+);
 // Emplois proposés au premier poste, selon les études et le lieu de vie. mult module le revenu du pays.
 const JOBS = {
   lowRural: [{ i: '🌾', fr: "Ouvri{er|ère} agricole", en: 'Farm labourer', mult: 0.8, health: -1 }, { i: '🐄', fr: "Éleveu{r|se}", en: 'Herder', mult: 0.85 }, { i: '🧺', fr: "Vendeu{r|se} sur les marchés", en: 'Market seller', mult: 0.9, happy: 1 }],
@@ -1720,6 +1803,8 @@ function applyFx(life, fx, label) {
   if (e.smoker) life.smoker = true;
   if (e.flag) {
     life[e.flag[0]] = e.flag[1];
+    if (e.flag[0] === 'herd' && e.flag[1]) { e.flag[1].since = life.age; e.flag[1].n = 1; }
+    if (e.flag[0] === 'housing' && e.flag[1] && ['own', 'mortgage'].includes(e.flag[1].type)) life.ownsHome = true;
     if (e.flag[0] === 'pet') {
       const pets = life.pets || (life.pets = []);
       if (e.flag[1]) { life.petSince = life.age; pets.push({ name: pick(['Luna', 'Bella', 'Max', 'Rex', 'Nala', 'Milo', 'Tigre', 'Pépita', 'Choupette', 'Rocky']), type: e.flag[1], from: life.age, to: null }); }
@@ -1773,7 +1858,7 @@ const ORIGINAL_GUARDS = {
   de_illness_treat: comfortable(6000),                                    // un dépistage précoce
   de_inflation: (life) => life.stats.netAssets > 1000 * moneyScale(life), // il faut une épargne à protéger
   de_job_change: comfortable(8000),                                       // une startup
-  de_buy_home: (life) => comfortable(10000)(life) && life.stats.netAssets > 0,
+  de_buy_home: () => false,   // remplacé par de_housing (prix et mensualités propres à chaque pays)
   de_sabbatical: (life) => pppOf(life) >= 20000,
   de_inheritance: (life) => quartOf(life) >= 3,                           // une entreprise familiale et des biens
   sm_weekend: (life) => life.stats.employment === 'employed',
@@ -2281,7 +2366,8 @@ RECIT.push(
   { a: [40, 70], i: '🩺', rep: false, fx: { health: -1 }, fr: "Le médecin découvre que votre tension est trop élevée." },
   { a: [30, 60], i: '⚖️', w: 4, when: (l) => pppOf(l) > 20000, fx: { health: -1 }, fr: "Vous prenez du poids depuis quelques années. Votre médecin vous met en garde." },
   { a: [5, 80], i: '🌿', w: 4, when: (l) => isRural(l) && pppOf(l) < 6000, fr: "Faute de médecin, vous consultez le guérisseur du village." },
-  { a: [3, 75], i: '🏥', w: 3, when: (l) => (l.countryData?.oop || 0) > 30, fx: { money: -200 }, fr: "Une ordonnance vous coûte une grosse part de la paie : ici, les soins se paient de sa poche." },
+  { a: [3, 17], i: '🏥', w: 3, when: (l) => (l.countryData?.oop || 0) > 30, fx: { money: -80 }, fr: "Une ordonnance pour vous pèse lourd sur le salaire de vos parents : ici, les soins se paient de sa poche." },
+  { a: [18, 75], i: '🏥', w: 3, when: (l) => (l.countryData?.oop || 0) > 30, fx: { money: -200 }, fr: "Une ordonnance vous coûte une grosse part de la paie : ici, les soins se paient de sa poche." },
   // route, violence, armes
   { a: [15, 70], i: '🚗', w: 5, when: (l) => (l.countryData?.road || 0) > 15, fx: { happy: -1 }, fr: "Vous êtes témoin d'un grave accident sur la route que vous prenez chaque jour." },
   { a: [18, 70], i: '🚙', w: 4, when: comfortable(8000), fx: { money: -300 }, fr: "Un accrochage sans gravité abîme votre véhicule." },
@@ -2345,6 +2431,34 @@ const fatherAlive = (l) => { const m = ((l.family && l.family.parents) || []).fi
 const gpAlive = (l) => ((l.family && l.family.grandparents) || []).some(g => isAliveAt(g, l.year + l.yearOffset));
 const hasFriends = (l) => !!(l.friends && l.friends.length);
 const hasPartner = (l) => !!(l.stats && l.stats.partner);
+const herdOf = (l) => !!l.herd;
+const renting = (l) => l.housing && l.housing.type === 'rent';
+const owning = (l) => l.housing && ['own', 'mortgage'].includes(l.housing.type);
+RECIT.push(
+  // bétail
+  { a: [18, 75], i: '🐑', w: 5, when: herdOf, fx: () => ({ pppx: 0.04, happy: 1 }), fr: "Votre troupeau a grandi : de nouveaux petits sont nés ce printemps, et vous en vendez quelques-uns au marché." },
+  { a: [18, 75], i: '🌵', w: 4, when: herdOf, fx: { pppx: -0.1, happy: -3 }, fr: "La sécheresse s'installe. Les pâturages jaunissent et vous devez acheter du fourrage pour sauver vos bêtes." },
+  { a: [18, 75], i: '🩺', w: 3, when: herdOf, fx: { pppx: -0.06, happy: -2 }, fr: "Une maladie touche le troupeau. Le vétérinaire est loin, et vous perdez quelques bêtes." },
+  { a: [18, 75], i: '🥛', w: 4, when: herdOf, fx: { happy: 2 }, fr: "Vous vendez le lait et le fromage au marché du village : les voisins reconnaissent maintenant votre étal." },
+  // logement
+  { a: [25, 80], i: '🏠', w: 4, when: renting, fx: { pppx: -0.04, happy: -2 }, fr: "Votre propriétaire augmente le loyer. Vous hésitez entre payer plus et déménager." },
+  { a: [25, 80], i: '🔧', w: 4, when: owning, fx: { pppx: -0.05, happy: -1 }, fr: "La toiture fuit : les travaux coûtent cher, mais c'est votre maison et personne d'autre ne les paiera." },
+  { a: [25, 80], i: '🌳', w: 3, when: owning, fx: { happy: 2 }, fr: "Vous plantez un arbre dans votre jardin. Vous savez maintenant que vous le verrez grandir." },
+  { a: [25, 80], i: '📦', w: 3, when: renting, fx: { happy: -1 }, fr: "Un nouveau déménagement : encore des cartons, encore un quartier à apprivoiser." },
+  // zones
+  { a: [8, 60], i: '🍚', w: 3, when: reg('eap', 'sa'), fx: { happy: 1 }, fr: "Toute la famille se retrouve autour du repas du dimanche, trois générations autour de la table." },
+  { a: [10, 70], i: '🪔', w: 4, when: (l) => l.country === 'IND' || l.country === 'NPL', fx: { social: 1, happy: 1 }, fr: "À Diwali, vous allumez des lampes à huile devant la maison et partagez des sucreries avec tous les voisins." },
+  { a: [10, 70], i: '🌙', w: 5, when: isMuslim, fx: { social: 1, happy: 1 }, fr: "La fin du ramadan : on s'embrasse, on se rend visite, et les enfants reçoivent un peu d'argent." },
+  { a: [10, 70], i: '🥁', w: 4, when: reg('ssa'), fx: { social: 1, happy: 1 }, fr: "Les tambours résonnent dans le village : un mariage, et tout le monde danse jusqu'à tard dans la nuit." },
+  { a: [20, 60], i: '🚌', w: 4, when: (l) => reg('ssa', 'sa', 'lac')(l) && !l.hasCar, fx: { happy: -1 }, fr: "Le minibus est tombé en panne en pleine route. Vous marchez des heures sous le soleil." },
+  { a: [5, 60], i: '🌧️', w: 4, when: (l) => MONSOON.includes(l.country), fx: { happy: -1 }, fr: "La mousson est arrivée : les rues sont inondées, et il faut porter les enfants à l'école." },
+  { a: [5, 70], i: '❄️', w: 4, when: (l) => COLD.includes(l.country), fx: { health: -1 }, fr: "Un hiver très froid : vous passez les soirées autour du poêle, à parler de tout et de rien." },
+  { a: [10, 70], i: '🎣', w: 3, when: reg('eap', 'ssa', 'lac'), fx: { happy: 1 }, fr: "Une journée de pêche avec vos proches : peu de prises, beaucoup de rires." },
+  { a: [18, 60], i: '📱', w: 4, when: (l) => (l.countryData?.net || 0) > 40, fx: { social: 1 }, fr: "Vous appelez vos proches en visio le soir : la distance se réduit un peu." },
+  { a: [30, 70], i: '☕', w: 4, when: reg('hi', 'eca'), fx: { social: 1 }, fr: "Le café du coin vous connaît par votre prénom : vous y retrouvez les mêmes visages chaque matin." },
+  { a: [18, 60], i: '🧺', w: 3, when: (l) => poorish(l) && l.stats.employment === 'employed', fx: { pppx: -0.02, happy: -1 }, fr: "Les prix du marché ont encore monté : vous remplissez moins le panier que le mois dernier." },
+  { a: [30, 75], i: '🧓', w: 3, when: (l) => hasKids(l) && l.age > 55, fx: { happy: 2 }, fr: "Vos enfants vous appellent le dimanche, comme chaque semaine. Cet appel est devenu le plus beau moment de la semaine." },
+);
 
 // ---- Cinquante scènes de vie : proches nommés, gestes, souvenirs, culture du pays ----
 RECIT.push(
@@ -2781,6 +2895,12 @@ function causeWeights(c, age, sex) {
   else if (age < 70) bucket = 'older';
   else bucket = 'elderly';
   const w = { ...CAUSE_BASE[bucket] };
+  // Transition épidémiologique : dans les pays pauvres, infections et malnutrition dominent bien plus longtemps, les cancers et maladies cardiaques moins.
+  { const poor = Math.max(0, Math.min(1, 1 - ((c.ppp || 12000) - 2000) / 30000));
+    const mul = (k, f) => { if (w[k] !== undefined) w[k] *= f; };
+    mul('感染性疾病', 1 + (age < 60 ? 5 : 2) * poor); mul('營養不良', 1 + 3 * poor);
+    if (age >= 50 && w['感染性疾病'] === undefined) w['感染性疾病'] = 25 * poor;   // pneumonies, diarrhées, tuberculose aux grands âges
+    mul('癌症', 1 - 0.55 * poor); mul('心血管', 1 - 0.4 * poor); mul('糖尿病', 1 - 0.5 * poor); mul('呼吸系統', 1 + 0.5 * poor); }
   // v5.39：略過可怕的情節 — 把自殺/他殺機率併入其他死因（不改變總死亡率）
   if (STATE.softMode) {
     let heavy = 0;
@@ -2807,7 +2927,7 @@ function causeWeights(c, age, sex) {
   // 那 5 國反而會拿到中位數權重，正好和實測抓到的那個 bug 相反。
   if (w['自殺']) w['自殺'] *= suicideFactor(c);
   if (c.road > 15 && w['事故']) w['事故'] *= c.road / 15;
-  if (c.hiv > 1 && w['感染性疾病']) w['感染性疾病'] *= c.hiv / 0.5;
+  if (c.hiv > 1 && w['感染性疾病']) w['感染性疾病'] *= Math.min(2, c.hiv / 0.5);   // le VIH a sa propre part (applyExternalShares)
   if (c.sm > 30 && w['癌症']) w['癌症'] *= c.sm / 25;
   if (c.sm > 30 && w['心血管']) w['心血管'] *= 1.2;
   if (c.war > 0.1 && (age < 50)) {
@@ -3846,6 +3966,40 @@ function tick() {
   // v5.55：通用決策 — 在每年 tick 末尾試一個未觸發過的事件
   setTimeout(() => tryTriggerDecision(STATE.life, STATE.life.age), 120);
 }
+/* Écran noir de fin : annonce du décès et de sa cause, puis défilé des moments forts de la vie. */
+function showDeathReel(life) {
+  document.getElementById('deathReel')?.remove();
+  const c = life.countryData, nm = (life.name && (life.name.full || life.name.full_en)) || '';
+  const sexE = life.sex === 'F' ? 'e' : '';
+  const PRI = { milestone: 5, spouse: 5, family: 4, parent: 4, illness: 4, heavy: 3, decision: 3, big: 2, social: 2, birth: 6 };
+  let ev = (life.log || []).filter(e => e.kind !== 'death' && e.icon && e.text && PRI[e.kind]);
+  ev.sort((a, b) => a.age - b.age);
+  if (ev.length > 9) {   // garde les plus marquants, répartis sur la vie
+    const keep = new Set(ev.slice().sort((a, b) => PRI[b.kind] - PRI[a.kind] || a.age - b.age).slice(0, 9));
+    ev = ev.filter(e => keep.has(e));
+  }
+  const phase = a => a < 13 ? ['#f6c9a6', '#e9a3a0'] : a < 30 ? ['#a8d8ea', '#c6e6a8'] : a < 60 ? ['#cfd8dc', '#e6d3a8'] : ['#e8c9d8', '#c9b8e8'];
+  const slides = [
+    `<div class="dr-big">${escapeHtml(nm)}</div><div class="dr-sub">${life.year} – ${life.year + life.deathAge}</div><p>Né${sexE} en ${escapeHtml(localize(c).name)} ${c.flag}, vous êtes mort${sexE} à ${life.deathAge} ans.</p><p class="dr-cause">${escapeHtml(causeLabel(life.cause))}</p>${causeExamples(life.cause) ? `<p class="dr-ex">${escapeHtml(causeExamples(life.cause))}</p>` : ''}`,
+    ...ev.map(e => { const [c1, c2] = phase(e.age); return `<div class="dr-card" style="background:linear-gradient(160deg,${c1},${c2})"><span>${e.icon}</span></div><div class="dr-age">${e.age} ans</div><p>${escapeHtml(e.text)}</p>`; })
+  ];
+  const el = document.createElement('div');
+  el.id = 'deathReel';
+  el.innerHTML = `<div class="dr-stage"></div><button class="dr-skip" type="button">Passer ›</button>`;
+  document.body.appendChild(el);
+  const stage = el.querySelector('.dr-stage');
+  let i = 0, timer = null;
+  const finish = () => { clearTimeout(timer); el.remove(); };
+  const show = () => {
+    if (i >= slides.length) return finish();
+    stage.classList.remove('in'); stage.innerHTML = slides[i];
+    void stage.offsetWidth; stage.classList.add('in');
+    timer = setTimeout(() => { i++; show(); }, i === 0 ? 5500 : 3800);
+  };
+  el.querySelector('.dr-skip').onclick = finish;
+  el.addEventListener('click', e => { if (e.target !== el.querySelector('.dr-skip')) { clearTimeout(timer); i++; show(); } });
+  show();
+}
 function dieNow(forcedCause) {
   const c = STATE.life.countryData;
   const cause = forcedCause || pickCause(c, STATE.life.age, STATE.life.sex);
@@ -3855,6 +4009,7 @@ function dieNow(forcedCause) {
   STATE.life.log.push({ age: STATE.life.age, kind: 'death', icon: '🕯️', text: t('log.died_of', cause) });
   savePastLife(STATE.life);
   stopTicker();
+  showDeathReel(STATE.life);
   // v5.43：用 setView() 才會真的切換 .view 面板的顯示（原本直接賦值 STATE.view 只更新資料、不換畫面）
   setView('end');
 }
@@ -6281,16 +6436,15 @@ function computeLifetimeCauses(life) {
   const c = life.countryData;
   const sex = life.sex;
   const causeAccum = {};
-  // 取幾個代表性年齡：每 5 年（嬰兒細分）
-  const sampleAges = [0, 1, 3, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90];
-  const maxAge = life.deathAge || life.age || 80;
-  const filtered = sampleAges.filter(a => a <= Math.min(110, maxAge + 1));
-  if (filtered.length === 0) filtered.push(maxAge);
-  for (const a of filtered) {
+  // Probabilité de mourir de chaque cause sur toute la vie : survivants à l'âge a × risque de décès × part de la cause.
+  const lt = lifeTable(c, sex);
+  for (let a = 0; a < 110; a++) {
+    const dead = (lt.l[a] / lt.l[0]) * pDie(a, c, sex);
+    if (!(dead > 0)) continue;
     const w = causeWeights(c, a, sex);
-    Object.entries(w).forEach(([k, v]) => {
-      causeAccum[k] = (causeAccum[k] || 0) + v;
-    });
+    const sum = Object.values(w).reduce((x, y) => x + y, 0);
+    if (!(sum > 0)) continue;
+    for (const [k, v] of Object.entries(w)) causeAccum[k] = (causeAccum[k] || 0) + dead * v / sum;
   }
   const total = Object.values(causeAccum).reduce((a, b) => a + b, 0);
   const sorted = Object.entries(causeAccum).sort((a, b) => b[1] - a[1]);
@@ -7377,6 +7531,7 @@ function yearBudget(life) {
     life.lastWage = income;
   }
   const pension = s.employment === 'retired' ? (life.lastWage || base * 0.6) * Math.min(0.7, r * 2.3) * (life.retireSaver ? 1.15 : 1) : 0;
+  if (life.herd) income += (HERD[life.herd.type]?.inc || 0.05) * base * (life.herd.n || 1);
   const gross = income + pension;
   const taxes = gross * Math.min(0.5, r * [0.6, 0.9, 1.15, 1.5][q - 1]);
   const kidsAtHome = (s.kids || []).filter(k => age - k.bornAt < 20).length;
@@ -7384,7 +7539,12 @@ function yearBudget(life) {
   const net = gross - taxes + aid;
   const couple = s.married || s.relationship === 'cohab';
   const fullLiving = 0.42 * base * (s.birthPlaceType === 'rural' ? 0.85 : 1.15) * (couple ? 0.8 : 1) * (1 + 0.2 * kidsAtHome);
-  const living = Math.min(fullLiving, Math.max(0, net * 0.9));      // les plus pauvres se privent : on ne dépense pas ce qu'on n'a pas
+  const hs = life.housing;
+  if (hs && hs.type === 'mortgage' && age >= hs.end) hs.type = 'own';   // prêt remboursé
+  const housingAdj = !hs ? 1 : hs.type === 'own' ? 0.85 : hs.type === 'family' ? 0.7 : 1;
+  const vehicle = (life.hasCar ? 0.08 * base : 0) + (life.hasMoto ? 0.04 * base : 0);
+  const mortgage = hs && hs.type === 'mortgage' ? hs.annual : 0;
+  const living = Math.min(fullLiving * housingAdj + vehicle + mortgage, Math.max(0, net * 0.9));      // les plus pauvres se privent : on ne dépense pas ce qu'on n'a pas
   const health = 0.07 * base * (age < 40 ? 0.5 : age < 60 ? 1 : age < 75 ? 1.8 : 2.6) * (c.oop ?? 30) / 100 + (life.careCost || 0);
   const school = s.employment === 'university' ? 0.25 * base * (1 - Math.min(0.9, r * 3)) : 0;
   // On ne dépense pas en tabac ou en alcool ce qu'on n'a pas : le coût est plafonné au disponible après les dépenses de base.
@@ -7582,6 +7742,18 @@ function renderIdCard() {
             [fr ? 'Milieu familial' : 'Family background', dots],
             [fr ? 'Études' : 'Education', G(eduLabel(L))],
             [fr ? 'Profession' : 'Occupation', G(jobLine(L))]);
+  if (L.age >= 15) {
+    const k = (L.stats.kids || []).length, pn = L.stats.partner && L.stats.partner.name;
+    rows.push([fr ? 'Situation' : 'Status', G(relLabel(L)) + (pn && L.stats.relationship !== 'single' ? ' · ' + escapeHtml(pn.first || pn.full || '') : '')]);
+    if (k) rows.push([fr ? 'Enfants' : 'Children', k + ' (' + L.stats.kids.map(x => (L.age - x.bornAt) + (fr ? ' ans' : '')).join(', ') + ')']);
+    const pets = (L.pets || []).filter(x => x.to == null);
+    if (pets.length) rows.push([fr ? 'Animaux' : 'Pets', pets.map(x => (x.type === 'dog' ? '🐕 ' : '🐈 ') + x.name).join(', ')]);
+    if (L.herd) rows.push([fr ? 'Bétail' : 'Livestock', (HERD[L.herd.type]?.icon || '') + ' ' + (HERD[L.herd.type]?.fr || '')]);
+    const H = L.housing;
+    rows.push([fr ? 'Logement' : 'Home', L.age < 18 ? (fr ? 'Chez vos parents' : 'With parents') : !H ? (L.ownsHome ? (fr ? 'Propriétaire' : 'Owner') : (fr ? 'Locataire' : 'Renting')) : ({ own: fr ? 'Propriétaire' : 'Owner', mortgage: fr ? 'Propriétaire (prêt en cours)' : 'Owner (mortgage)', rent: fr ? 'Locataire' : 'Renting', family: fr ? 'Chez la famille' : 'With family' })[H.type]]);
+    const tr = [L.hasCar && '🚗', L.hasMoto && '🏍️', L.hasBike && '🚲'].filter(Boolean).join(' ');
+    if (tr) rows.push([fr ? 'Transport' : 'Transport', tr]);
+  }
   if (L.traits) rows.push([fr ? 'Tempérament' : 'Temperament', G(L.traits.temperament)], [fr ? 'Talents' : 'Talents', G(L.traits.talents)], [fr ? 'Rêve d\'enfant' : 'Childhood dream', G(L.traits.dream)]);
   const iso = (c.id || '').toString();
   el.innerHTML = '<div class="id-head"><span>' + (fr ? "Fiche d'identité" : 'Identity card') + ' · ' + iso + '</span><span>' + (L.year) + '</span></div>'
