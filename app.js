@@ -1020,7 +1020,7 @@ const EXTRA_DECISIONS = [
       { k: 'switch', icon: '🔀', fr: "Changer complètement de voie", en: "Switch careers entirely", fx: () => (half() ? { money: 8000, happy: 3 } : { money: -8000, happy: 3 }) },
       { k: 'coast', icon: '🪑', fr: "Compter sur votre expérience", en: "Rely on your experience", fx: { happy: -1 } },
     ] },
-  { id: 'de_retire_early', kind: 'big', min: 55, max: 62, p: 0.10, when: (life) => life.stats.employment === 'employed' && pppOf(life) >= 10000,
+  { id: 'de_retire_early', kind: 'big', min: 50, max: 66, p: 0.10, when: (life) => life.stats.employment === 'employed' && pppOf(life) >= 10000 && hasPension(life) && life.age >= retireAge(life) - 5 && life.age < retireAge(life),
     fr: ["Partir plus tôt", "Votre employeur propose un départ anticipé, avec une somme moins élevée que si vous restiez."],
     en: ["Leaving early", "Your employer offers early retirement, for less money than if you stayed on."],
     choices: [
@@ -1749,8 +1749,8 @@ EXTRA_DECISIONS.push(
       { k: 'change', icon: '🧭', fr: "Changer de métier", sub: () => "Un risque de revenu, une chance de s'épanouir", fx: () => roll([0.6, { happy: 6, pppx: -0.1, know: 3 }], [0.4, { happy: -3, pppx: -0.3 }]) },
       { k: 'family', icon: '👪', fr: "Passer plus de temps avec vos proches", sub: () => "Moins de revenu mais plus de liens", fx: { social: 4, happy: 3, pppx: -0.05 } },
     ] },
-  { id: 'de_retire_plan', kind: 'big', min: 58, max: 66, p: 0.14, when: (l) => isEmployed(l) && !l.retirePlanned,
-    fr: ["Préparer la retraite", "Il reste quelques années avant l'âge de la retraite. Le moment de regarder ce qu'on a mis de côté."],
+  { id: 'de_retire_plan', kind: 'big', min: 50, max: 66, p: 0.16, when: (l) => isEmployed(l) && !l.retirePlanned && hasPension(l) && l.age >= retireAge(l) - 4 && l.age < retireAge(l),
+    fr: ["Préparer la retraite", (l) => `Dans ce pays, l'âge légal de la retraite est de ${retireAge(l)} ans : il vous en reste ${retireAge(l) - l.age}. Le moment de regarder ce qu'on a mis de côté.`],
     choices: [
       { k: 'save', icon: '💰', fr: "Mettre le maximum de côté", sub: () => "Une retraite plus confortable", fx: { pppx: 0.05, happy: -1, flag: ['retireSaver', true] } },
       { k: 'enjoy', icon: '🌴', fr: "Profiter de ces années", sub: () => "Des souvenirs maintenant, une pension plus modeste", fx: { pppx: -0.1, happy: 3 } },
@@ -1883,6 +1883,28 @@ EXTRA_DECISIONS.push(
     { k: 'trade', icon: '🛠️', fr: "L'orienter vers un métier", sub: (l2) => `Environ ${priceTxt(l2, 0.08)} · un revenu plus tôt`, fx: { pppx: -0.08, happy: 1 } },
     { k: 'free', icon: '🧭', fr: "Le laisser choisir seul", sub: () => "Il décidera à sa manière", fx: { social: 2 } },
   ]),
+);
+// ==== Retraite : âge légal et couverture propres à chaque pays ====
+const RETIRE_AGE = { FRA: [64, 64], DEU: [67, 67], ITA: [67, 67], ESP: [66, 66], GBR: [66, 66], USA: [67, 67], JPN: [65, 65], KOR: [63, 63], CHN: [60, 55], RUS: [63, 58], BRA: [65, 62], IND: [60, 60], NLD: [67, 67], SWE: [65, 65], NOR: [67, 67], DNK: [67, 67], CHE: [65, 64], BEL: [66, 66], POL: [65, 60], TUR: [60, 58], MEX: [65, 65], ARG: [65, 60], COL: [62, 57], CHL: [65, 60], EGY: [60, 60], SAU: [60, 60], IRN: [60, 55], ZAF: [60, 60], NGA: [60, 60], IDN: [58, 58], VNM: [60, 55], THA: [60, 60], PHL: [60, 60], PAK: [60, 60], BGD: [60, 60], AUS: [67, 67], CAN: [65, 65], PRT: [66, 66], GRC: [62, 62], ISR: [67, 62] };
+const retireAge = (l) => { const a = RETIRE_AGE[l.country]; if (a) return a[l.sex === 'F' ? 1 : 0]; const r = l.countryData?.region; return r === 'hi' ? 65 : r === 'eca' ? 62 : r === 'lac' ? 62 : 60; };
+// Part de la population qui touche une pension : emplois déclarés, caisse de retraite ; très faible là où le travail est informel.
+const pensionCoverage = (c) => Math.max(0.03, Math.min(1, ((c.ppp || 12000) - 3000) / 30000)) * (1 - Math.min(0.4, (c.agr || 0) / 100));
+function hasPension(l) {
+  if (l.pensionRight === undefined) {
+    const q = [0.5, 0.8, 1.1, 1.3][(l.stats.incomeQuartile || 2) - 1];
+    const cov = pensionCoverage(l.countryData || {});
+    l.pensionRight = Math.random() < (cov >= 0.8 ? 0.97 : Math.min(1, cov * q * (l.stats.birthPlaceType === 'rural' ? 0.6 : 1) * (l.stats.education >= 4 ? 1.3 : 1)));
+  }
+  return l.pensionRight;
+}
+EXTRA_DECISIONS.push(
+  { id: 'de_no_pension', kind: 'big', min: 52, max: 70, p: 0.2, when: (l) => isEmployed(l) && !hasPension(l) && l.age >= retireAge(l) - 6 && !l.noPensionAsked,
+    fr: ["Pas de retraite en vue", (l) => `Dans votre situation, personne ne vous versera de pension : ${pppOf(l) < 8000 ? "la retraite n'existe presque pas pour les travailleurs non déclarés" : "vos années travaillées ne vous ouvrent pas de droits"}. Il faut préparer ce qui viendra.`],
+    choices: (l) => [
+      { k: 'work', icon: '⚒️', fr: "Travailler aussi longtemps que possible", sub: () => "Un revenu qui baisse avec l'âge et la fatigue", fx: { pppx: 0.05, health: -3, flag: ['noPensionAsked', true] } },
+      { k: 'kids', icon: '👨‍👩‍👧', fr: "Compter sur vos enfants", sub: (l2) => (l2.stats.kids || []).length ? "Ils vous aideront, au prix de tensions possibles" : "Vous n'avez pas d'enfant : ce sera difficile", fx: (l2) => (l2.stats.kids || []).length ? { social: 3, happy: 1, flag: ['noPensionAsked', true] } : { happy: -4, flag: ['noPensionAsked', true] } },
+      { k: 'save', icon: '🐐', fr: "Mettre de côté ce que vous pouvez (bétail, terre, or)", sub: () => "Un petit capital pour les vieux jours", fx: { pppx: -0.05, happy: 1, flag: ['noPensionAsked', true] } },
+    ] },
 );
 // Emplois proposés au premier poste, selon les études et le lieu de vie. mult module le revenu du pays.
 const JOBS = {
@@ -3802,10 +3824,18 @@ function milestoneEvents(life, newAge) {
     }
     events.push({ age: newAge, kind: 'milestone', icon: '👶', text: t('event.baby', life.stats.kids.length) });
   }
-  if (newAge === 60 && life.stats.employment !== 'none') {
-    life.stats.employment = 'retired';
-    events.push({ age: 60, kind: 'milestone', icon: '🏖️', text: t('event.retirement') });
-  }
+  { const ra = retireAge(life);
+    if (newAge === ra && life.stats.employment !== 'university' && life.stats.employment !== 'retired') {
+      if (hasPension(life)) {
+        life.stats.employment = 'retired';
+        events.push({ age: newAge, kind: 'milestone', icon: '🏖️', text: LANG === 'fr' ? `À ${ra} ans, l'âge légal de la retraite ici, vous cessez de travailler et touchez votre pension.` : t('event.retirement') });
+      } else {
+        events.push({ age: newAge, kind: 'milestone', icon: '🧺', text: LANG === 'fr' ? `À ${ra} ans, vous n'avez droit à aucune pension : vous continuez à travailler tant que vos forces le permettent.` : 'With no pension, you keep working.' });
+      }
+    } else if (newAge === 75 && life.stats.employment === 'employed' && !life.pensionRight) {
+      life.stats.employment = 'retired';
+      events.push({ age: newAge, kind: 'milestone', icon: '🪑', text: LANG === 'fr' ? "Vos forces déclinent : vous arrêtez de travailler et vivez de l'aide de vos proches." : 'You stop working and rely on relatives.' });
+    } }
   // 偶發事件（教學版過濾掉疾病）
   // v5.62：只挑還沒得過的病 — 否則同一個人生會重複出現「罹患癌症」
   if (!STATE.eduMode && !STATE.softMode && newAge >= 18 && newAge <= 65 && !life.illness && chance(0.04)) {
@@ -7675,8 +7705,10 @@ function yearBudget(life) {
     const experience = Math.min(1, 0.6 + (age - 18) * 0.02);
     income = base * Math.pow(quartileShare(c, q), 0.7) * edu * experience * (life.job?.mult || 1) * (life.priority === 'work' ? 1.06 : life.priority === 'growth' ? 1.02 : 1);
     life.lastWage = income;
+    if (age >= 66) income *= age >= 72 ? 0.5 : 0.75;   // on travaille moins vite quand les forces baissent
   }
-  const pension = s.employment === 'retired' ? (life.lastWage || base * 0.6) * Math.min(0.7, r * 2.3) * (life.retireSaver ? 1.15 : 1) : 0;
+  const basicPension = (c.ppp || 0) > 6000 || r > 0.08 ? 0.12 * base : 0;   // minimum vieillesse là où il existe
+  const pension = s.employment === 'retired' ? (hasPension(life) ? (life.lastWage || base * 0.6) * Math.min(0.7, r * 2.3) * (life.retireSaver ? 1.15 : 1) : basicPension) : 0;
   if (life.herd) income += (HERD[life.herd.type]?.inc || 0.05) * base * (life.herd.n || 1);
   const gross = income + pension;
   const taxes = gross * Math.min(0.5, r * [0.6, 0.9, 1.15, 1.5][q - 1]);
