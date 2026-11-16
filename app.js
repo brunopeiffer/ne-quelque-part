@@ -3288,7 +3288,8 @@ function newLife(countryCode) {
     year: STATE.era === 'past' ? 1990 : STATE.era === 'future' ? 2080 : 2024,
     yearOffset: 0,
     // 個人條件
-    smoker: chance(c.sm / 100 * 0.5),
+    smoker: false,                            // on ne fume pas à la naissance : voir smokeProne
+    smokeProne: chance(c.sm / 100 * 0.5),     // prédisposition : le tabac commence à l'adolescence
     conditions: {
       diabetes: chance(0.05 * (c.sm / 30)),
       heart: chance(0.03),
@@ -3747,6 +3748,10 @@ function milestoneEvents(life, newAge) {
   if (newAge === 15 && life.stats.education === 2 && tgt < 3 && chance(0.5)) {
     life.stats.education = 1;  // 國中輟學
     events.push({ age: 15, kind: 'milestone', icon: '📖', text: t('event.education.low') });
+  }
+  if (life.smokeProne && !life.smoker && !life.exSmoker && newAge >= 16 && newAge <= 19 && chance(0.5)) {
+    life.smoker = true;
+    events.push({ age: newAge, kind: 'small', icon: '🚬', text: LANG === 'fr' ? "Vous allumez votre première cigarette avec des amis. Elle ne sera pas la dernière." : 'You light your first cigarette with friends.' });
   }
   if (newAge === 18) {
     if (tgt >= 3) {
