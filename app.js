@@ -5567,7 +5567,7 @@ function renderActualVsRandom() {
         const a = parseFloat(r.realVal), b = parseFloat(r.randVal);
         let winner = '';
         if (r.dir !== 0 && !isNaN(a) && !isNaN(b)) winner = a === b ? '⚪' : ((a > b) === (r.dir > 0) ? '🟢' : '🔴');
-        return `<tr><td class="ar-k">${r.lab}${winner ? ' ' + winner : ''}</td><td class="ar-v">${realV}</td><td class="ar-v">${randV}</td></tr>`;
+        return `<tr><td class="ar-k">${r.lab}${winner ? ' ' + winner : ''}</td><td class="ar-v" data-l="${real.flag}">${realV}</td><td class="ar-v" data-l="${(r.randC && r.randC.flag) || ''}">${randV}</td></tr>`;
       }).join('')}</tbody>
     </table>
     <p class="muted ar-note">${isEn ? '🟢 = better than random · 🔴 = worse · ⚪ = same. ' : LANG === 'fr' ? "🟢 = mieux que cette vie · 🔴 = moins bien · ⚪ = pareil. " : '🟢 = 比隨機好 · 🔴 = 比隨機差 · ⚪ = 一樣。'}</p>
@@ -5944,7 +5944,7 @@ function pixelPortraitSVG(country, age, sex) {
     parts.push(`<path d="M ${cx - 6} ${cy + 12} Q ${cx} ${cy + 16} ${cx + 6} ${cy + 12}" stroke="#1a1a1a" stroke-width="1.5" fill="none"/>`);
   }
   if (country?.flag) {
-    parts.push(`<text x="10" y="${H-10}" font-size="14">${country.flag}</text>`);
+    parts.push(`<text x="8" y="${H-8}" font-size="30">${country.flag}</text>`);
   }
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:0 auto;">${parts.join('')}</svg>`;
 }
@@ -7981,11 +7981,8 @@ function renderFinSide() {
   const row = (k, v, cls) => '<div class="fs-row"><span>' + k + '</span><b' + (cls ? ' class="' + cls + '"' : '') + '>' + v + '</b></div>';
   const sgn = (v) => (v >= 0 ? '+ ' : '− ') + money(Math.abs(v));
   let h = '<h4>💶 ' + (fr ? 'Situation financière' : 'Finances') + '</h4>';
-  h += row(fr ? 'Patrimoine' : 'Net worth', money(L.stats.netAssets), L.stats.netAssets < 0 ? 'neg' : '');
   if (L.age < 18) h += '<p class="fs-note">' + (fr ? 'Vos parents subviennent à vos besoins.' : 'Your parents provide for you.') + '</p>';
   else {
-    const earn = (b.income || 0) + (b.pension || 0) + (b.aid || 0);
-    h += row(fr ? 'Revenu par an' : 'Income / year', money(earn));
     h += row(fr ? 'Dépenses par an' : 'Spending / year', money((b.taxes || 0) + (b.living || 0) + (b.health || 0) + (b.school || 0) + (b.habit || 0) + (b.comfort || 0)));
     h += row(fr ? 'Épargne par an' : 'Saved / year', sgn(b.saved || 0), (b.saved || 0) < 0 ? 'neg' : 'pos');
     const lodge = L.age < 18 ? '' : !H ? (L.ownsHome ? (fr ? 'propriétaire' : 'owner') : (fr ? 'locataire' : 'renting')) : ({ own: fr ? 'propriétaire' : 'owner', mortgage: (fr ? 'prêt jusqu\'à ' : 'mortgage until ') + H.end + (fr ? ' ans' : ''), rent: fr ? 'locataire' : 'renting', family: fr ? 'chez la famille' : 'with family' })[H.type];

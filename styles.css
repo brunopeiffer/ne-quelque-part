@@ -2622,3 +2622,27 @@ body { font-size: 16px; }
 .fs-note{font-size:13px;color:#7a6a55;margin:8px 0 0}.fs-note.warn{color:#a33}
 .fs-more{margin-top:10px;width:100%;padding:8px;border:1px solid #c9b88f;background:none;border-radius:8px;cursor:pointer;font-size:13px}
 
+
+/* ==== Page de vie : en-tête compact, puces défilantes, tableau en cartes ==== */
+.pri-chip{min-height:46px;padding:7px 14px}
+.help-fab{opacity:.9}
+@media (max-width:720px){
+  #view-life .cert-body{display:grid;grid-template-columns:84px 1fr;gap:4px 14px;align-items:center}
+  #view-life #lifePortrait{grid-column:1;grid-row:1;width:84px}
+  #view-life #lifePortrait svg{width:84px;height:84px}
+  #view-life #lifeName2{grid-column:2;grid-row:1;text-align:left;margin:0;font-size:21px}
+  #view-life .cert-body > :not(#lifePortrait):not(#lifeName2){grid-column:1/-1}
+  #view-life .life-hero{grid-row:2;margin:6px 0 10px}
+  #view-life .lh-age{font-size:56px;line-height:1.05;text-align:left}
+  #view-life .lh-money b{font-size:19px}
+  .pri-chips{flex-wrap:nowrap;overflow-x:auto;scroll-snap-type:x proximity;padding-bottom:6px;margin-right:-8px;-webkit-overflow-scrolling:touch}
+  .pri-chip{flex:0 0 auto;min-width:168px;scroll-snap-align:start}
+  .ar-table thead{display:none}
+  .ar-table,.ar-table tbody{display:block}
+  .ar-table tr{display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;padding:8px 0;border-bottom:1px solid var(--line)}
+  .ar-table td{border:0;padding:0}
+  .ar-table td.ar-k{grid-column:1/-1;font-weight:600;white-space:normal}
+  .ar-table td.ar-v{text-align:left}
+  .ar-table td.ar-v::before{content:attr(data-l) " ";font-weight:400}
+  .help-fab{width:34px;height:34px;font-size:15px;bottom:12px;right:10px;opacity:.75}
+}
