@@ -247,7 +247,7 @@ const DECISIONS = [
   // 2. 中年身心健康：戒菸 / 戒酒 vs. 維持
   {
     id: 'de_health_warning', kind: 'big',
-    chance: (life) => life.age >= 30 && life.age <= 55 &&
+    chance: (life) => life.age >= 30 && life.age <= 55 && !life.illness &&
                      (Math.random() < 0.05),
     show: (life) => ({
       title: t('de.health.title'),
@@ -293,7 +293,7 @@ const DECISIONS = [
   {
     id: 'de_illness_treat', kind: 'big',
     chance: (life) => !STATE.eduMode && !STATE.softMode &&
-                     life.age >= 38 && life.age <= 70 &&
+                     life.age >= 38 && life.age <= 70 && !life.illness &&
                      Math.random() < 0.04,
     show: (life) => ({
       title: t('de.illness.title'),
@@ -1341,7 +1341,7 @@ const EXTRA_DECISIONS = [
       { k: 'half', icon: '🍽️', fr: "Faire de votre mieux", fx: { health: 1 } },
       { k: 'ignore', icon: '🍰', fr: "Ne rien changer", fx: { health: -6 } },
     ] },
-  { id: 'de_screening', kind: 'big', min: 40, max: 65, p: 0.1, when: comfortable(5000),
+  { id: 'de_screening', kind: 'big', min: 40, max: 65, p: 0.1, when: (l) => comfortable(5000)(l) && !(l.illness && l.illness.type === 'cancer'),   // pas de dépistage pour un cancer déjà diagnostiqué
     fr: ["Un dépistage", "On vous propose un dépistage du cancer. Rien ne vous fait mal, mais mieux vaut ne pas attendre les symptômes."],
     choices: [
       { k: 'go', icon: '🩺', fr: "Y aller", fx: { money: -150, health: 1, flag: ['screened', true] } },
