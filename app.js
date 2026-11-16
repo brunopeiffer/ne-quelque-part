@@ -1757,6 +1757,133 @@ EXTRA_DECISIONS.push(
       { k: 'work', icon: '⏳', fr: "Travailler le plus longtemps possible", sub: () => "Un meilleur revenu mais moins de repos", fx: { pppx: 0.1, health: -2 } },
     ] },
 );
+EXTRA_DECISIONS.push(
+  { id: 'de_fin_savings', kind: 'big', min: 20, max: 45, p: 0.12, when: (l) => isEmployed(l) && !l.savingsPlan,
+    fr: ["Où mettre vos économies ?", (l) => reg('ssa', 'sa', 'eap', 'lac')(l) && poorish(l) ? "Quelques économies commencent à s'accumuler. Autour de vous, beaucoup se méfient des banques : on se confie à une tontine, à un cercle d'épargne ou au téléphone." : "Quelques économies commencent à s'accumuler. Autant décider tout de suite où elles dormiront."],
+    choices: (l) => {
+      const poorReg = reg('ssa', 'sa', 'eap', 'lac')(l) && poorish(l);
+      const ch = [];
+      if (poorReg) ch.push({ k: 'tontine', icon: '🤝', fr: "Rejoindre une tontine avec des voisins", sub: () => "Chacun verse chaque mois, chacun reçoit la cagnotte à son tour · solide si le groupe est sérieux", fx: () => roll([0.85, { social: 3, pppx: 0.06, flag: ['savingsPlan', true] }], [0.15, { social: -2, pppx: -0.08, msg: { fr: "Le trésorier a disparu avec la cagnotte.", en: "The treasurer vanished with the pot." }, flag: ['savingsPlan', true] }]) });
+      else ch.push({ k: 'account', icon: '🏦', fr: "Ouvrir un compte d'épargne", sub: () => "Peu de rendement mais aucun risque", fx: { pppx: 0.05, flag: ['savingsPlan', true] } });
+      if (reg('ssa')(l) || l.country === 'IND') ch.push({ k: 'mobile', icon: '📱', fr: "Garder l'argent sur votre téléphone", sub: () => "Pratique pour envoyer à la famille · quelques frais", fx: { pppx: 0.03, flag: ['savingsPlan', true] } });
+      ch.push({ k: 'cash', icon: '🧦', fr: "Garder l'argent à la maison", sub: () => "Toujours disponible, mais l'inflation le ronge et le vol est possible", fx: () => roll([0.8, { flag: ['savingsPlan', true] }], [0.2, { pppx: -0.1, happy: -3, msg: { fr: "Une partie de vos économies disparaît lors d'un cambriolage.", en: "Part of your savings is stolen." }, flag: ['savingsPlan', true] }]) });
+      return ch;
+    } },
+  { id: 'de_fin_insurance', kind: 'big', min: 25, max: 55, p: 0.1, when: (l) => isEmployed(l) && !l.insured && pppOf(l) >= 6000,
+    fr: ["Une assurance santé ?", (l) => `Un agent vous propose une assurance qui rembourserait une partie des soins. Elle coûte environ ${priceTxt(l, 0.025)} par an.`],
+    choices: [
+      { k: 'yes', icon: '🛡️', fr: "La souscrire", sub: () => "Moins de frais en cas de maladie, mais une dépense chaque année", fx: { flag: ['insured', true], happy: 1 } },
+      { k: 'no', icon: '🎲', fr: "Prendre le risque", sub: () => "Rien à payer maintenant, une facture lourde si vous tombez malade", fx: {} },
+    ] },
+  { id: 'de_fin_business', kind: 'big', min: 24, max: 52, p: 0.08, when: (l) => isEmployed(l) && !l.bizTried && l.stats.netAssets > 0,
+    fr: ["Se mettre à son compte ?", "Une occasion se présente de monter votre propre petite affaire : un commerce, un atelier, un service. Vous y mettriez vos économies."],
+    choices: [
+      { k: 'go', icon: '🏪', fr: "Se lancer", sub: (l) => `Mise de départ d'environ ${priceTxt(l, 0.5)} · risque réel d'échec`, fx: () => roll([0.35, { pppx: 0.8, happy: 5, flag: ['bizTried', true], msg: { fr: "L'affaire marche : vos revenus dépassent ceux d'un salaire.", en: "The business works and beats a salary." } }], [0.65, { pppx: -0.5, happy: -4, flag: ['bizTried', true], msg: { fr: "L'affaire ne décolle pas et vous fermez au bout d'un an, en perdant votre mise.", en: "The business fails and you lose your stake." } }]) },
+      { k: 'stay', icon: '💼', fr: "Garder votre emploi", sub: () => "Un revenu régulier, sans risque", fx: { flag: ['bizTried', true] } },
+    ] },
+  { id: 'de_fin_debt', kind: 'big', min: 22, max: 70, p: 0.35, repeat: true, when: (l) => l.stats.netAssets < -0.3 * pppOf(l) && l.age - (l.lastDebtAsk || -9) > 6,
+    fr: ["Les dettes s'accumulent", "Les remboursements s'empilent et les fins de mois deviennent difficiles. Il faut trouver une issue."],
+    choices: [
+      { k: 'family', icon: '🫂', fr: "Demander de l'aide à la famille", sub: () => "Cela allège la dette, mais pèse sur les relations", fx: (l) => ({ pppx: 0.25, social: -3, flag: ['lastDebtAsk', l.age] }) },
+      { k: 'work', icon: '🕰️', fr: "Prendre un travail en plus", sub: () => "Du revenu en plus, de la fatigue aussi", fx: (l) => ({ pppx: 0.2, health: -4, flag: ['lastDebtAsk', l.age] }) },
+      { k: 'cut', icon: '✂️', fr: "Réduire fortement vos dépenses", sub: () => "Rien de superflu pendant quelques années", fx: (l) => ({ pppx: 0.12, happy: -3, flag: ['lastDebtAsk', l.age] }) },
+    ] },
+  { id: 'de_fin_remit', kind: 'family', min: 22, max: 60, p: 0.18, when: (l) => !!l.birthOrigin && !l.remitAsked,
+    fr: ["Envoyer de l'argent au pays", "Votre famille, restée là-bas, compte sur vous : une toiture, des frais d'école, des soins. Les transferts des migrants font vivre des villages entiers."],
+    choices: [
+      { k: 'much', icon: '💸', fr: "Envoyer une part importante de votre salaire", sub: (l) => `Environ ${priceTxt(l, 0.2)} · vos proches vivent mieux`, fx: { pppx: -0.2, social: 4, happy: 2, flag: ['remitAsked', true] } },
+      { k: 'some', icon: '✉️', fr: "Envoyer un peu, quand vous le pouvez", sub: () => "Un équilibre entre eux et vous", fx: { pppx: -0.06, social: 2, flag: ['remitAsked', true] } },
+      { k: 'no', icon: '🔒', fr: "Garder l'argent pour vous", sub: () => "Plus d'économies, des reproches à distance", fx: { social: -4, flag: ['remitAsked', true] } },
+    ] },
+  { id: 'de_fin_school_fund', kind: 'family', min: 26, max: 45, p: 0.12, when: (l) => hasKids(l) && !l.schoolFund,
+    fr: ["Mettre de côté pour les études", "Vos enfants grandissent. Les études coûtent, ici comme ailleurs, et mieux vaut y penser tôt."],
+    choices: [
+      { k: 'yes', icon: '🎒', fr: "Épargner chaque mois pour eux", sub: (l) => `Environ ${priceTxt(l, 0.08)} par an mis de côté`, fx: { pppx: -0.08, happy: 1, social: 1, flag: ['schoolFund', true] } },
+      { k: 'no', icon: '🕰️', fr: "Voir plus tard", sub: () => "Moins de contraintes aujourd'hui", fx: { flag: ['schoolFund', true] } },
+    ] },
+  { id: 'de_fin_will', kind: 'family', min: 58, max: 78, p: 0.12, when: (l) => hasKids(l) && l.stats.netAssets > 0.5 * pppOf(l) && !l.willDone,
+    fr: ["Organiser la transmission", "Vous avez de quoi laisser quelque chose à vos proches. Mieux vaut décider aujourd'hui que laisser les autres se disputer demain."],
+    choices: [
+      { k: 'equal', icon: '⚖️', fr: "Partager équitablement entre vos enfants", sub: () => "Moins de rancœur après vous", fx: { social: 3, happy: 2, flag: ['willDone', true] } },
+      { k: 'give', icon: '🎁', fr: "Donner dès maintenant", sub: () => "Voir ses proches en profiter, mais moins de sécurité pour vous", fx: { pppx: -0.2, social: 4, happy: 3, flag: ['willDone', true] } },
+      { k: 'keep', icon: '🏦', fr: "Tout garder", sub: () => "De la sécurité, des tensions possibles ensuite", fx: { flag: ['willDone', true] } },
+    ] },
+  { id: 'de_fin_pension', kind: 'big', min: 30, max: 52, p: 0.1, when: (l) => isEmployed(l) && !l.retireSaver && comfortable(8000)(l),
+    fr: ["Un plan d'épargne retraite", "Votre conseiller vous parle d'un plan d'épargne pour la retraite. Vous y verseriez un peu chaque mois, bloqué jusqu'à vos vieux jours."],
+    choices: [
+      { k: 'yes', icon: '🌅', fr: "Y verser chaque mois", sub: (l) => `Environ ${priceTxt(l, 0.05)} par an · pension plus confortable`, fx: { pppx: -0.05, flag: ['retireSaver', true] } },
+      { k: 'no', icon: '🎉', fr: "Profiter de l'argent maintenant", sub: () => "Plus de liberté aujourd'hui, une pension plus modeste demain", fx: { happy: 2 } },
+    ] },
+);
+// ==== Enfants mineurs : un enfant à la fois, repéré par son âge et par les décisions déjà prises pour lui ====
+const kidAge = (l, k) => l.age - k.bornAt;
+const kidIdx = (l, a, b, key) => (l.stats.kids || []).findIndex(k => kidAge(l, k) >= a && kidAge(l, k) <= b && !(k.done || {})[key]);
+const kidName = (l, i) => { const n = l.family && l.family.kids && l.family.kids[i]; return n && n.name ? n.name.split(' ')[0] : (LANG === 'fr' ? 'votre enfant' : 'your child'); };
+const kidMark = (l, i, key, val) => { const k = l.stats.kids[i]; if (k) { (k.done || (k.done = {}))[key] = val || true; } };
+const hasKidIn = (a, b, key) => (l) => kidIdx(l, a, b, key) >= 0;
+// Une décision pour un enfant : le texte cite son prénom ; le choix est enregistré sur lui.
+const kidDec = (id, a, b, key, p, title, body, choices, extra = {}) => ({
+  id, kind: 'family', min: 18, max: 75, p, repeat: true, when: (l) => hasKidIn(a, b, key)(l) && (!extra.when || extra.when(l)),
+  fr: [(l) => title(kidName(l, kidIdx(l, a, b, key)), l), (l) => body(kidName(l, kidIdx(l, a, b, key)), l)],
+  choices: (l) => choices(l).map(c => ({ ...c, fx: (l2) => { const i = kidIdx(l2, a, b, key); kidMark(l2, i, key, c.k); const r = typeof c.fx === 'function' ? c.fx(l2) : c.fx; return r; } })),
+});
+function addChildNow(life) {
+  const sex = Math.random() < 0.5 ? 'M' : 'F';
+  life.stats.kids.push({ sex, bornAt: life.age });
+  if (life.family) {
+    (life.family.kids = life.family.kids || []).push({ id: 'k_' + Math.random().toString(36).slice(2, 8), name: randomName(life.countryData, sex, life.name.last).full || '?', sex, country: life.country, countryData: life.countryData, birth: { year: life.year + life.yearOffset }, death: null });
+  }
+  life.log.push({ age: life.age, kind: 'milestone', icon: '👶', text: t('event.baby', life.stats.kids.length) });
+}
+EXTRA_DECISIONS.push(
+  { id: 'de_have_child', kind: 'family', min: 22, max: 40, p: 0.22, priority: true, when: (l) => (l.stats.married || l.stats.relationship === 'cohab') && !(l.stats.kids || []).length && !l.noKids,
+    fr: ["Fonder une famille ?", (l) => `Vous et ${l.stats.partner && l.stats.partner.name && (l.stats.partner.name.first || '') || 'votre conjoint'} parlez de plus en plus d'avoir un enfant. Dans ce pays, une femme a en moyenne ${(l.countryData.tfr || 2).toFixed(1).replace('.', ',')} enfant(s).`],
+    choices: [
+      { k: 'yes', icon: '👶', fr: "Avoir un enfant", sub: () => "Une nouvelle vie, des dépenses et moins de sommeil", fx: { baby: true, happy: 4, pppx: -0.05 } },
+      { k: 'wait', icon: '⏳', fr: "Attendre encore", sub: () => "Un peu de temps pour vous deux", fx: {} },
+      { k: 'no', icon: '🧳', fr: "Ne pas en avoir", sub: () => "Plus de liberté, la question reviendra parfois", fx: { flag: ['noKids', true], happy: 1 } },
+    ] },
+  kidDec('de_kid_care', 0, 2, 'care', 0.5, (n) => `Qui garde ${n} ?`, (n, l) => `${n} est tout petit, et vous reprenez le travail. Il faut décider de la garde.`, (l) => [
+    comfortable(15000)(l) ? { k: 'creche', icon: '🏫', fr: "Une crèche", sub: (l2) => `Environ ${priceTxt(l2, 0.12)} par an`, fx: { pppx: -0.12, social: 1, happy: 1 } } : { k: 'family', icon: '👵', fr: "La grand-mère ou une voisine", sub: () => "Gratuit, mais cela repose sur d'autres", fx: { social: 3 } },
+    { k: 'home', icon: '🏠', fr: "L'un de vous reste à la maison", sub: () => "Du temps avec lui, un revenu en moins", fx: { pppx: -0.2, happy: 3, social: 1 } },
+    { k: 'carry', icon: '🧺', fr: "L'emmener sur le lieu de travail", sub: () => "On se débrouille, la fatigue s'accumule", fx: { health: -2, happy: -1 } },
+  ]),
+  kidDec('de_kid_school', 5, 7, 'school', 0.6, (n) => `L'école de ${n}`, (n, l) => poorish(l) ? `${n} a l'âge d'entrer à l'école. Les frais, l'uniforme et les fournitures pèsent sur le budget, et il faut parfois marcher longtemps.` : `${n} entre en primaire. Vous hésitez entre l'école du quartier et une école plus exigeante.`, (l) => poorish(l) ? [
+    { k: 'school', icon: '🎒', fr: "L'inscrire, quitte à se priver", sub: (l2) => `Environ ${priceTxt(l2, 0.06)} par an · de meilleures chances plus tard`, fx: { pppx: -0.06, happy: 2, social: 1 } },
+    { k: 'late', icon: '⏳', fr: "Attendre un ou deux ans", sub: () => "Vous économisez maintenant, il rattrapera plus tard", fx: { pppx: 0.01, happy: -2 } },
+  ] : [
+    { k: 'public', icon: '🏫', fr: "L'école publique du quartier", sub: () => "Gratuite, proche, avec ses camarades du coin", fx: { social: 2 } },
+    { k: 'private', icon: '🎓', fr: "Une école privée", sub: (l2) => `Environ ${priceTxt(l2, 0.1)} par an · plus d'exigence`, fx: { pppx: -0.1, happy: 1, know: 1 } },
+  ]),
+  kidDec('de_kid_hobby', 7, 12, 'hobby', 0.5, (n) => `Une activité pour ${n}`, (n) => `${n} cherche ce qui le passionne. Une activité le soir ou le week-end lui ferait du bien.`, (l) => [
+    { k: 'sport', icon: '⚽', fr: "Un sport collectif", sub: (l2) => `Environ ${priceTxt(l2, 0.02)} par an · amis et énergie`, fx: { pppx: -0.02, happy: 2, social: 2 } },
+    { k: 'music', icon: '🎵', fr: "La musique", sub: (l2) => `Environ ${priceTxt(l2, 0.04)} par an · du temps et de la patience`, fx: { pppx: -0.04, happy: 2, know: 1 } },
+    { k: 'free', icon: '🌳', fr: "Jouer dehors, sans programme", sub: () => "Gratuit et libre", fx: { social: 1 } },
+  ]),
+  kidDec('de_kid_sick', 1, 12, 'sick', 0.35, (n) => `${n} est malade`, (n, l) => `${n} a une forte fièvre depuis deux jours. ${(l.countryData.oop || 30) > 30 ? "Ici, les soins se paient en grande partie de sa poche." : "Les soins sont en grande partie pris en charge."}`, (l) => [
+    { k: 'doctor', icon: '🏥', fr: "L'emmener à l'hôpital", sub: (l2) => `Environ ${priceTxt(l2, 0.01 + (l2.countryData.oop || 30) / 1000)}`, fx: (l2) => ({ pppx: -(0.01 + (l2.countryData.oop || 30) / 1000), happy: 1 }) },
+    { k: 'home', icon: '🍵', fr: "Le soigner à la maison", sub: () => "Moins cher, un peu risqué", fx: () => roll([0.85, { happy: 0 }], [0.15, { happy: -6, pppx: -0.05, msg: { fr: "L'état empire : vous finissez par l'emmener à l'hôpital, plus tard.", en: "He gets worse." } }]) },
+  ]),
+  kidDec('de_kid_work', 9, 14, 'work', 0.55, (n) => `Faut-il que ${n} travaille ?`, (n) => `L'argent manque à la maison. Des voisins proposent à ${n} de travailler dans les champs ou au marché.`, () => [
+    { k: 'school', icon: '📚', fr: "Le garder à l'école", sub: () => "Moins d'argent aujourd'hui, un meilleur avenir", fx: { pppx: -0.03, happy: 2 } },
+    { k: 'both', icon: '🌙', fr: "Travailler après la classe", sub: () => "Un petit revenu et de la fatigue", fx: { pppx: 0.04, happy: -2 } },
+    { k: 'work', icon: '🧺', fr: "Le laisser travailler", sub: () => "Un vrai revenu, mais l'école s'arrête", fx: { pppx: 0.1, happy: -5, social: -2 } },
+  ], { when: (l) => poorish(l) && quartOf(l) <= 2 }),
+  kidDec('de_kid_screen', 10, 14, 'screen', 0.45, (n) => `Un téléphone pour ${n} ?`, (n) => `Tous les camarades de ${n} en ont un. L'insistance est forte, et vous hésitez.`, () => [
+    { k: 'yes', icon: '📱', fr: "Lui en offrir un", sub: (l2) => `Environ ${priceTxt(l2, 0.03)} · lien avec ses amis, moins de contrôle`, fx: { pppx: -0.03, happy: 1 } },
+    { k: 'later', icon: '⏳', fr: "Attendre encore", sub: () => "Des disputes, mais plus de temps pour lui", fx: { happy: -1, social: -1 } },
+  ], { when: online(30) }),
+  kidDec('de_kid_talk', 13, 17, 'talk', 0.5, (n) => `${n} rentre tard`, (n) => `${n} a passé la soirée dehors sans prévenir. Vous l'attendiez, inquiet(ète).`, () => [
+    { k: 'talk', icon: '💬', fr: "Discuter calmement", sub: () => "Du temps et de l'écoute", fx: { social: 2, happy: 1 } },
+    { k: 'strict', icon: '🚪', fr: "Fixer des règles strictes", sub: () => "Plus de sécurité, des tensions", fx: { happy: -2, social: -1 } },
+    { k: 'let', icon: '🕊️', fr: "Faire confiance", sub: () => "Un peu d'inquiétude, plus de liberté", fx: () => roll([0.85, { social: 2 }], [0.15, { happy: -5, msg: { fr: "Une mauvaise rencontre vous donne des sueurs froides.", en: "A bad encounter gives you a scare." } }]) },
+  ]),
+  kidDec('de_kid_orient', 15, 17, 'orient', 0.6, (n) => `Quel avenir pour ${n} ?`, (n) => `${n} approche de la fin du secondaire. Il faut parler d'études, de métier, et de ce que vous pouvez payer.`, (l) => [
+    { k: 'uni', icon: '🎓', fr: "L'encourager à poursuivre ses études", sub: (l2) => `Environ ${priceTxt(l2, 0.2)} par an · de meilleures perspectives`, fx: { pppx: -0.2, happy: 2, social: 1 } },
+    { k: 'trade', icon: '🛠️', fr: "L'orienter vers un métier", sub: (l2) => `Environ ${priceTxt(l2, 0.08)} · un revenu plus tôt`, fx: { pppx: -0.08, happy: 1 } },
+    { k: 'free', icon: '🧭', fr: "Le laisser choisir seul", sub: () => "Il décidera à sa manière", fx: { social: 2 } },
+  ]),
+);
 // Emplois proposés au premier poste, selon les études et le lieu de vie. mult module le revenu du pays.
 const JOBS = {
   lowRural: [{ i: '🌾', fr: "Ouvri{er|ère} agricole", en: 'Farm labourer', mult: 0.8, health: -1 }, { i: '🐄', fr: "Éleveu{r|se}", en: 'Herder', mult: 0.85 }, { i: '🧺', fr: "Vendeu{r|se} sur les marchés", en: 'Market seller', mult: 0.9, happy: 1 }],
@@ -1820,6 +1947,7 @@ function applyFx(life, fx, label) {
   if (e.rel === 'single') { s.partner = null; s.married = false; s.relationship = 'single'; }
   if (e.marry && !s.married) { if (!s.partner) s.partner = newPartner(life, life.age < 18 ? 9 : 0); life.pendingMarriage = true; }
   if (e.leave) { s.married = false; s.partner = null; s.relationship = 'divorced'; }
+  if (e.baby) addChildNow(life);
   if (e.migrate) migrateLife(life);
   if (e.illTreat) startTreatment(life, e.illTreat);
   if (e.univRetry) { life.univ = { start: life.age - 2, status: 'enrolled' }; s.employment = 'university'; life.univAsked = true; }
@@ -3127,6 +3255,8 @@ function newLife(countryCode) {
   const birthYear = STATE.era === 'past' ? 1990 : STATE.era === 'future' ? 2080 : 2024;
   const father = fam.parents.find(p => p.sex === 'M');
   const mother = fam.parents.find(p => p.sex === 'F');
+  const q0 = 1 + Math.floor(Math.random() * 4);                 // milieu familial : décide aussi du métier des parents
+  const rural0 = chance(1 - (c.urb ?? 45) / 100);
   return {
     country: countryCode,
     countryData: c,
@@ -3158,15 +3288,15 @@ function newLife(countryCode) {
       netAssets: 0,     // v5.8 新增：淨資產（PPP 美元）
       annualIncome: 0,  // v5.8 新增：年收入
       // 1in8b.life 風格：家境、宗教、出生地類型
-      incomeQuartile: 1 + Math.floor(Math.random() * 4),  // 1-4 分位
+      incomeQuartile: q0,
       religion: pickReligion(c),
-      birthPlaceType: chance(1 - (c.urb ?? 45) / 100) ? 'rural' : 'urban',   // selon le taux d'urbanisation du pays  // 55% 鄉村、45% 城市
+      birthPlaceType: rural0 ? 'rural' : 'urban',   // selon le taux d'urbanisation du pays  // 55% 鄉村、45% 城市
     },
     // v5.59：教育上限（依出生國家的 eys / ter 統計抽出），教育歷程會往這個目標推進
     eduTarget: rollEducation(c),
     // 父母詳細（v5.8 新增）
-    fatherDetail: father ? { age: birthYear - father.birth.year, job: pickParentJob(c, 'M') } : null,
-    motherDetail: mother ? { age: birthYear - mother.birth.year, job: pickParentJob(c, 'F') } : null,
+    fatherDetail: father ? { age: birthYear - father.birth.year, job: parentJobFor(c, 'M', q0, rural0) } : null,
+    motherDetail: mother ? { age: birthYear - mother.birth.year, job: parentJobFor(c, 'F', q0, rural0) } : null,
     // 同伴（v5.8 新增）：4 個同時出生的隨機人物
     companions: generateCompanions(countryCode, 4),
     // 1in8b.life 風格：出生登記編號
@@ -3240,6 +3370,21 @@ function pickReligionRaw(c) {
   let r2 = Math.random() * total;
   for (const p of parts) { r2 -= p.pct; if (r2 <= 0) return p.name; }
   return parts[parts.length - 1].name;
+}
+
+// Métier des parents selon le milieu familial (1 = très modeste … 4 = aisé) et le lieu de vie.
+const PARENT_JOBS = {
+  1: { rural: [['Farmer', 'Agriculteur'], ['Laborer', 'Ouvrier agricole'], ['Herder', 'Éleveur'], ['Vendor', 'Petit commerçant'], ['Porter', 'Porteur']], urban: [['Vendor', 'Vendeur de rue'], ['Laborer', 'Manœuvre'], ['Security guard', 'Gardien'], ['Service worker', 'Employé de service'], ['Porter', 'Docker']] },
+  2: { rural: [['Farmer', 'Agriculteur'], ['Fisherman', 'Pêcheur'], ['Auto mechanic', 'Mécanicien'], ['Vendor', 'Commerçant'], ['Construction worker', 'Ouvrier du bâtiment']], urban: [['Taxi driver', 'Chauffeur de taxi'], ['Construction worker', 'Ouvrier du bâtiment'], ['Sales clerk', 'Vendeur'], ['Service worker', 'Employé de service'], ['Technician', 'Technicien']] },
+  3: { rural: [['Teacher', 'Enseignant'], ['Technician', 'Technicien'], ['Farmer', 'Agriculteur propriétaire'], ['Civil servant', 'Fonctionnaire']], urban: [['Teacher', 'Enseignant'], ['Nurse', 'Infirmier'], ['Civil servant', 'Fonctionnaire'], ['Bank clerk', 'Employé de banque'], ['Technician', 'Technicien']] },
+  4: { rural: [['Doctor', 'Médecin'], ['Teacher', 'Directeur d\'école'], ['Farmer', 'Grand exploitant agricole']], urban: [['Engineer', 'Ingénieur'], ['Doctor', 'Médecin'], ['Lawyer', 'Avocat'], ['Manager', 'Cadre dirigeant'], ['Business owner', 'Chef d\'entreprise']] },
+};
+function parentJobFor(c, sex, q, rural) {
+  const pool = PARENT_JOBS[q][rural ? 'rural' : 'urban'];
+  const [en, fr] = pick(pool);
+  if (LANG !== 'fr') return en;
+  if (sex === 'F') return fr.replace(/^Agriculteur/, 'Agricultrice').replace(/^Éleveur/, 'Éleveuse').replace(/^Ouvrier/, 'Ouvrière').replace(/^Petit commerçant/, 'Petite commerçante').replace(/^Commerçant/, 'Commerçante').replace(/^Vendeur/, 'Vendeuse').replace(/^Mécanicien/, 'Mécanicienne').replace(/^Pêcheur/, 'Pêcheuse').replace(/^Chauffeur/, 'Chauffeuse').replace(/^Enseignant/, 'Enseignante').replace(/^Infirmier/, 'Infirmière').replace(/^Technicien/, 'Technicienne').replace(/^Gardien/, 'Gardienne').replace(/^Employé/, 'Employée').replace(/^Médecin/, 'Médecin').replace(/^Directeur/, 'Directrice').replace(/^Ingénieur/, 'Ingénieure').replace(/^Avocat/, 'Avocate').replace(/^Cadre/, 'Cadre').replace(/^Chef/, 'Cheffe').replace(/^Fonctionnaire/, 'Fonctionnaire').replace(/^Grand exploitant/, 'Grande exploitante').replace(/^Manœuvre/, 'Manœuvre').replace(/^Porteur/, 'Porteuse').replace(/^Docker/, 'Docker');
+  return fr;
 }
 function pickParentJob(c, sex) { const j0 = pickParentJobRaw(c, sex); return LANG === 'fr' ? (FR_BY_EN[j0] || j0) : j0; }
 function pickParentJobRaw(c, sex) {
@@ -3939,7 +4084,7 @@ function tick() {
   // v5.73：若這一刻已經有別的 modal 開著，就不要疊上去 ——
   // 否則玩家對上方的決策按 Escape，下一瞬間又看到財務 modal，感覺「按了沒反應」。
   // 跳過的那一年記進 financeModalShown，下一次機會自然會補上。
-  if ([25, 30, 35, 40, 45, 50, 55, 60].includes(STATE.life.age) && !STATE.life.financeModalShown?.includes(STATE.life.age)) {
+  if (false && [25, 30, 35, 40, 45, 50, 55, 60].includes(STATE.life.age) && !STATE.life.financeModalShown?.includes(STATE.life.age)) {   // la situation financière est affichée en permanence sur le côté
     STATE.life.financeModalShown = STATE.life.financeModalShown || [];
     if (STATE.paused) {
       STATE.life.financeModalShown.push(STATE.life.age);   // 記成已處理，改用自動進行
@@ -4935,6 +5080,7 @@ function renderLife() {
     const ppp = (v) => Math.round(v).toLocaleString(LANG === 'fr' ? 'fr-FR' : 'en-US') + ' $ US PPA';
     { const a = $('#heroAssetsSub'); if (a) a.textContent = ppp(STATE.life.stats.netAssets); const b2 = $('#heroIncomeSub'); if (b2) b2.textContent = STATE.life.stats.annualIncome ? ppp(STATE.life.stats.annualIncome) + ' · ' + money(STATE.life.stats.annualIncome / 12) + (LANG === 'fr' ? ' par mois' : ' a month') : ''; }
     renderBudget();
+    renderFinSide();
     renderLifeGrid();
     renderIndicators();
     renderIdCard();
@@ -7163,7 +7309,7 @@ function wire() {
       situation.id = 'lifeSituation';
       situation.append(...['.cert-age-row', '.cert-meta'].map(q => document.querySelector('#lifeCert ' + q)).filter(Boolean));
       { const ind = document.createElement('div'); ind.id = 'lifeIndicators'; const st0 = $('#lifeStats'); if (st0) st0.appendChild(ind);
-        const idc = document.createElement('div'); idc.id = 'lifeIdCard'; const hero0 = document.querySelector('.life-hero'); if (hero0) hero0.after(idc); }
+        const idc = document.createElement('div'); idc.id = 'lifeIdCard'; const hero0 = document.querySelector('.life-hero'); if (hero0) hero0.after(idc); const fin0 = $('#finSide'); if (hero0 && fin0) hero0.after(fin0); }
       const famLife = document.createElement('div'); famLife.id = 'lifeFamilyLife';
       const budget = document.createElement('div');
       budget.id = 'lifeBudget';
@@ -7545,7 +7691,8 @@ function yearBudget(life) {
   const vehicle = (life.hasCar ? 0.08 * base : 0) + (life.hasMoto ? 0.04 * base : 0);
   const mortgage = hs && hs.type === 'mortgage' ? hs.annual : 0;
   const living = Math.min(fullLiving * housingAdj + vehicle + mortgage, Math.max(0, net * 0.9));      // les plus pauvres se privent : on ne dépense pas ce qu'on n'a pas
-  const health = 0.07 * base * (age < 40 ? 0.5 : age < 60 ? 1 : age < 75 ? 1.8 : 2.6) * (c.oop ?? 30) / 100 + (life.careCost || 0);
+  const insPremium = life.insured ? 0.025 * base : 0;
+  const health = 0.07 * base * (age < 40 ? 0.5 : age < 60 ? 1 : age < 75 ? 1.8 : 2.6) * (c.oop ?? 30) / 100 * (life.insured ? 0.5 : 1) + (life.careCost || 0) * (life.insured ? 0.5 : 1) + insPremium;
   const school = s.employment === 'university' ? 0.25 * base * (1 - Math.min(0.9, r * 3)) : 0;
   // On ne dépense pas en tabac ou en alcool ce qu'on n'a pas : le coût est plafonné au disponible après les dépenses de base.
   const habitRaw = (life.smoker ? 0.03 * base : 0) + (life.drinker ? 0.025 * base : 0) + (life.addicted ? 0.15 * base : 0);
@@ -7788,6 +7935,30 @@ function renderFamilyLife() {
   if (habits.length) h += '<div class="fl-row"><span>' + (fr ? 'Habitudes' : 'Habits') + '</span><b>' + habits.join(', ') + '</b></div>';
   if (L.illness && L.illness.status !== 'resolved') h += '<div class="fl-row"><span>' + (fr ? 'Santé' : 'Health') + '</span><b>' + ({ cancer: fr ? 'Cancer' : 'Cancer', heart: fr ? 'Maladie du cœur' : 'Heart disease', stroke: 'AVC', diabetes: fr ? 'Diabète' : 'Diabetes' })[L.illness.type] + (L.illness.status === 'remission' ? (fr ? ' · en rémission' : ' · remission') : L.illness.treated === 'none' ? (fr ? ' · non soigné' : ' · untreated') : '') + '</b></div>';
   el.innerHTML = h;
+}
+function renderFinSide() {
+  const el = $('#finSide');
+  if (!el || !STATE.life) return;
+  { const hero = document.querySelector('.life-hero'); if (hero && el.previousElementSibling !== hero) hero.after(el); }   // juste sous l'âge et le patrimoine, dans la colonne de gauche
+  const L = STATE.life, b = L.budget || {}, fr = LANG === 'fr', H = L.housing;
+  const row = (k, v, cls) => '<div class="fs-row"><span>' + k + '</span><b' + (cls ? ' class="' + cls + '"' : '') + '>' + v + '</b></div>';
+  const sgn = (v) => (v >= 0 ? '+ ' : '− ') + money(Math.abs(v));
+  let h = '<h4>💶 ' + (fr ? 'Situation financière' : 'Finances') + '</h4>';
+  h += row(fr ? 'Patrimoine' : 'Net worth', money(L.stats.netAssets), L.stats.netAssets < 0 ? 'neg' : '');
+  if (L.age < 18) h += '<p class="fs-note">' + (fr ? 'Vos parents subviennent à vos besoins.' : 'Your parents provide for you.') + '</p>';
+  else {
+    const earn = (b.income || 0) + (b.pension || 0) + (b.aid || 0);
+    h += row(fr ? 'Revenu par an' : 'Income / year', money(earn));
+    h += row(fr ? 'Dépenses par an' : 'Spending / year', money((b.taxes || 0) + (b.living || 0) + (b.health || 0) + (b.school || 0) + (b.habit || 0) + (b.comfort || 0)));
+    h += row(fr ? 'Épargne par an' : 'Saved / year', sgn(b.saved || 0), (b.saved || 0) < 0 ? 'neg' : 'pos');
+    const lodge = L.age < 18 ? '' : !H ? (L.ownsHome ? (fr ? 'propriétaire' : 'owner') : (fr ? 'locataire' : 'renting')) : ({ own: fr ? 'propriétaire' : 'owner', mortgage: (fr ? 'prêt jusqu\'à ' : 'mortgage until ') + H.end + (fr ? ' ans' : ''), rent: fr ? 'locataire' : 'renting', family: fr ? 'chez la famille' : 'with family' })[H.type];
+    if (lodge) h += row(fr ? 'Logement' : 'Home', lodge);
+    if (L.herd) h += row(fr ? 'Bétail' : 'Livestock', (HERD[L.herd.type]?.icon || '') + ' ' + (HERD[L.herd.type]?.fr || ''));
+    if (L.stats.netAssets < 0) h += '<p class="fs-note warn">' + (fr ? 'Vous êtes endetté : chaque année, vos remboursements pèsent sur le budget.' : 'You are in debt.') + '</p>';
+  }
+  h += '<button type="button" class="fs-more" id="finSideMore">' + (fr ? 'Comparer avec d\'autres pays' : 'Compare with other countries') + '</button>';
+  el.innerHTML = h;
+  $('#finSideMore')?.addEventListener('click', () => showFinanceModal());
 }
 function renderBudget() {
   const el = $('#lifeBudget');

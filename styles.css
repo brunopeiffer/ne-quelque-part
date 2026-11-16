@@ -2614,3 +2614,11 @@ body { font-size: 16px; }
 #deathReel .dr-card{height:200px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:84px;box-shadow:0 12px 40px #0008;margin-bottom:16px}
 #deathReel .dr-age{font:14px ui-monospace,monospace;letter-spacing:.2em;color:#9a968b}
 #deathReel .dr-skip{position:absolute;right:20px;bottom:20px;background:none;border:1px solid #555;color:#bbb;padding:8px 14px;border-radius:8px;cursor:pointer}
+
+.fin-side{background:var(--paper,#fbf6ea);border:1px solid var(--line,#d8c9a8);border-radius:14px;padding:14px 16px;margin:14px 0}
+.fin-side h4{margin:0 0 8px;font-size:15px}
+.fs-row{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px dotted #d8c9a8;font-size:14px}
+.fs-row b.neg{color:#a33}.fs-row b.pos{color:#2b6e6a}
+.fs-note{font-size:13px;color:#7a6a55;margin:8px 0 0}.fs-note.warn{color:#a33}
+.fs-more{margin-top:10px;width:100%;padding:8px;border:1px solid #c9b88f;background:none;border-radius:8px;cursor:pointer;font-size:13px}
+
