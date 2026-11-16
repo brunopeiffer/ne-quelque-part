@@ -167,55 +167,56 @@
   const histHas = (L, fn) => Object.keys(L.hist || {}).some((a) => L.hist[a].b && fn(L.hist[a], +a));
   // Éléments à identifier selon le chapitre : chacun se coche tout seul quand le jeu en fournit un exemple.
   function identify(ch, L) {
-    const b = L.budget || {}, c = L.countryData, k = childState(L), adult = L.age >= 18;
-    const I = (t, ex) => ({ t, ok: !!ex, ex: ex || null });
-    const ex = (v) => v || null;
+    const b = L.budget || {}, c = L.countryData, adult = L.age >= 18;
+    const I = (t, ex, hint) => ({ t, ok: !!ex, ex: ex || null, hint: hint || '' });
     switch (String(ch)) {
       case '1': return [
-        I("Une mission régalienne de l'État (sécurité, justice, défense)", logHit(L, /police|sécurité|tribunal|justice|cambriol|armée|conscription|frontière|violence|guerre|arrêt|vol/i) || 'dans ce pays : ' + c.hom + ' homicides pour 100 000 habitants (la sécurité est une mission de l\'État)'),
-        I("Un service public (école, santé, vaccination)", logHit(L, /école|collège|lycée|universit|vaccin|hôpital|soins|médecin|dépistage|concours/i) || 'dans ce pays : ' + c.eys + ' ans de scolarité attendue, reste à charge en santé ' + c.oop + ' %'),
-        I("Une prestation versée par l'État", adult ? ((b.aid > 0 || b.pension > 0) ? 'cette année : ' + money$((b.aid || 0) + (b.pension || 0)) : logHit(L, /aide|allocation|pension|bourse|prime/i)) : 'allocations familiales estimées : ' + money$(k.fam) + ' par an'),
-        I("Un prélèvement (impôt ou cotisation)", adult ? (b.taxes > 0 ? 'cette année : ' + money$(b.taxes) : null) : 'payé par vos parents : ' + money$(k.hhPrel) + ' par an'),
+        I("Une mission régalienne de l'État (sécurité, justice, défense)", logHit(L, /police|sécurité|tribunal|justice|cambriol|armée|conscription|frontière|violence|guerre|arrêt|vol/i), "Cherchez un événement du Récit (sécurité, justice, armée) ou la ligne « Sécurité » dans « Les chiffres »."),
+        I("Un service public (école, santé, vaccination)", logHit(L, /école|collège|lycée|universit|vaccin|hôpital|soins|médecin|dépistage|concours/i), "Cherchez dans le Récit une école, un soin ou un vaccin, ou les lignes « Santé » et « Éducation » de « Les chiffres »."),
+        I("Une prestation versée par l'État", adult && (b.aid > 0 || b.pension > 0) ? 'cette année : ' + money$((b.aid || 0) + (b.pension || 0)) : (adult ? logHit(L, /aide|allocation|pension|bourse|prime/i) : null), "Dans « Les chiffres », lisez la ligne « Allocations familiales » (ou « Prestations » à l'âge adulte), puis cliquez ici pour la cocher."),
+        I("Un prélèvement (impôt ou cotisation)", adult && b.taxes > 0 ? 'cette année : ' + money$(b.taxes) : null, "Dans « Les chiffres », lisez la ligne « Prélèvements », puis cliquez ici pour la cocher."),
       ];
       case '2': return [
-        I("Une externalité positive", carnetHit(L, /externalité positive|bien public/i)), I("Une externalité négative", carnetHit(L, /externalité négative/i)),
-        I("Une asymétrie d'information", carnetHit(L, /asymétrie|information/i)), I("Un bien public ou un bien commun", carnetHit(L, /bien public|bien commun/i)),
-        I("Une défaillance de l'État", carnetHit(L, /défaillance de l'état|corruption/i)),
+        I("Une externalité positive", carnetHit(L, /externalité positive|bien public/i), "Continuez la vie : une décision de vaccination ou de prévention peut en montrer une."),
+        I("Une externalité négative", carnetHit(L, /externalité négative/i), "Continuez la vie : tabac, alcool ou conduite peuvent en montrer une."),
+        I("Une asymétrie d'information", carnetHit(L, /asymétrie|information/i), "Continuez la vie : assurance, dépistage ou crédit peuvent en montrer une."),
+        I("Un bien public ou un bien commun", carnetHit(L, /bien public|bien commun/i), "Continuez la vie : eau, vaccination ou sécurité peuvent en montrer un."),
+        I("Une défaillance de l'État", carnetHit(L, /défaillance de l'état|corruption/i), "Continuez la vie : corruption ou favoritisme peuvent en montrer une."),
       ];
       case '3': return [
-        I("Un épisode d'inflation (prix qui montent)", carnetHit(L, /inflation/i) || logHit(L, /inflation|prix/i)),
-        I("Un crédit ou une dette", carnetHit(L, /crédit|prêt/i) || logHit(L, /crédit|emprunt|dette|prêt/i)),
-        I("Le bilan budgétaire (prélèvements et prestations)", adult ? 'cette année : prélèvements ' + money$(b.taxes || 0) + ', prestations ' + money$(b.aid || 0) : null),
+        I("Un épisode d'inflation (prix qui montent)", carnetHit(L, /inflation/i) || logHit(L, /inflation|prix/i), "Continuez la vie : une décision sur les prix ou l'épargne peut apparaître."),
+        I("Un crédit ou une dette", carnetHit(L, /crédit|prêt/i) || logHit(L, /crédit|emprunt|dette|prêt/i), "Continuez la vie : un prêt ou une dette peut apparaître."),
+        I("Le bilan budgétaire (prélèvements et prestations)", adult ? 'cette année : prélèvements ' + money$(b.taxes || 0) + ', prestations ' + money$(b.aid || 0) : null, "Disponible à partir de 18 ans, dans « Les chiffres »."),
       ];
       case '4': return [
-        I("Des cotisations sociales", adult && b.cotis > 0 ? money$(b.cotis) + ' cette année' : null),
-        I("Des impôts", adult && b.impots > 0 ? money$(b.impots) + ' cette année' : null),
-        I("Une prestation d'assistance (sous conditions de ressources)", histHas(L, (h) => h.b.aa > 0) ? 'perçue dans la vie du personnage' : null),
-        I("Des prestations familiales", adult ? (histHas(L, (h) => h.b.af > 0) ? 'perçues dans la vie du personnage' : null) : money$(k.fam) + ' par an (estimation)'),
-        I("Un reste à charge en santé", adult && b.health > 0 ? money$(b.health) + ' cette année' : null),
-        I("Une pension de retraite", L.stats.employment === 'retired' && hasPension(L) ? 'pension versée' : null),
+        I("Des cotisations sociales", adult && b.cotis > 0 ? money$(b.cotis) + ' cette année' : null, "Visible dans « Les chiffres » dès la vie active."),
+        I("Des impôts", adult && b.impots > 0 ? money$(b.impots) + ' cette année' : null, "Visible dans « Les chiffres » dès la vie active (souvent nul pour les bas revenus)."),
+        I("Une prestation d'assistance (sous conditions de ressources)", histHas(L, (h) => h.b.aa > 0) ? 'perçue dans la vie du personnage' : null, "Réservée aux bas revenus : elle peut ne jamais apparaître pour un milieu aisé."),
+        I("Des prestations familiales", adult && histHas(L, (h) => h.b.af > 0) ? 'perçues dans la vie du personnage' : null, "Avant 18 ans, lisez « Allocations familiales » dans « Les chiffres » et cliquez ici ; ensuite, elles apparaissent avec un enfant."),
+        I("Un reste à charge en santé", adult && b.health > 0 ? money$(b.health) + ' cette année' : null, "Visible dans « Les chiffres » dès la vie active."),
+        I("Une pension de retraite", L.stats.employment === 'retired' && hasPension(L) ? 'pension versée' : null, "Apparaît à la retraite, si le personnage a droit à une pension."),
       ];
       case '5': return [
-        I("Une période d'études", histHas(L, (h) => h.emp === 'university') ? 'études supérieures' : (L.age >= 6 ? 'scolarité depuis 6 ans' : null)),
-        I("Une période d'emploi", histHas(L, (h) => h.emp === 'employed') ? 'oui' : null),
-        I("Une période sans emploi ou inactif", histHas(L, (h, a) => a >= 18 && h.emp === 'none') ? 'oui' : null),
-        I("La retraite, ou un travail sans droit à pension", L.stats.employment === 'retired' || (L.age >= 60 && !hasPension(L)) ? (hasPension(L) ? 'retraite avec pension' : 'sans pension') : null),
+        I("Une période d'études", histHas(L, (h) => h.emp === 'university') ? 'études supérieures' : null, "Repérez-la sur la frise (études supérieures en violet), ou cliquez ici si le personnage n'a connu que l'école."),
+        I("Une période d'emploi", histHas(L, (h) => h.emp === 'employed') ? 'oui' : null, "Elle apparaît en vert sur la frise dès la vie active."),
+        I("Une période sans emploi ou inactif", histHas(L, (h, a) => a >= 18 && h.emp === 'none') ? 'oui' : null, "Elle apparaît en gris après 18 ans, si le personnage n'a pas d'emploi."),
+        I("La retraite, ou un travail sans droit à pension", L.stats.employment === 'retired' || (L.age >= 60 && !hasPension(L)) ? (hasPension(L) ? 'retraite avec pension' : 'sans pension') : null, "Apparaît autour de 60 ans."),
       ];
       case '8': return [
-        I("Un lien avec l'étranger (migration, transfert d'argent, emploi à l'étranger)", logHit(L, /migr|étranger|passeur|expuls|frontière|transfert|envoy|visa|Golfe/i)),
-        I("L'accès à Internet du pays", c.net != null ? c.net + ' % de la population' : null),
-        I("Un écart de niveau de vie avec un autre pays", 'PIB par habitant : ' + money$(c.ppp) + ' contre ' + money$(countryById('FRA').ppp) + ' en France'),
+        I("Un lien avec l'étranger (migration, transfert d'argent, emploi à l'étranger)", logHit(L, /migr|étranger|passeur|expuls|frontière|transfert|envoy|visa|Golfe/i), "Continuez la vie : une décision de départ ou d'envoi d'argent peut apparaître."),
+        I("L'accès à Internet du pays", null, "Lisez le tableau « Ouverture au monde » dans « Les chiffres », puis cliquez ici."),
+        I("Un écart de niveau de vie avec un autre pays", null, "Comparez les PIB par habitant dans « Les chiffres », puis cliquez ici."),
       ];
       case '11': return [
-        I("Un choc environnemental (sécheresse, inondation, incendie, eau)", logHit(L, /sécheresse|inondation|incendie|eau|tremblement|mousson|cyclone/i)),
-        I("L'indice de développement estimé du pays", 'indice ' + idh(c).v.toFixed(2).replace('.', ',')),
-        I("L'espérance de vie et la scolarité du pays", c.le + ' ans · ' + c.eys + ' ans de scolarité attendue'),
+        I("Un choc environnemental (sécheresse, inondation, incendie, eau)", logHit(L, /sécheresse|inondation|incendie|eau|tremblement|mousson|cyclone/i), "Continuez la vie : un événement climatique peut apparaître."),
+        I("L'indice de développement estimé du pays", null, "Lisez le tableau « Indice de développement » dans « Les chiffres », puis cliquez ici."),
+        I("L'espérance de vie et la scolarité du pays", null, "Elles composent l'indice : repérez-les puis cliquez ici."),
       ];
       case '12': return [
-        I("Le quartile du milieu familial", 'quartile ' + (L.stats.incomeQuartile || 1) + ' sur 4'),
-        I("Une année sous le seuil de pauvreté absolue", histHas(L, (h, a) => a >= 18 && (h.b.nv != null ? h.b.nv : h.b.net) < Z_ABS) ? 'oui' : null),
-        I("Une année sous le seuil de pauvreté relative", histHas(L, (h, a) => a >= 18 && (h.b.nv != null ? h.b.nv : h.b.net) < zRelOf(c)) ? 'oui' : null),
-        I("Un facteur qui aggrave ou réduit la pauvreté (santé, dettes, études, enfants)", carnetHit(L, /pauvreté|dette|éducation/i) || logHit(L, /dette|chômage|malad|bourse|aide/i)),
+        I("Le quartile du milieu familial", null, "Dans « Les chiffres », lisez la ligne « Quartile du milieu familial », puis cliquez ici."),
+        I("Une année sous le seuil de pauvreté absolue", histHas(L, (h, a) => a >= 18 && (h.b.nv != null ? h.b.nv : h.b.net) < Z_ABS) ? 'oui' : null, "Se vérifie dans « Les chiffres » : le niveau de vie passe-t-il sous le seuil ?"),
+        I("Une année sous le seuil de pauvreté relative", histHas(L, (h, a) => a >= 18 && (h.b.nv != null ? h.b.nv : h.b.net) < zRelOf(c)) ? 'oui' : null, "Se vérifie dans « Les chiffres » : le niveau de vie passe-t-il sous le seuil ?"),
+        I("Un facteur qui aggrave ou réduit la pauvreté (santé, dettes, études, enfants)", carnetHit(L, /pauvreté|dette|éducation/i) || logHit(L, /dette|chômage|malad|bourse|aide/i), "Continuez la vie : cherchez dans le Récit un événement de santé, de dette, d'études ou de famille."),
       ];
       default: return [];
     }
@@ -273,9 +274,15 @@
     const rows = ids.map((id) => { const c = countryById(id); const p = probe(Object.assign({}, L, { countryData: c, country: id }), 2); return '<tr><td>' + countryNm(c) + '</td><td>' + pct(socialRate(c)) + '</td><td class="cl-n">' + pct(p.gross ? p.taxes / p.gross : 0) + ' · ' + money$(p.aid) + '</td></tr>'; }).join('');
     return '<h5>Comparer des États (même parcours, ailleurs)</h5><table class="cl-t"><tr><th></th><th>Dépenses sociales</th><th>Prélèvement · aides</th></tr>' + rows + '</table>';
   }
+  function rolesTable(c) {
+    return "<h5>Les rôles de l'État dans ce pays</h5>" + table([
+      ['<b>Sécurité</b> <small>(fonction régalienne)</small>', 'homicides : ' + c.hom + ' pour 100 000'],
+      ['<b>Santé</b>', 'reste à charge des ménages : ' + c.oop + ' %'], ['<b>Éducation</b>', 'scolarité attendue : ' + c.eys + ' ans · enseignement supérieur : ' + c.ter + ' %'],
+      ['<b>Protection sociale</b> <small>(État-providence)</small>', 'dépenses sociales ≈ ' + pct(socialRate(c)) + ' de la richesse nationale']]);
+  }
   function viewCh1(L) {
     const b = L.budget || {}, c = L.countryData;
-    if (L.age < 18) return childTable(L) + compare(L);
+    if (L.age < 18) return childTable(L) + rolesTable(L.countryData) + compare(L);
     const paye = b.taxes || 0, recu = (b.aid || 0) + (b.healthCovered || 0) + (b.pension || 0);
     return "<h5>Ce que l'État prend et ce qu'il rend (cette année)</h5>" + table([
       ['Prélèvements (cotisations + impôts)', money$(paye)], ['Prestations, pension et santé prise en charge', money$(recu)],
@@ -350,15 +357,20 @@
     if (!CL.cfg || !STATE.life || !STATE.life.classe) return;
     const grid = $('#view-life .life-grid'); if (!grid) return;
     let el = $('#lifeClasse');
-    if (!el) { el = document.createElement('div'); el.id = 'lifeClasse'; grid.insertBefore(el, grid.children[1] || null); }
+    if (!el) {
+      el = document.createElement('div'); el.id = 'lifeClasse'; grid.insertBefore(el, grid.children[1] || null);
+      el.addEventListener('click', (e) => { const li = e.target.closest('.cl-ident li'); if (!li || !STATE.life) return; const k = li.dataset.k, T = STATE.life.classeTick || (STATE.life.classeTick = {}); T[k] = !T[k]; CL.render(); });
+    }
     const ch = CHAPS[CL.cfg.c] || CHAPS['4'], fn = VIEWS[CL.cfg.c] || viewCh4;
     let body; try { body = fn(STATE.life); } catch (e) { body = note('Observation indisponible : ' + esc(e.message)); }
     const q = ch.q.map((x) => '<li>' + esc(x) + '</li>').join('');
     const L0 = STATE.life, gs = ch.g || [];
     let gi = gs.findIndex((x) => L0.age < x.a); if (gi < 0) gi = gs.length - 1;
     const guide = gs.length ? '<div class="cl-guide"><div class="cl-gsteps">' + gs.map((x, k) => '<i class="' + (k < gi ? 'done' : k === gi ? 'on' : '') + '">' + (k + 1) + '</i>').join('') + '</div><div><b>À faire maintenant · étape ' + (gi + 1) + ' sur ' + gs.length + '</b><br>' + esc(gs[gi].t) + '</div></div>' : '';
-    const ids = identify(CL.cfg.c, L0), done = ids.filter((x) => x.ok).length;
-    const idHtml = ids.length ? '<div class="cl-ident"><div class="cl-idh"><b>À identifier</b> · ' + done + ' sur ' + ids.length + ' trouvés <span>Les éléments se cochent tout seuls au fil de la vie.</span></div><ul>' + ids.map((x) => '<li class="' + (x.ok ? 'ok' : '') + '"><u>' + (x.ok ? '✔' : '○') + '</u><span>' + esc(x.t) + (x.ok ? '<em>' + esc(x.ex) + '</em>' : '<em>pas encore trouvé : continuez la vie</em>') + '</span></li>').join('') + '</ul></div>' : '';
+    const tick = L0.classeTick || {};
+    const ids = identify(CL.cfg.c, L0).map((x, k) => Object.assign(x, { k: CL.cfg.c + ':' + k, manual: !x.ok && !!tick[CL.cfg.c + ':' + k] }));
+    const done = ids.filter((x) => x.ok || x.manual).length;
+    const idHtml = ids.length ? '<div class="cl-ident"><div class="cl-idh"><b>À identifier</b> · ' + done + ' sur ' + ids.length + ' trouvés <span>Une case se coche seule quand la vie en donne un exemple. Sinon, cliquez dessus quand vous l’avez trouvée dans « Les chiffres ».</span></div><ul>' + ids.map((x) => '<li data-k="' + x.k + '" class="' + (x.ok || x.manual ? 'ok' : '') + '"><u>' + (x.ok || x.manual ? '✔' : '○') + '</u><span>' + esc(x.t) + (x.ok ? '<em>' + esc(x.ex) + '</em>' : x.manual ? '<em>coché par vous</em>' : '<em class="hint">' + esc(x.hint) + '</em>') + '</span></li>').join('') + '</ul></div>' : '';
     el.innerHTML = '<h4>🎓 Observation · ' + esc(ch.t) + '</h4><p class="cl-where">👀 <b>Où regarder ?</b> Cette carte verte : la mission du moment, puis la liste « À identifier », puis les chiffres. Le Récit, plus bas, donne les événements.</p>' + guide + idHtml + '<h5 class="cl-chiffres">Les chiffres</h5>' + body + '<details class="cl-q"><summary>Consignes de la séance</summary><ol>' + q + '</ol></details>';
   };
 

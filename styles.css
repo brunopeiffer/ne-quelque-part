@@ -2943,3 +2943,6 @@ body.classe-on #view-intro .bt-class{grid-row:3}
 .cl-ident li span{display:flex;flex-direction:column}.cl-ident li em{font-style:normal;font-size:12.5px;color:#5a4d3e}
 .cl-ident li.ok em{color:#1f6f66;font-weight:600}
 #lifeClasse h5.cl-chiffres{margin-top:16px}
+
+.cl-ident li{cursor:pointer}.cl-ident li:hover{background:rgba(217,240,163,.35)}
+.cl-ident li em.hint{color:#8a6d3b;font-weight:400}
