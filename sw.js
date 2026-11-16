@@ -1,0 +1,103 @@
+/* born-somewhere service worker v6.12
+ * Cache-first strategy for the static app shell + countries/i18n JSON.
+ * Falls back to network when cache misses, then caches the response.
+ */
+const CACHE_NAME = 'born-somewhere-v6.12-fr27';
+const APP_VERSION = '6.12.0';
+
+// Files we want in the offline shell. List both the entry HTML and the data
+// blob so the game can boot without network.
+const APP_SHELL = [
+  './',
+  './index.html',
+  './app.js',
+  './styles.css',
+  './gedcom.js',
+  './data/world-coords.js',
+  './data/countries.json',
+  './data/i18n.json',
+  './assets/illus-baby-book.jpg',
+  './assets/illus-world-people.jpg',
+  './assets/illus-time-seed.jpg',
+  './assets/illus-elder-hill.jpg',
+  './assets/illus-home-cat.jpg',
+  './assets/illus-memorial-lantern.jpg',
+  './manifest.json',
+  './CHANGELOG.md',
+];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) =>
+      // Use add with individual fallbacks so a single 404 doesn't break install.
+      //
+      // v5.94：這裡必須用 cache:'reload' 強制繞過 HTTP cache。
+      // 舊碼用 cache.add(url)，會走瀏覽器預設的 HTTP cache ——
+      // 於是就算 CACHE_NAME 剛剛升級，預存進新 cache 的仍可能是磁碟上的舊檔。
+      // 實測（改成 v5.94 之前的當下）：新的 born-somewhere-v5.93 cache 裡
+      // data/i18n.json 是舊值 "{} 生"，但 network 已經是新值 "{}"。
+      // 結果整個版本被釘死在舊內容，而且沒有任何錯誤訊息。
+      Promise.all(
+        APP_SHELL.map((url) =>
+          cache.add(new Request(url, { cache: 'reload' })).catch((err) => {
+            console.warn('[sw] failed to pre-cache', url, err);
+          })
+        )
+      )
+    ).then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))
+      )
+    ).then(() => self.clients.claim())
+  );
+});
+
+// Cache-first with network fallback + background revalidation.
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  if (req.method !== 'GET') return;
+  // Only handle same-origin GETs (avoid messing with cross-origin beacons)
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
+
+  event.respondWith(
+    caches.match(req).then((cached) => {
+      if (cached) {
+        // Background refresh (stale-while-revalidate feel).
+        // v5.94：這裡也要繞過 HTTP cache。否則「重新驗證」拿到的是磁碟上的舊副本，
+        // 再把它寫回 cache，等於永遠更新不了。
+        fetch(new Request(req, { cache: 'reload' })).then((res) => {
+          if (res && res.ok) {
+            caches.open(CACHE_NAME).then((cache) => cache.put(req, res.clone()));
+          }
+        }).catch(() => { /* offline — keep cached */ });
+        return cached;
+      }
+      return fetch(req).then((res) => {
+        // Cache successful responses for next time
+        if (res && res.ok && res.type === 'basic') {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+        }
+        return res;
+      }).catch(() => {
+        // Offline + not in cache: return a tiny fallback so the page doesn't crash
+        if (req.destination === 'document') {
+          return caches.match('./index.html');
+        }
+        return new Response('', { status: 504, statusText: 'offline' });
+      });
+    })
+  );
+});
+
+// Optional: allow page to trigger skipWaiting after new SW is ready
+self.addEventListener('message', (event) => {
+  if (event.data === 'SKIP_WAITING') self.skipWaiting();
+});
