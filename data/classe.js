@@ -22,6 +22,14 @@
       "Relevez dans le carnet deux situations d'externalités (une positive, une négative) et expliquez-les.",
       "Relevez une asymétrie d'information (assurance, santé, crédit) : qui sait quoi ?",
       "Quelle intervention publique corrige la défaillance ? Observez-vous aussi une défaillance de l'État ?" ] },
+    '3': { d: "Politique budgétaire vécue (prélèvements, prestations), inflation et pouvoir d'achat, crédit. Lien partiel avec le chapitre : le simulateur ne modélise pas la politique monétaire.", pre: [{ n: 'France ↔ Allemagne (zone euro)', p: ['FRA', 'DEU'], w: 'Deux pays soumis à la même monnaie et aux mêmes règles européennes.' }, { n: 'France ↔ États-Unis', p: ['FRA', 'USA'], w: 'Deux politiques économiques et sociales différentes.' }, { n: 'France ↔ Niger', p: ['FRA', 'NER'], w: 'Une grande marge de politique publique face à une marge très réduite.' }], g: [{ a: 25, t: "Jusqu'à 25 ans : repérez comment l'argent et les prix évoluent (inflation, crédit) dans la vie du personnage." }, { a: 40, t: "Arrêtez à 40 ans (pause) : faites le bilan budgétaire : ce que l'État prélève, ce qu'il verse, et le pouvoir d'achat qui reste." }, { a: 999, t: "Jusqu'à la fin : repérez l'effet d'un choc (inflation, catastrophe, dette) sur le pouvoir d'achat, puis comparez avec l'autre pays." }], t: "Chapitre 3 · Les politiques économiques de l'État et de l'Europe", q: [
+      "Faites le bilan budgétaire de votre personnage à 40 ans : prélèvements, prestations, revenu disponible. Quel est l'effet de la politique budgétaire sur son pouvoir d'achat ?",
+      "Relevez un épisode d'inflation ou de crédit dans sa vie : comment a-t-il réagi ? Quel instrument de politique économique pourrait agir sur ce problème ?",
+      "Comparez avec l'autre pays : la marge de manœuvre de l'État est-elle la même ? Justifiez avec trois chiffres." ] },
+    '8': { d: "Mondialisation vécue : migrations, transferts d'argent, accès au numérique. Lien limité : le simulateur ne modélise pas les échanges de biens.", pre: [{ n: "Pays d'émigration", p: ['MEX', 'IND', 'NER'], w: "Trois pays d'où l'on part vers des pays plus riches (États-Unis, Royaume-Uni, France)." }, { n: 'France ↔ Niger', p: ['FRA', 'NER'], w: "Un pays d'accueil et un pays de départ." }], g: [{ a: 25, t: "Jusqu'à 25 ans : repérez ce qui relie votre personnage au reste du monde (numérique, études, rencontres)." }, { a: 50, t: "Jusqu'à 50 ans : y a-t-il une décision de migration ou d'envoi d'argent ? Notez le choix et ses conséquences." }, { a: 999, t: "Jusqu'à la fin : comparez avec l'autre pays l'ouverture au monde (accès à Internet, migrations vécues)." }], t: "Chapitres 8 à 10 · Mondialisation et échanges (lien limité)", q: [
+      "Relevez dans le récit une situation qui relie votre personnage à l'étranger (migration, transfert d'argent, emploi à l'étranger). Qui en profite, qui y perd ?",
+      "Comparez l'accès à Internet et le niveau de vie des deux pays : que révèle l'insertion dans la mondialisation ?",
+      "Le simulateur ne montre pas le commerce de biens : quelles données faudrait-il pour caractériser la balance commerciale ou le rôle des firmes multinationales ?" ] },
     '4': { d: 'Cotisations et impôts, progressivité, assurance et assistance, redistribution verticale et horizontale, risques sociaux couverts.', pre: [{ n: 'France ↔ Niger', p: ['FRA', 'NER'], w: 'Contraste maximal : prélèvements et protection sociale très différents.' }, { n: 'États-providence', p: ['FRA', 'SWE', 'DEU'], w: 'Comparer des systèmes proches mais distincts.' }, { n: 'France · États-Unis · Brésil', p: ['FRA', 'USA', 'BRA'], w: 'Trois modèles : protection forte, marchande, limitée.' }], g: [{ a: 18, t: "Jusqu'à 18 ans : notez le milieu familial (quartile) et comment les parents financent les besoins." }, { a: 25, t: "Entrée dans la vie active : lisez le détail cotisations, impôts et prestations dans la tuile." }, { a: 40, t: "Arrêtez à 40 ans (pause) : remplissez le tableau 1 de votre fiche et calculez le taux de prélèvement." }, { a: 60, t: "Jusqu'à la retraite : y a-t-il une pension ? Que couvre la protection sociale en cas de maladie ?" }, { a: 999, t: "Jusqu'à la fin de la vie, puis imprimez votre fiche de synthèse." }], t: "Chapitre 4 · Les politiques sociales", q: [
       "Calculez le taux de prélèvement obligatoire de votre personnage à 40 ans. Le système est-il progressif ?",
       "Distinguez cotisations sociales et impôts. Quelles prestations relèvent d'une logique d'assurance, lesquelles d'une logique d'assistance ?",
@@ -115,6 +123,10 @@
     de_remittance: T(12, 'Transferts de migrants', "L'argent envoyé aux proches réduit la pauvreté dans le pays d'origine."),
     de_fin_remit: T(12, 'Transferts de migrants', "Les transferts financent soins, écoles, logements dans le pays d'origine."),
     de_fin_debt: T(12, 'Pauvreté · endettement', "Quand le revenu ne couvre pas les dépenses, l'endettement s'installe."),
+    de_inflation: T(3, 'Inflation · pouvoir d’achat', "Quand les prix montent plus vite que les revenus, le pouvoir d'achat baisse ; la politique monétaire vise à stabiliser les prix."),
+    de_inflation_hedge: T(3, 'Inflation · protection du patrimoine', "Se protéger de l'inflation : arbitrage entre épargne, placements et biens réels."),
+    de_loan_request: T(3, 'Crédit · taux d’intérêt', "Le coût du crédit dépend des taux fixés par le marché et par la politique monétaire."),
+    de_student_loan: T(3, 'Crédit · investissement en capital humain', "Emprunter pour étudier : un arbitrage entre dette présente et revenu futur."),
     de_war_flee: T(12, 'Pauvreté · conflits', "Les conflits détruisent revenus et patrimoine."),
   };
 
@@ -230,7 +242,26 @@
       + note("Estimation simplifiée à partir de l'espérance de vie, de la scolarité attendue et du PIB par habitant : elle ne remplace pas l'IDH publié.")
       + '<h5>Chocs environnementaux vécus par votre personnage</h5>' + (ev ? '<ul class="cl-ul">' + ev + '</ul>' : note('Aucun pour le moment.'));
   }
-  const VIEWS = { '1': viewCh1, '2': viewCh2, '4': viewCh4, '5': viewCh5, '11': viewCh11, '12': viewCh12 };
+  function viewCh3(L) {
+    const b = L.budget || {}, c = L.countryData;
+    const ev = (L.log || []).filter((e) => /inflation|prix|crédit|emprunt|dette|crise/i.test(e.text || '')).slice(-4).map((e) => '<li>' + e.age + ' ans : ' + esc(e.text) + '</li>').join('');
+    const list = (L.carnet || []).filter((x) => x.ch === 3).slice(-4).map((x) => '<div class="cl-card"><b>' + esc(x.n) + '</b> <small>' + x.age + ' ans</small><br>' + esc(x.t) + '<br><em>Votre choix : ' + esc(x.label) + '</em></div>').join('');
+    const bilan = L.age < 18 ? note("Avant 18 ans, le personnage ne perçoit pas de revenu : avancez jusqu'à la vie active pour voir l'effet de la politique budgétaire.")
+      : '<h5>Bilan budgétaire de la personne (cette année)</h5>' + table([['Revenu primaire', money$(b.gross || 0)], ['− Prélèvements obligatoires', money$(b.taxes || 0)], ['+ Prestations (assistance, famille)', money$(b.aid || 0)], ['= Revenu disponible (pouvoir d\'achat)', money$(b.net || 0), null, 'cl-sum'], ['Solde de l\'État vis-à-vis du personnage', sgn((b.aid || 0) + (b.healthCovered || 0) + (b.pension || 0) - (b.taxes || 0)), null, 'cl-key']]);
+    return bilan + '<h5>Inflation, crédit, chocs vécus</h5>' + (ev ? '<ul class="cl-ul">' + ev + '</ul>' : note('Aucun épisode pour le moment.')) + (list ? '<h5>Notions rencontrées</h5>' + list : '') + compare(L)
+      + note("Ce chapitre est surtout observable par le budget et les épisodes d'inflation ou de crédit : le simulateur ne modélise pas la politique monétaire ni la dette publique.");
+  }
+  function viewCh8(L) {
+    const c = L.countryData, hist = L.log || [];
+    const ev = hist.filter((e) => /migr|étranger|passeur|expuls|frontière|transfert|envoy|rentr|visa|Golfe|contrat à l/i.test(e.text || '')).slice(-5).map((e) => '<li>' + e.age + ' ans : ' + esc(e.text) + '</li>').join('');
+    const refs = [c, countryById('FRA'), countryById('NER')].filter((x, i, a) => x && a.findIndex((y) => y.id === x.id) === i);
+    const rows = refs.map((x) => '<tr><td>' + countryNm(x) + '</td><td>' + (x.net != null ? x.net + ' %' : '—') + '</td><td class="cl-n">' + money$(x.ppp) + '</td></tr>').join('');
+    return '<h5>Les liens de votre personnage avec le reste du monde</h5>' + (ev ? '<ul class="cl-ul">' + ev + '</ul>' : note('Aucune migration ni aucun transfert pour le moment.'))
+      + '<h5>Ouverture au monde (comparaison)</h5><table class="cl-t"><tr><th></th><th>Usage d’Internet</th><th>PIB par habitant (PPA)</th></tr>' + rows + '</table>'
+      + (L.birthOrigin ? note('Votre personnage a migré : observez les écarts de niveau de vie entre pays de départ et pays d’arrivée.') : '')
+      + note("Le simulateur ne modélise pas les échanges de biens ni les firmes multinationales : cette tuile se limite aux migrations, aux transferts d'argent et à l'accès au numérique.");
+  }
+  const VIEWS = { '3': viewCh3, '8': viewCh8, '1': viewCh1, '2': viewCh2, '4': viewCh4, '5': viewCh5, '11': viewCh11, '12': viewCh12 };
 
   // ---------- Hooks appelés par app.js ----------
   CL.onChoice = (life, d) => {
