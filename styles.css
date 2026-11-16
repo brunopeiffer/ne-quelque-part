@@ -2926,3 +2926,9 @@ body.classe-on #view-intro .bt-class{grid-row:3}
 .wz-code{display:flex;gap:10px;align-items:flex-end;margin:8px 0}.wz-code label{flex:1;margin:0}
 .wz-code input{font:14px ui-monospace,monospace !important;width:100%}
 @media (max-width:640px){.wz-cards{grid-template-columns:1fr}.cl-big button{min-width:0;width:100%}}
+
+.cl-guide{display:flex;gap:14px;align-items:center;background:#fff;border-radius:16px;padding:10px 14px;margin:8px 0 4px;box-shadow:0 1px 0 rgba(0,0,0,.05)}
+.cl-gsteps{display:flex;gap:4px;flex-wrap:wrap;max-width:140px}
+.cl-gsteps i{width:24px;height:24px;border-radius:50%;background:#e4dccb;color:#7a6a55;font:700 12px var(--sans,sans-serif);display:flex;align-items:center;justify-content:center;font-style:normal}
+.cl-gsteps i.done{background:#2f9e8f;color:#fff}.cl-gsteps i.on{background:#2a2118;color:#ffd56a}
+.wz-card i{font-style:normal;opacity:.85}

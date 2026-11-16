@@ -14,27 +14,27 @@
 
   // ---------- Chapitres ----------
   const CHAPS = {
-    '1': { d: "Rôles de l'État : solde entre prélèvements et prestations, dépenses sociales, comparaison de cinq États.", rec: 1, t: "Chapitre 1 · L'intervention de l'État", q: [
+    '1': { d: "Rôles de l'État : solde entre prélèvements et prestations, dépenses sociales, comparaison de cinq États.", pre: [{ n: 'État-providence ↔ État peu présent', p: ['FRA', 'NER'], w: 'Un État qui prélève et redistribue beaucoup face à un État qui le fait très peu.' }, { n: 'Trois modèles sociaux', p: ['FRA', 'USA', 'BRA'], w: 'Dépenses sociales fortes, moyennes et faibles.' }, { n: 'Cinq États', p: ['FRA', 'USA', 'BRA', 'IND', 'NER'], w: 'Le tableau complet de comparaison.' }], g: [{ a: 18, t: "Jusqu'à 18 ans : repérez ce que l'État fournit sans qu'on le voie (école, santé, sécurité)." }, { a: 40, t: "Arrêtez à 40 ans (pause) : calculez le solde avec l'État, c'est-à-dire ce qu'il reçoit moins ce qu'il verse." }, { a: 999, t: "Jusqu'à la fin de la vie : comparez avec l'autre pays dans le tableau « Comparer des États »." }], t: "Chapitre 1 · L'intervention de l'État", q: [
       "Quels rôles l'État joue-t-il dans la vie de votre personnage (régalien, redistributeur, producteur de services) ?",
       "Calculez le solde entre ce que votre personnage verse à l'État et ce qu'il en reçoit à 40 ans.",
       "Comparez avec le pays de votre voisin : État-providence ou État gendarme ? Justifiez avec trois chiffres." ] },
-    '2': { d: "Externalités, asymétries d'information, biens publics, défaillances de l'État : un carnet de notions se remplit à chaque décision.", rec: 2, t: "Chapitre 2 · Défaillances du marché et de l'État", q: [
+    '2': { d: "Externalités, asymétries d'information, biens publics, défaillances de l'État : un carnet de notions se remplit à chaque décision.", pre: [{ n: 'Riche · intermédiaire · pauvre', p: ['DEU', 'BRA', 'ETH'], w: 'Accès aux soins, reste à charge et sécurité très différents.' }, { n: 'France ↔ Niger', p: ['FRA', 'NER'], w: 'Un système de santé très protecteur face à un système où les ménages paient presque tout.' }, { n: 'États-Unis ↔ France', p: ['USA', 'FRA'], w: 'Deux organisations de la santé : marché et assurance publique.' }], g: [{ a: 25, t: "Vivez jusqu'à 25 ans : à chaque décision, regardez le carnet de notions qui se remplit." }, { a: 50, t: "Jusqu'à 50 ans : repérez une externalité (positive ou négative) et une asymétrie d'information." }, { a: 999, t: "Jusqu'à la fin : trouvez une défaillance de l'État et l'intervention qui pourrait la corriger." }], t: "Chapitre 2 · Défaillances du marché et de l'État", q: [
       "Relevez dans le carnet deux situations d'externalités (une positive, une négative) et expliquez-les.",
       "Relevez une asymétrie d'information (assurance, santé, crédit) : qui sait quoi ?",
       "Quelle intervention publique corrige la défaillance ? Observez-vous aussi une défaillance de l'État ?" ] },
-    '4': { d: 'Cotisations et impôts, progressivité, assurance et assistance, redistribution verticale et horizontale, risques sociaux couverts.', rec: 0, t: "Chapitre 4 · Les politiques sociales", q: [
+    '4': { d: 'Cotisations et impôts, progressivité, assurance et assistance, redistribution verticale et horizontale, risques sociaux couverts.', pre: [{ n: 'France ↔ Niger', p: ['FRA', 'NER'], w: 'Contraste maximal : prélèvements et protection sociale très différents.' }, { n: 'États-providence', p: ['FRA', 'SWE', 'DEU'], w: 'Comparer des systèmes proches mais distincts.' }, { n: 'France · États-Unis · Brésil', p: ['FRA', 'USA', 'BRA'], w: 'Trois modèles : protection forte, marchande, limitée.' }], g: [{ a: 18, t: "Jusqu'à 18 ans : notez le milieu familial (quartile) et comment les parents financent les besoins." }, { a: 25, t: "Entrée dans la vie active : lisez le détail cotisations, impôts et prestations dans la tuile." }, { a: 40, t: "Arrêtez à 40 ans (pause) : remplissez le tableau 1 de votre fiche et calculez le taux de prélèvement." }, { a: 60, t: "Jusqu'à la retraite : y a-t-il une pension ? Que couvre la protection sociale en cas de maladie ?" }, { a: 999, t: "Jusqu'à la fin de la vie, puis imprimez votre fiche de synthèse." }], t: "Chapitre 4 · Les politiques sociales", q: [
       "Calculez le taux de prélèvement obligatoire de votre personnage à 40 ans. Le système est-il progressif ?",
       "Distinguez cotisations sociales et impôts. Quelles prestations relèvent d'une logique d'assurance, lesquelles d'une logique d'assistance ?",
       "Donnez un exemple de redistribution verticale et un de redistribution horizontale observés dans la vie du personnage.",
       "Quels risques sociaux sont couverts dans son pays, lesquels ne le sont pas ? Quelles conséquences sur sa vie ?" ] },
-    '5': { d: "Statut sur le marché du travail âge par âge, travail informel, absence de pension. Le tableau de classe donne un taux d'emploi approché.", rec: 2, t: "Chapitres 5 à 7 · Emploi et chômage", q: [
+    '5': { d: "Statut sur le marché du travail âge par âge, travail informel, absence de pension. Le tableau de classe donne un taux d'emploi approché.", pre: [{ n: 'Emploi formel ↔ informel', p: ['FRA', 'IND', 'NER'], w: 'Emploi protégé, emploi partiellement informel, emploi presque entièrement informel.' }, { n: 'France ↔ Niger', p: ['FRA', 'NER'], w: 'Protection de l\u2019emploi et pensions très inégales.' }], g: [{ a: 18, t: "Jusqu'à 18 ans : études ou travail précoce ? Repérez l'âge d'entrée dans la vie active." }, { a: 40, t: "Arrêtez à 40 ans (pause) : lisez la frise du statut et repérez les périodes sans emploi." }, { a: 999, t: "Jusqu'à la fin : retraite ou travail sans pension ? Copiez vos résultats pour le tableau de classe." }], t: "Chapitres 5 à 7 · Emploi et chômage", q: [
       "Retracez le statut de votre personnage sur le marché du travail (actif occupé, inactif…) âge par âge.",
       "Repérez des situations de sous-emploi, de travail informel ou d'absence de protection.",
       "Avec le tableau de classe, calculez un taux d'activité et un taux d'emploi sur l'ensemble des personnages." ] },
-    '11': { d: 'Indice de développement estimé (santé, éducation, revenu) et chocs environnementaux vécus.', rec: 2, t: "Chapitre 11 · Croissance et développement durable", q: [
+    '11': { d: 'Indice de développement estimé (santé, éducation, revenu) et chocs environnementaux vécus.', pre: [{ n: 'Développement élevé · moyen · faible', p: ['NOR', 'BRA', 'NER'], w: 'Santé, éducation et revenu très contrastés.' }, { n: 'France ↔ Niger', p: ['FRA', 'NER'], w: 'Deux niveaux de développement et d\u2019exposition aux chocs.' }], g: [{ a: 40, t: "Vivez jusqu'à 40 ans : notez les chocs environnementaux (sécheresse, inondation, eau)." }, { a: 999, t: "Jusqu'à la fin : comparez l'indice de développement de votre pays avec celui des autres." }], t: "Chapitre 11 · Croissance et développement durable", q: [
       "Comparez l'indice de développement estimé de votre pays avec celui de votre voisin : quels indicateurs expliquent l'écart ?",
       "Quels événements de la vie (sécheresse, inondation, eau, santé) montrent des limites d'une croissance non soutenable ?" ] },
-    '12': { d: 'Seuils de pauvreté absolue et relative, part de la population pauvre, années vécues sous les seuils.', rec: 0, t: "Chapitre 12 · La réduction de la pauvreté", q: [
+    '12': { d: 'Seuils de pauvreté absolue et relative, part de la population pauvre, années vécues sous les seuils.', pre: [{ n: 'Pauvreté absolue et relative', p: ['FRA', 'BRA', 'NER'], w: 'France : surtout relative ; Niger : surtout absolue ; Brésil : fortes inégalités.' }, { n: 'Riche · intermédiaire · pauvre', p: ['DEU', 'BRA', 'ETH'], w: 'Trois niveaux de richesse pour voir reculer la pauvreté absolue.' }, { n: 'Inégalités fortes ↔ faibles', p: ['ZAF', 'SVK'], w: 'Un Gini très élevé face à un Gini très faible.' }], g: [{ a: 18, t: "Jusqu'à 18 ans : le niveau de vie dépend du ménage des parents. Notez le quartile du milieu familial." }, { a: 30, t: "Première vie active : le revenu disponible passe-t-il au-dessus des deux seuils ? À quel âge ?" }, { a: 40, t: "Arrêtez à 40 ans (pause) : notez les années passées sous le seuil absolu et sous le seuil relatif." }, { a: 65, t: "Repérez ce qui aggrave ou réduit la pauvreté : santé, études, enfants, dettes." }, { a: 999, t: "Jusqu'à la fin : retraite sans pension ? Comparez avec l'autre pays." }], t: "Chapitre 12 · La réduction de la pauvreté", q: [
       "Votre personnage est-il pauvre en termes absolus ? en termes relatifs ? À quels âges ?",
       "Pourquoi un même niveau de vie peut-il être « pauvre » dans un pays et pas dans un autre ?",
       "Quels facteurs (famille, études, santé, protection sociale) ont aggravé ou réduit sa pauvreté ?" ] },
@@ -248,7 +248,10 @@
     const ch = CHAPS[CL.cfg.c] || CHAPS['4'], fn = VIEWS[CL.cfg.c] || viewCh4;
     let body; try { body = fn(STATE.life); } catch (e) { body = note('Observation indisponible : ' + esc(e.message)); }
     const q = ch.q.map((x) => '<li>' + esc(x) + '</li>').join('');
-    el.innerHTML = '<h4>🎓 Observation · ' + esc(ch.t) + '</h4>' + body + '<details class="cl-q"><summary>Consignes de la séance</summary><ol>' + q + '</ol></details>';
+    const L0 = STATE.life, gs = ch.g || [];
+    let gi = gs.findIndex((x) => L0.age < x.a); if (gi < 0) gi = gs.length - 1;
+    const guide = gs.length ? '<div class="cl-guide"><div class="cl-gsteps">' + gs.map((x, k) => '<i class="' + (k < gi ? 'done' : k === gi ? 'on' : '') + '">' + (k + 1) + '</i>').join('') + '</div><div><b>À faire maintenant · étape ' + (gi + 1) + ' sur ' + gs.length + '</b><br>' + esc(gs[gi].t) + '</div></div>' : '';
+    el.innerHTML = '<h4>🎓 Observation · ' + esc(ch.t) + '</h4>' + guide + body + '<details class="cl-q"><summary>Consignes de la séance</summary><ol>' + q + '</ol></details>';
   };
 
   // ---------- Graine commune ----------
@@ -314,7 +317,7 @@
     const st = { step: 1, c: '4', pre: 0, custom: null, name: '', same: true };
     const today = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
     const m = overlay('clWizard', '<div id="wzBody"></div>');
-    const countriesOf = () => st.custom && st.custom.length ? st.custom : PRESETS[st.pre].p;
+    const countriesOf = () => st.custom && st.custom.length ? st.custom : CHAPS[st.c].pre[st.pre].p;
     const dots = () => '<div class="wz-dots">' + ['Chapitre', 'Pays', 'Réglages', 'Code'].map((x, k) => '<span class="' + (k + 1 === st.step ? 'on' : k + 1 < st.step ? 'done' : '') + '"><b>' + (k + 1) + '</b>' + x + '</span>').join('') + '</div>';
     const nav = (back, next, nextLbl) => '<div class="wz-nav">' + (back ? '<button type="button" class="ghost" id="wzBack">← Retour</button>' : '<span></span>') + (next ? '<button type="button" class="cl-main" id="wzNext">' + nextLbl + '</button>' : '') + '</div>';
     const draw = () => {
@@ -323,8 +326,8 @@
         h += '<h3>Que voulez-vous faire observer ?</h3><p class="cl-small">Choisissez le chapitre : le jeu affichera, pendant la vie, les indicateurs qui s’y rapportent.</p><div class="wz-cards">'
           + Object.keys(CHAPS).map((k) => '<button type="button" class="wz-card' + (st.c === k ? ' on' : '') + '" data-c="' + k + '"><b>' + esc(CHAPS[k].t) + '</b><span>' + esc(CHAPS[k].d) + '</span></button>').join('') + '</div>' + nav(false, true, 'Suivant →');
       } else if (st.step === 2) {
-        h += '<h3>Quels pays attribuer ?</h3><p class="cl-small">Chaque élève ou binôme naîtra dans l’un de ces pays. Comparer deux pays très différents rend les notions visibles. Conseil pour ce chapitre : <b>' + esc(PRESETS[CHAPS[st.c].rec].n) + '</b>.</p><div class="wz-cards">'
-          + PRESETS.map((p, k) => '<button type="button" class="wz-card' + (!st.custom && st.pre === k ? ' on' : '') + '" data-p="' + k + '"><b>' + esc(p.n) + (k === CHAPS[st.c].rec ? ' <em>conseillé</em>' : '') + '</b><span>' + p.p.map((id) => { const c = countryById(id); return c ? countryNm(c) : id; }).join(' · ') + '</span></button>').join('') + '</div>'
+        h += '<h3>Quels pays attribuer ?</h3><p class="cl-small">Chaque élève ou binôme naîtra dans l’un de ces pays. Comparer deux pays très différents rend les notions visibles. Conseil pour ce chapitre : <b>' + esc(CHAPS[st.c].pre[0].n) + '</b>. ' + esc(CHAPS[st.c].pre[0].w) + '</p><div class="wz-cards">'
+          + CHAPS[st.c].pre.map((p, k) => '<button type="button" class="wz-card' + (!st.custom && st.pre === k ? ' on' : '') + '" data-p="' + k + '"><b>' + esc(p.n) + (k === 0 ? ' <em>conseillé</em>' : '') + '</b><span>' + esc(p.w) + '<br><i>' + p.p.map((id) => { const c = countryById(id); return c ? countryNm(c) : id; }).join(' · ') + '</i></span></button>').join('') + '</div>'
           + '<details class="wz-more"' + (st.custom ? ' open' : '') + '><summary>Choisir d’autres pays</summary><label>Maintenez Ctrl (ou Cmd) pour en sélectionner plusieurs<select id="wzCtry" multiple size="7">' + (typeof COUNTRIES !== 'undefined' ? COUNTRIES.slice().sort((a, b) => localize(a).name.localeCompare(localize(b).name, 'fr')).map((c) => '<option value="' + c.id + '"' + (st.custom && st.custom.includes(c.id) ? ' selected' : '') + '>' + countryNm(c) + '</option>').join('') : '') + '</select></label></details>'
           + nav(true, true, 'Suivant →');
       } else if (st.step === 3) {
@@ -342,7 +345,7 @@
           + '<div class="cl-btns"><button type="button" class="cl-main" id="wzTry">Essayer en tant qu’élève</button><button type="button" class="ghost" id="wzAgg">Ouvrir le tableau de classe</button><button type="button" class="ghost" id="wzNew">Créer une autre séance</button></div>';
       }
       body.innerHTML = h;
-      body.querySelectorAll('.wz-card[data-c]').forEach((b) => b.addEventListener('click', () => { st.c = b.dataset.c; st.pre = CHAPS[st.c].rec; st.custom = null; draw(); }));
+      body.querySelectorAll('.wz-card[data-c]').forEach((b) => b.addEventListener('click', () => { st.c = b.dataset.c; st.pre = 0; st.custom = null; draw(); }));
       body.querySelectorAll('.wz-card[data-p]').forEach((b) => b.addEventListener('click', () => { st.pre = +b.dataset.p; st.custom = null; draw(); }));
       const bk = $('#wzBack', body), nx = $('#wzNext', body);
       if (bk) bk.addEventListener('click', () => { st.step--; st.cfg = null; draw(); });
