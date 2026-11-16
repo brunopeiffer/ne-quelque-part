@@ -48,17 +48,19 @@
   <!-- Accueil v2 : une action principale, le choix du pays juste dessous, le reste replié -->
   <div class="hero">
     <div class="hero-text">
+    <div class="bt bt-title">
     <h1 class="hero-title">
       <span class="kicker" data-t="intro.kicker">8 億 分 之 1</span>
       <span data-t-html="intro.title">選一個<br/>出<span class="accent">生</span>地</span>
       <span id="eduBadge" class="edu-badge" hidden data-t="edu.badge">教學版</span>
     </h1>
     <p class="hero-sub" data-t-html="intro.sub">在 8 億分之 1 原作裡，出生地由人口比例隨機抽出。<br/>這版交給你決定——挑一個國家，從 0 歲活到當地平均壽命。<br/>每一段人生依真實統計：嬰兒死亡率、人均 GDP、所受教育、自殺率、兇殺率⋯⋯</p>
-    <div class="cta-row">
+    </div>
+    <div class="cta-row bt bt-cta">
       <button id="btnStart" class="cta-btn" data-t="intro.cta">出 生</button>
       <p class="cta-hint" data-t="intro.cta.hint">設定不用改，直接出生也沒關係；不選國家就依人口比例隨機抽一個。</p>
     </div>
-    <div class="pick-block">
+    <div class="pick-block bt bt-pick">
       <h3 data-t="intro.pick">或者選一個國家：</h3>
       <div class="pick-line">
         <select id="countrySelect" class="country-pick"></select>
@@ -87,7 +89,7 @@
         </div>
       </div>
     </div>
-    <details class="intro-options">
+    <details class="intro-options bt bt-opt">
       <summary data-t="intro.options">選項</summary>
     <div class="mode-block">
       <div class="seg-group">
@@ -108,12 +110,12 @@
       </div>
     </div>
     </details>
-      <p class="warnline">
+      <p class="warnline bt bt-warn">
         <span data-t="intro.heavy">死亡、暴力、自殺這類沉重的事，也會照實際統計發生。不會描寫畫面，並會一起告訴你可以求助的地方。</span>
         <button type="button" class="lnk" id="softBtnIntro" aria-pressed="false" data-t="intro.softBtn">略過可怕的情節</button>
       </p>
     </div>
-    <img class="hero-illus" src="assets/illus-world-people.jpg" alt="" decoding="async">
+    <img class="hero-illus bt bt-illus" src="assets/illus-world-people.jpg" alt="" decoding="async">
   </div>
 
   <!-- v5.66：以下全部是「補充閱讀」，預設收起來。
