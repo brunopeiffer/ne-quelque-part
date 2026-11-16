@@ -6379,6 +6379,7 @@ function renderShelfWorldMap(lives) {
   const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, class: 'world-map', style: 'max-width:100%;height:auto;background:var(--bg-3);border-radius:8px;' });
   // 大陸輪廓（簡化用矩形網格代替）
   const grid = svgEl('rect', { x: 0, y: 0, width: W, height: H, fill: '#dde6e8' }, svg);
+  drawLand(svg, W, H);
   // 為每個經歷國家繪製點
   const visited = Object.keys(countryStats);
   const tooltipLines = [];
@@ -6718,6 +6719,7 @@ function renderActivePlayersMap() {
     style: 'max-width:100%;height:auto;background:var(--bg-3);border-radius:8px;'
   });
   svgEl('rect', { x: 0, y: 0, width: W, height: H, fill: '#dde6e8' }, svg);
+  drawLand(svg, W, H);
   // 已去過國家（過去 lives）淡化顯示
   const pastCountries = new Set(past.map(l => l.country));
   const tooltipLines = [];
@@ -6746,6 +6748,12 @@ function renderActivePlayersMap() {
   wrap.appendChild(svg);
 }
 
+// Continents du fond de carte (Natural Earth, domaine public) ; le tracé est en 720×360.
+function drawLand(svg, W, H) {
+  if (!window.WORLD_LAND_PATH) return;
+  const g = svgEl('g', { transform: `scale(${W / 720} ${H / 360})` }, svg);
+  svgEl('path', { d: window.WORLD_LAND_PATH, fill: '#cdbf9d', stroke: '#b3a47e', 'stroke-width': 0.4, 'stroke-linejoin': 'round' }, g);
+}
 /* ==== v5.20：本年死因（life view） ==== */
 function renderLifeCauseThisYear() {
   const wrap = $('#lifeCauseThisYear');
