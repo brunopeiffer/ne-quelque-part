@@ -7557,17 +7557,19 @@ function wire() {
       const mine = document.createElement('div'); mine.id = 'lifeMine';
       mine.innerHTML = '<h3 class="zone-h">' + (LANG === 'fr' ? 'Ma vie' : 'My life') + '</h3>';
       ['finSide', 'lifeStats', 'lifeFamilyLife', 'lifeGrid', 'lifeIdCard', 'lifeBudget'].forEach(id => { const e = document.getElementById(id); if (e) mine.appendChild(e); });
-      if (cert) cert.appendChild(mine);
+      { const ind = mine.querySelector('#lifeIndicators'), lg = mine.querySelector('#lifeGrid');
+        if (ind && lg) { const tile = document.createElement('div'); tile.id = 'lifeIndTile'; tile.innerHTML = '<h4>' + (LANG === 'fr' ? 'Niveau de vie' : 'Living standard') + '</h4>'; tile.appendChild(ind); mine.insertBefore(tile, lg); } }
+      if (cert) cert.insertBefore(mine, grid);   // « Ma vie » juste sous le nom du personnage
       const nowH = document.createElement('h3'); nowH.className = 'zone-h'; nowH.textContent = LANG === 'fr' ? 'Maintenant' : 'Now';
       grid.prepend(nowH);
       const worldH = document.createElement('h3'); worldH.className = 'zone-h'; worldH.textContent = LANG === 'fr' ? 'Le monde' : 'The world';
       const avr = document.getElementById('lifeActualVsRandom'); if (avr) avr.before(worldH);
       // Fiches repliables : on clique sur le titre ; l'état est mémorisé.
-      [['finSide', 0], ['lifeStats', 0], ['lifeFamilyLife', 0], ['lifeGrid', 0], ['lifeIdCard', 0], ['lifeBudget', 1], ['lifeActualVsRandom', 1], ['lifeCompanions', 1]].forEach(([id, closed]) => {
+      [['finSide', 0], ['lifeStats', 0], ['lifeFamilyLife', 0], ['lifeGrid', 0], ['lifeIdCard', 0], ['lifeIndTile', 0], ['lifeBudget', 1], ['lifeActualVsRandom', 1], ['lifeCompanions', 1]].forEach(([id, closed]) => {
         const el = document.getElementById(id); if (!el) return;
         el.classList.add('collapsible');
         let st = null; try { st = localStorage.getItem(STORAGE_KEY + ':fold:' + id); } catch (e) {}
-        if (st === null ? closed : st === '1') el.classList.add('is-collapsed');
+        if (st === null ? (closed || window.innerWidth < 720) : st === '1') el.classList.add('is-collapsed');   // sur mobile, tout est replié au départ pour atteindre « Maintenant » vite
         el.addEventListener('click', (ev) => {
           const h = ev.target.closest('h4, .id-head');
           if (!h || h.parentElement !== el || ev.target.closest('button, a, select, input')) return;

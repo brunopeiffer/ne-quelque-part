@@ -2689,3 +2689,47 @@ body { font-size: 16px; }
   .ltb-vitals{gap:2px 12px;font-size:12px}
 }
 @media (max-width:720px){ #view-life .ty-event{font-size:16px;gap:8px} #view-life .ty-icon{font-size:24px} }
+
+/* ==== Style Bento : tuiles arrondies de tailles variées, ombres douces ==== */
+#view-life{--bento-r:22px;--bento-gap:14px;--bento-shadow:0 1px 0 rgba(255,255,255,.65) inset,0 10px 26px -16px rgba(70,45,20,.42)}
+body.theme-dark #view-life{--bento-shadow:0 10px 26px -16px rgba(0,0,0,.7)}
+#view-life .cert-band{border-radius:var(--bento-r);box-shadow:var(--bento-shadow);margin-bottom:var(--bento-gap)}
+#view-life .cert-body,
+#view-life #lifeMine > div,
+#view-life .life-grid > div:not(.life-meta-controls){border:0;border-radius:var(--bento-r);box-shadow:var(--bento-shadow);background:var(--bg-2)}
+#view-life .cert-body{padding:16px 18px;margin-bottom:var(--bento-gap);background:linear-gradient(135deg,var(--bg-2),#f1e8d6)}
+body.theme-dark #view-life .cert-body{background:var(--bg-2)}
+#view-life #lifeMine{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--bento-gap);margin-bottom:var(--bento-gap)}
+#view-life #lifeMine > .zone-h{grid-column:1/-1;margin:0}
+#view-life #lifeMine > div{padding:14px 16px;min-width:0}
+#view-life #lifeMine > #finSide{grid-column:1;background:linear-gradient(160deg,var(--bg-2),#e3efe9)}
+#view-life #lifeMine > #lifeStats{grid-column:2}
+#view-life #lifeMine > #lifeFamilyLife{grid-column:1/-1;background:linear-gradient(160deg,var(--bg-2),#f6e3da)}
+#view-life #lifeMine > #lifeGrid{grid-column:1}
+#view-life #lifeMine > #lifeIdCard{grid-column:2;padding:0;overflow:hidden}
+#view-life #lifeMine > #lifeBudget{grid-column:1/-1}
+#view-life #lifeMine .lg-grid{gap:3px}
+#view-life #lifeMine .lg-cell{min-height:0;font-size:9px;border-radius:4px}
+#view-life #lifeMine #lifeIdCard .id-line{grid-template-columns:78px 1fr;font-size:13px;padding:6px 10px}
+#view-life #lifeMine .fs-row{font-size:13px}
+body.theme-dark #view-life #lifeMine > #finSide,body.theme-dark #view-life #lifeMine > #lifeFamilyLife{background:var(--bg-2)}
+#view-life .life-grid{gap:var(--bento-gap)}
+#view-life #lifeThisYear{border:0;background:linear-gradient(150deg,var(--bg-2),#f3e6c8);box-shadow:var(--bento-shadow),0 0 0 2px var(--accent) inset}
+body.theme-dark #view-life #lifeThisYear{background:var(--bg-2)}
+#view-life .life-grid .zone-h{margin:2px 4px 0}
+#view-life .ty-scene{border-radius:16px}
+#view-life .pri-chip{border-radius:16px}
+@media (min-width:980px){
+  #view-life .life-cert{grid-template-columns:minmax(0,430px) minmax(0,1fr);gap:0 var(--bento-gap)}
+  #view-life .cert-body{grid-column:1;grid-row:2}
+  #view-life #lifeMine{grid-column:1;grid-row:3}
+  #view-life .life-grid{grid-column:2;grid-row:2 / span 2}
+}
+@media (max-width:979px){
+  #view-life #lifeMine{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:560px){
+  #view-life #lifeMine > #finSide,#view-life #lifeMine > #lifeStats,#view-life #lifeMine > #lifeGrid,#view-life #lifeMine > #lifeIdCard{grid-column:1/-1}
+}
+#view-life #lifeMine > #lifeIndTile{grid-column:1/-1}
+#view-life #lifeIndTile #lifeIndicators{margin:0}
