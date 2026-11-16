@@ -2532,3 +2532,15 @@ body { font-size: 16px; }
 .cr-name { font-family: var(--serif); font-weight: 700; font-size: clamp(40px, 9vw, 104px); line-height: 1.1; color: var(--ink-2); }
 .cr-done .cr-name { color: var(--accent); }
 .cr-prob { font-size: 15px; color: var(--ink-2); min-height: 22px; }
+
+/* Grille de vie */
+#view-life #lifeGrid { grid-column: 1 / -1; }
+.lg-grid { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 6px; max-width: 560px; }
+.lg-cell { aspect-ratio: 1; min-height: 32px; border: 0; border-radius: 6px; background: var(--bg-3); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; padding: 0; }
+.lg-cell.future { background: var(--bg-3); cursor: default; opacity: .55; }
+.lg-cell.now { outline: 2px solid var(--accent); outline-offset: 1px; }
+.lg-cell.le { box-shadow: inset 0 0 0 2px #7a7a7a; }
+.lg-cell:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.lg-legend { font-size: 13px; margin: 12px 0 0; max-width: 560px; }
+.lg-tip { position: fixed; z-index: 300; background: #162126; color: #f1f4f2; border-radius: 10px; padding: 12px 14px; font-size: 14px; line-height: 1.5; box-shadow: 0 8px 24px rgba(0,0,0,.3); pointer-events: none; }
+.lg-tip b { font-size: 15px; }

@@ -873,10 +873,21 @@ function migrateLife(life) {
   const dest = countryById(pick(MIGRATION_DEST[from.region] || ['USA']));
   if (!dest || dest.id === life.country) return;
   if (!life.birthOrigin) life.birthOrigin = { country: life.country, flag: from.flag };
+  life.migratedAt = life.age;
   life.country = dest.id;
   life.countryData = dest;
   if (life === STATE.life) setTimeout(() => toast(from.flag + ' → ' + dest.flag + '  Migration'), 200);
 }
+const reg = (...r) => (life) => r.includes(life.countryData && life.countryData.region);
+const inList = (...ids) => (life) => ids.includes(life.country);
+const COLD = ['SWE', 'NOR', 'FIN', 'RUS', 'CAN', 'POL', 'UKR', 'BLR', 'EST', 'LVA', 'LTU', 'MNG', 'KAZ', 'ISL', 'DNK', 'CZE', 'SVK', 'KGZ', 'TJK', 'ARM', 'GEO', 'DEU', 'AUT', 'CHE'];
+const QUAKE = ['JPN', 'CHL', 'MEX', 'NPL', 'IRN', 'TUR', 'IDN', 'PER', 'ITA', 'GRC', 'NZL', 'PHL', 'ECU', 'GTM'];
+const CYCLONE = ['HTI', 'DOM', 'CUB', 'JAM', 'PHL', 'BGD', 'MDG', 'MOZ', 'VNM', 'IND'];
+const MONSOON = ['IND', 'BGD', 'PAK', 'NPL', 'LKA', 'THA', 'VNM', 'KHM', 'LAO', 'MMR', 'PHL', 'IDN', 'CHN'];
+const NO_VOTE = ['PRK', 'SAU', 'ARE', 'QAT', 'KWT', 'OMN', 'BHR', 'TKM', 'ERI', 'CHN', 'SYR', 'SDN', 'YEM'];
+const OVERWORK = ['JPN', 'KOR', 'TWN', 'CHN', 'SGP', 'HKG'];
+const bribery = (life) => pppOf(life) < 15000 && ['lac', 'ssa', 'mena', 'sa', 'eca'].includes(life.countryData?.region);
+const sibs = (life) => ((life.family && life.family.siblings) || []).length > 0;
 const EXTRA_DECISIONS = [
   { id: 'sm_stray', kind: 'small', min: 6, max: 12, p: 0.10,
     fr: ["Le chien errant", "Un chien sans collier vous suit jusqu'à la maison et s'assoit devant la porte."],
@@ -1308,6 +1319,171 @@ const EXTRA_DECISIONS = [
       { k: 'read', icon: '📚', fr: "La lecture", en: "Reading", fx: { know: 4, happy: 1 } },
       { k: 'none', icon: '🛋️', fr: "Le repos suffit", en: "Rest is enough", fx: { happy: 1 } },
     ] },
+  // ---- Santé, argent, famille, vie sociale : décisions adaptées au pays ----
+  { id: 'de_quit_smoking', kind: 'big', min: 28, max: 70, p: 0.12, repeat: true, when: (life) => !!life.smoker,
+    fr: ["Arrêter de fumer ?", "Vous toussez de plus en plus souvent. Est-il temps d'arrêter de fumer ?"],
+    choices: [
+      { k: 'quit', icon: '🚭', fr: "Essayer d'arrêter", sub: () => "Si ça marche, votre santé se rétablit",
+        fx: () => roll([0.35, { flag: ['smoker', false], exSmoker: true, health: 4, happy: 2, msg: { fr: "Vous tenez bon : vous ne fumez plus.", en: "You hold on: you no longer smoke." } }],
+                       [0.65, { health: -1, msg: { fr: "Vous recommencez au bout de quelques semaines.", en: "You start again after a few weeks." } }]) },
+      { k: 'keep', icon: '🚬', fr: "Continuer à fumer", fx: { health: -2 } },
+    ] },
+  { id: 'de_diabetes_diet', kind: 'big', min: 35, max: 75, p: 0.25, when: (life) => !!(life.conditions && life.conditions.diabetes),
+    fr: ["Un régime à suivre", "Votre médecin est clair : sans changer votre alimentation, le diabète va s'aggraver."],
+    choices: [
+      { k: 'diet', icon: '🥗', fr: "Suivre le régime", fx: { health: 4, money: -400, happy: -1 } },
+      { k: 'half', icon: '🍽️', fr: "Faire de votre mieux", fx: { health: 1 } },
+      { k: 'ignore', icon: '🍰', fr: "Ne rien changer", fx: { health: -6 } },
+    ] },
+  { id: 'de_screening', kind: 'big', min: 40, max: 65, p: 0.1, when: comfortable(5000),
+    fr: ["Un dépistage", "On vous propose un dépistage du cancer. Rien ne vous fait mal, mais mieux vaut ne pas attendre les symptômes."],
+    choices: [
+      { k: 'go', icon: '🩺', fr: "Y aller", fx: { money: -150, health: 1, flag: ['screened', true] } },
+      { k: 'skip', icon: '⏭️', fr: "Remettre à plus tard", fx: {} },
+    ] },
+  { id: 'de_vaccination', kind: 'small', min: 18, max: 70, p: 0.06, when: (life) => pppOf(life) < 15000 && !life.vaccinated,
+    fr: ["Une campagne de vaccination", "Une équipe sanitaire s'installe sur la place du quartier. La file est longue."],
+    choices: [
+      { k: 'yes', icon: '💉', fr: "Faire la queue", fx: { flag: ['vaccinated', true], health: 1 } },
+      { k: 'no', icon: '🙅', fr: "Vous n'avez pas le temps", fx: {} },
+    ] },
+  { id: 'de_bednet', kind: 'small', min: 18, max: 50, p: 0.12, when: (life) => (life.countryData?.mal || 0) > 0 && !life.bednet && pppOf(life) < 8000,
+    fr: ["La moustiquaire", "Les moustiques sont venus en nombre avec la saison des pluies. Une moustiquaire traitée coûte l'équivalent de quelques jours de travail."],
+    choices: [
+      { k: 'buy', icon: '🛏️', fr: "En acheter une", fx: { pppx: -0.02, flag: ['bednet', true] } },
+      { k: 'skip', icon: '🙅', fr: "Vous passer de moustiquaire", fx: {} },
+    ] },
+  { id: 'de_pilgrimage', kind: 'big', min: 40, max: 72, p: 0.08, when: (life) => isMuslim(life) && comfortable(6000)(life),
+    fr: ["Le pèlerinage", "Depuis des années, vous rêvez de faire le pèlerinage à La Mecque. Il faut réunir une somme importante et partir plusieurs semaines."],
+    choices: [
+      { k: 'go', icon: '🕋', fr: "Partir cette année", fx: { pppx: -0.9, happy: 6, social: 3 } },
+      { k: 'wait', icon: '⏳', fr: "Attendre encore", fx: {} },
+    ] },
+  { id: 'de_wedding', kind: 'family', min: 18, max: 60, p: 1, priority: true, when: (life) => life.stats.married && life.marriedAt != null && life.age - life.marriedAt <= 2 && !life.weddingDone,
+    fr: ["La cérémonie", "Votre mariage approche. La famille a ses idées sur la fête, et sur son prix."],
+    choices: [
+      { k: 'big', icon: '🎊', fr: "Une grande fête", fx: { pppx: -0.5, social: 4, happy: 3, flag: ['weddingDone', true] } },
+      { k: 'simple', icon: '🥂', fr: "Une cérémonie simple", fx: { pppx: -0.1, happy: 2, flag: ['weddingDone', true] } },
+      { k: 'civil', icon: '📜', fr: "Seulement la mairie", fx: { pppx: -0.02, social: -1, flag: ['weddingDone', true] } },
+    ] },
+  { id: 'de_school_choice', kind: 'family', min: 28, max: 45, p: 0.15, when: (life) => hasKids(life) && comfortable(5000)(life),
+    fr: ["Où scolariser votre enfant ?", "Votre enfant entre à l'école. L'établissement le plus proche n'a pas très bonne réputation."],
+    choices: [
+      { k: 'public', icon: '🏫', fr: "L'école publique du quartier", fx: { social: 2 } },
+      { k: 'private', icon: '🎒', fr: "Une école privée, plus chère", fx: { pppx: -0.3, know: 1, happy: 1 } },
+    ] },
+  { id: 'de_second_job', kind: 'big', min: 22, max: 50, p: 0.08, when: (life) => isEmployed(life) && pppOf(life) < 15000,
+    fr: ["Un second travail", "Votre salaire ne suffit plus. Un voisin propose de vous employer le week-end."],
+    choices: [
+      { k: 'yes', icon: '🛠️', fr: "Accepter", fx: { pppx: 0.2, health: -3, social: -2 } },
+      { k: 'no', icon: '🏠', fr: "Refuser et serrer les dépenses", fx: { happy: -1 } },
+    ] },
+  { id: 'de_loan_shark', kind: 'big', min: 22, max: 55, p: 0.07, when: (life) => pppOf(life) < 8000 && quartOf(life) <= 2,
+    fr: ["Un prêteur du quartier", "Il vous manque de l'argent pour un mois. Un prêteur du coin propose de vous avancer la somme, à un taux qui fait peur."],
+    choices: [
+      { k: 'take', icon: '🤝', fr: "Accepter le prêt", fx: () => roll([0.5, { pppx: 0.15, happy: -2 }], [0.5, { pppx: -0.1, happy: -5, social: -2, msg: { fr: "Les intérêts vous étranglent.", en: "The interest strangles you." } }]) },
+      { k: 'family', icon: '👪', fr: "Demander à la famille", fx: { pppx: 0.05, social: -1 } },
+      { k: 'refuse', icon: '✋', fr: "Vous débrouiller autrement", fx: { health: -1 } },
+    ] },
+  { id: 'de_microcredit', kind: 'big', min: 20, max: 50, p: 0.07, when: (life) => pppOf(life) < 8000 && reg('ssa', 'sa', 'lac')(life),
+    fr: ["Un microcrédit", "Une association propose un petit prêt pour lancer un commerce, à rembourser par petites sommes."],
+    choices: [
+      { k: 'yes', icon: '🏪', fr: "Se lancer", fx: () => roll([0.6, { pppx: 0.25, happy: 3, msg: { fr: "Votre petit commerce marche.", en: "Your little business works." } }], [0.4, { pppx: -0.15, happy: -2, msg: { fr: "Le commerce peine à décoller.", en: "The business struggles." } }]) },
+      { k: 'no', icon: '🙅', fr: "Ne pas s'endetter", fx: {} },
+    ] },
+  { id: 'de_nepotism', kind: 'big', min: 20, max: 38, p: 0.08, when: (life) => reg('lac', 'mena', 'sa', 'ssa')(life) && !isEmployed(life),
+    fr: ["Un coup de pouce", "Un oncle bien placé peut vous faire entrer dans l'administration. Il faudra lui renvoyer l'ascenseur un jour."],
+    choices: [
+      { k: 'yes', icon: '🏛️', fr: "Accepter", fx: { pppx: 0.2, social: 2, happy: -1 } },
+      { k: 'no', icon: '🧭', fr: "Chercher par vos propres moyens", fx: { happy: 1 } },
+    ] },
+  { id: 'de_bribe', kind: 'small', min: 20, max: 60, p: 0.07, when: bribery,
+    fr: ["Un pot-de-vin", "Un fonctionnaire laisse entendre que votre dossier avancerait plus vite avec une petite enveloppe."],
+    choices: [
+      { k: 'pay', icon: '✉️', fr: "Payer", fx: { pppx: -0.02, happy: -1 } },
+      { k: 'refuse', icon: '✋', fr: "Refuser et attendre", fx: { happy: -1, social: 1 } },
+    ] },
+  { id: 'de_land_dispute', kind: 'big', min: 20, max: 60, p: 0.06, when: (life) => isRural(life) && (life.countryData?.agr || 0) > 30,
+    fr: ["Un différend de terrain", "Un voisin prétend que la limite de votre champ passe plus loin. La tension monte."],
+    choices: [
+      { k: 'elders', icon: '🧓', fr: "Faire appel aux anciens du village", fx: () => roll([0.7, { social: 2 }], [0.3, { social: -2, pppx: -0.05 }]) },
+      { k: 'court', icon: '⚖️', fr: "Aller en justice", fx: () => roll([0.5, { pppx: -0.15, happy: 2 }], [0.5, { pppx: -0.25, happy: -3 }]) },
+      { k: 'yield', icon: '🤷', fr: "Céder", fx: { pppx: -0.1, happy: -2 } },
+    ] },
+  { id: 'de_earthquake_repair', kind: 'big', min: 15, max: 75, p: 0.012, when: inList(...QUAKE),
+    fr: ["Après la secousse", "Un séisme a fissuré un mur porteur de votre maison. Les réparations coûtent cher."],
+    choices: [
+      { k: 'repair', icon: '🧱', fr: "Réparer tout de suite", fx: { pppx: -0.3, happy: 1 } },
+      { k: 'wait', icon: '⏳', fr: "Attendre de pouvoir payer", fx: () => roll([0.9, { happy: -2 }], [0.1, { health: -12, msg: { fr: "Le mur cède pendant une réplique.", en: "The wall gives way in an aftershock." } }]) },
+    ] },
+  { id: 'de_football_scout', kind: 'big', min: 14, max: 18, p: 0.05, when: (life) => life.sex === 'M' && reg('lac', 'ssa', 'eca')(life),
+    fr: ["Un recruteur", "Un homme assis au bord du terrain vous a observé{e} toute l'après-midi. Il vous propose un essai dans un club."],
+    choices: [
+      { k: 'try', icon: '⚽', fr: "Tenter l'essai", fx: () => roll([0.08, { pppx: 1.0, happy: 6, edu: 'stop', msg: { fr: "Le club vous garde : vous deviendrez footballeur.", en: "The club keeps you: you will become a footballer." } }], [0.92, { happy: -2, know: -1, msg: { fr: "Ce n'était pas pour cette fois.", en: "It was not meant to be." } }]) },
+      { k: 'school', icon: '📚', fr: "Rester concentré{e} sur l'école", fx: { know: 2 } },
+    ] },
+  { id: 'de_overtime', kind: 'big', min: 25, max: 50, p: 0.1, when: (life) => isEmployed(life) && inList(...OVERWORK)(life),
+    fr: ["Les heures du soir", "Votre chef reste tard et chacun attend de voir qui partira le premier."],
+    choices: [
+      { k: 'stay', icon: '🕙', fr: "Rester comme les autres", fx: { pppx: 0.05, health: -3, happy: -2 } },
+      { k: 'leave', icon: '🚪', fr: "Partir à l'heure", fx: { social: -3, happy: 2 } },
+    ] },
+  { id: 'de_exam', kind: 'big', min: 15, max: 18, p: 0.3, priority: true, when: (life) => reg('eap', 'sa')(life) && life.stats.education >= 2,
+    fr: ["Le concours d'entrée", "Toute votre classe prépare le grand concours qui décidera des études supérieures."],
+    choices: [
+      { k: 'cram', icon: '📖', fr: "Réviser nuit et jour", fx: { know: 5, health: -3, happy: -3 } },
+      { k: 'balance', icon: '⚖️', fr: "Garder du temps pour vous", fx: { know: 2, happy: 1 } },
+    ] },
+  { id: 'de_workplace_mockery', kind: 'big', min: 25, max: 60, p: 0.06, when: (life) => isEmployed(life) && pppOf(life) >= 8000,
+    fr: ["Moqueries au travail", "Une personne de votre équipe est la cible de moqueries devant tout le monde, à cause de ses origines et de sa façon de parler."],
+    choices: [
+      { k: 'stop', icon: '✋', fr: "Leur dire d'arrêter", sub: () => "L'ambiance risque de devenir pesante", fx: { social: -1, happy: 2 } },
+      { k: 'ignore', icon: '🙈', fr: "Faire semblant de ne rien voir", fx: { happy: -2 } },
+    ] },
+  { id: 'de_absent_father', kind: 'family', min: 30, max: 58, p: 0.15, when: (life) => { const par = (life.family && life.family.parents) || []; return par.length === 1 && par[0].sex === 'F'; },
+    fr: ["Le père qui était parti", "Votre père, qui avait quitté la maison dans votre enfance, a repris contact. Il aimerait vous rencontrer, une fois."],
+    choices: [
+      { k: 'meet', icon: '🤝', fr: "Le rencontrer", fx: () => roll([0.5, { happy: 4, social: 2 }], [0.5, { happy: -3 }]) },
+      { k: 'no', icon: '🚪', fr: "Ne pas le rencontrer", fx: { happy: -1 } },
+    ] },
+  { id: 'de_refugee_neighbour', kind: 'family', min: 20, max: 65, p: 0.05, when: (life) => pppOf(life) >= 8000 && heavyOk(),
+    fr: ["Une famille s'installe à côté", "Une famille qui a fui un conflit vient d'emménager à côté de chez vous. Vous avez du mal à vous comprendre."],
+    choices: [
+      { k: 'meet', icon: '🍲', fr: "Apporter un plat et aller dire bonjour", fx: { social: 4, happy: 2 } },
+      { k: 'distance', icon: '🙂', fr: "Garder une distance polie", fx: {} },
+    ] },
+  { id: 'de_naturalize', kind: 'big', min: 20, max: 80, p: 0.2, when: (life) => !!life.birthOrigin && life.migratedAt != null && life.age - life.migratedAt >= 5 && !life.naturalized,
+    fr: ["Prendre la nationalité ?", (l) => "Vous vivez " + inCountry(l.countryData) + " depuis " + (l.age - l.migratedAt) + " ans. Après un examen et un serment, vous pourriez voter et obtenir un nouveau passeport."],
+    choices: [
+      { k: 'yes', icon: '🛂', fr: "Demander la naturalisation", fx: { pppx: -0.05, social: 3, happy: 3, flag: ['naturalized', true] } },
+      { k: 'no', icon: '🙅', fr: "Ne pas la demander", fx: { flag: ['naturalized', true] } },
+    ] },
+  { id: 'de_remittance', kind: 'family', min: 22, max: 65, p: 0.1, when: (life) => !!life.birthOrigin,
+    fr: ["La famille au pays", "Votre famille restée au pays vous écrit : la toiture de la maison cède et ils n'ont pas de quoi la refaire."],
+    choices: [
+      { k: 'send', icon: '💸', fr: "Envoyer une grosse somme", fx: { pppx: -0.1, social: 3, happy: 2 } },
+      { k: 'some', icon: '✉️', fr: "Envoyer un peu", fx: { pppx: -0.03, social: 1 } },
+      { k: 'no', icon: '🙅', fr: "Vous ne pouvez pas", fx: { happy: -3, social: -2 } },
+    ] },
+  { id: 'de_rent_rise', kind: 'small', min: 25, max: 65, p: 0.07, when: (life) => !isRural(life) && pppOf(life) >= 10000 && isEmployed(life),
+    fr: ["Le loyer augmente", "Votre propriétaire annonce une hausse de loyer importante."],
+    choices: [
+      { k: 'accept', icon: '💶', fr: "Accepter", fx: { money: -1200 } },
+      { k: 'negotiate', icon: '🗣️', fr: "Négocier", fx: () => roll([0.5, { money: -400 }], [0.5, { money: -1200, happy: -1 }]) },
+      { k: 'move', icon: '📦', fr: "Déménager", fx: { money: -800, social: -2 } },
+    ] },
+  { id: 'de_elder_home', kind: 'family', min: 70, max: 90, p: 0.12, when: (life) => hasKids(life),
+    fr: ["Vivre seul{e} ou avec vos enfants ?", "Vos forces déclinent. Vos enfants vous proposent de vivre chez eux."],
+    choices: [
+      { k: 'family', icon: '🏡', fr: "Emménager chez vos enfants", fx: { social: 5, happy: 3, health: 1 } },
+      { k: 'alone', icon: '🔑', fr: "Rester chez vous, tant que vous le pouvez", fx: { happy: 1, social: -2 } },
+    ] },
+  { id: 'de_protest', kind: 'big', min: 18, max: 60, p: 0.05, when: (life) => heavyOk() && reg('lac', 'mena', 'eca', 'ssa', 'sa')(life),
+    fr: ["La manifestation", "Une grande manifestation traverse votre ville. Des collègues vous proposent de vous y joindre."],
+    choices: [
+      { k: 'join', icon: '✊', fr: "Défiler avec eux", fx: () => roll([0.9, { social: 3, happy: 2 }], [0.1, { health: -6, social: 2, msg: { fr: "La manifestation dégénère, vous êtes blessé{e}.", en: "The march turns violent and you are hurt." } }]) },
+      { k: 'home', icon: '🏠', fr: "Rester chez vous", fx: {} },
+    ] },
 ];
 // Emplois proposés au premier poste, selon les études et le lieu de vie. mult module le revenu du pays.
 const JOBS = {
@@ -1352,7 +1528,7 @@ function applyFx(life, fx) {
   if (e.know) s.knowledge = clamp(s.knowledge + e.know);
   if (e.retire) s.employment = 'retired';
   if (e.smoker) life.smoker = true;
-  if (e.flag) life[e.flag[0]] = e.flag[1];
+  if (e.flag) { life[e.flag[0]] = e.flag[1]; if (e.flag[0] === 'pet' && e.flag[1]) life.petSince = life.age; }
   if (e.edu != null) life.eduTarget = e.edu === 'stop' ? s.education : Math.min(life.eduTarget ?? 4, e.edu);
   if (e.eduUp) life.eduTarget = Math.max(life.eduTarget ?? 0, e.eduUp);
   if (e.job) life.job = { fr: e.job.fr, en: e.job.en, mult: e.job.mult };
@@ -1419,9 +1595,9 @@ EXTRA_DECISIONS.forEach(d => DECISIONS.push({
     const G = (txt) => genderize(txt, life);
     const choices = typeof d.choices === 'function' ? d.choices(life) : d.choices;
     return {
-      title: G(fr ? d.fr[0] : d.en[0]),
-      body: G(fr ? d.fr[1] : d.en[1]),
-      choices: choices.map(c => ({ k: c.k, icon: c.icon, label: G(fr ? c.fr : c.en), sub: c.sub ? c.sub(life) : fxSub(c.fx), apply: (l) => applyFx(l, c.fx) })),
+      title: G(((fr || !d.en) ? (typeof d.fr[0] === 'function' ? d.fr[0](life) : d.fr[0]) : d.en[0])),
+      body: G(((fr || !d.en) ? (typeof d.fr[1] === 'function' ? d.fr[1](life) : d.fr[1]) : d.en[1])),
+      choices: choices.map(c => ({ k: c.k, icon: c.icon, label: G((fr || !c.en) ? c.fr : c.en), sub: c.sub ? c.sub(life) : fxSub(c.fx), apply: (l) => applyFx(l, c.fx) })),
     };
   },
 }));
@@ -1839,6 +2015,44 @@ const RECIT = [
   { a: [65, 95], i: '😴', en: 'You nap every afternoon, without the slightest guilt.', fr: "Vous faites la sieste chaque après-midi, sans la moindre culpabilité." },
   { a: [62, 85], i: '🧺', when: (l) => pppOf(l) < 8000, en: 'With no pension, you keep working as long as your strength allows.', fr: "Faute de retraite, vous continuez à travailler tant que vos forces le permettent." },
 ];
+
+// ---- Évènements du récit supplémentaires : région, pays, religion, habitudes ----
+RECIT.push(
+  { a: [10, 16], i: '🌙', rep: false, when: isMuslim, fr: "Vous jeûnez pour la première fois pendant le ramadan, fi{er|ère} d'aller jusqu'au bout." },
+  { a: [4, 22], i: '🧧', when: reg('eap'), fx: { happy: 1 }, fr: "Pour le Nouvel An lunaire, les aînés vous glissent une enveloppe rouge." },
+  { a: [25, 60], i: '🧧', when: (l) => reg('eap')(l) && hasKids(l), fx: { money: -100 }, fr: "Vous préparez des enveloppes rouges pour les enfants de la famille." },
+  { a: [18, 50], i: '💒', when: reg('sa'), fx: { money: -100, social: 1 }, fr: "Vous assistez à un mariage de trois jours, avec des centaines d'invités." },
+  { a: [15, 55], i: '💃', when: reg('lac'), fx: { social: 1 }, fr: "Le quartier fête un anniversaire en musique jusqu'à l'aube." },
+  { a: [8, 70], i: '⚽', w: 8, when: reg('lac', 'ssa', 'eca', 'hi'), fx: { social: 1 }, fr: "Vous regardez un match de Coupe du monde avec tout le quartier, devant un seul écran." },
+  { a: [5, 80], i: '🌾', when: (l) => isRural(l) && (l.countryData?.agr || 0) > 20, fx: { happy: 1 }, fr: "Le village fête la fin des récoltes : on chante, on mange, on danse." },
+  { a: [15, 60], i: '🚐', when: (l) => ['ssa', 'sa', 'lac'].includes(l.countryData?.region) && pppOf(l) < 8000, fr: "Vous attendez le minibus pendant une heure, puis voyagez serré{|e} contre vos voisins." },
+  { a: [3, 80], i: '🌧️', w: 5, when: inList(...MONSOON), fr: "La mousson inonde la rue pendant plusieurs jours : on circule avec de l'eau jusqu'aux genoux." },
+  { a: [3, 80], i: '🥶', w: 6, when: inList(...COLD), fx: { money: -150 }, fr: "Un hiver glacial s'installe : le chauffage coûte cher et l'on rentre tôt." },
+  { a: [3, 80], i: '🥵', w: 6, when: reg('mena', 'ssa', 'sa'), fx: { health: -1 }, fr: "Une vague de chaleur rend les nuits irrespirables." },
+  { a: [3, 80], i: '🌋', w: 3, when: inList(...QUAKE), fx: { happy: -2 }, fr: "Un séisme secoue la région. La maison tient, mais personne ne dort chez soi cette nuit-là." },
+  { a: [3, 80], i: '🌀', w: 3, when: inList(...CYCLONE), fx: { money: -300 }, fr: "Un cyclone arrache des toits dans le quartier. Il faut des semaines pour réparer." },
+  { a: [20, 65], i: '📄', when: bribery, fx: { money: -80 }, fr: "On vous réclame un « petit cadeau » pour qu'un document soit enfin tamponné." },
+  { a: [25, 75], i: '🏥', when: inList('USA'), fx: { money: -1800 }, fr: "Une facture d'hôpital imprévue arrive, bien plus élevée que prévu." },
+  { a: [22, 55], i: '🕙', when: (l) => isEmployed(l) && inList(...OVERWORK)(l), fx: { health: -1 }, fr: "Vous restez au bureau bien après l'heure : personne ne part avant le chef." },
+  { a: [22, 62], i: '🚶', when: (l) => isEmployed(l) && pppOf(l) > 20000 && reg('hi', 'eca')(l), fr: "Une grève des transports vous oblige à marcher une heure pour aller travailler." },
+  { a: [18, 60], i: '📲', when: reg('ssa'), fr: "Vous envoyez de l'argent à votre famille par téléphone, en quelques secondes." },
+  { a: [13, 35], i: '🎬', when: online(50), fx: { social: 1 }, fr: "Une vidéo de vous fait rire tout le quartier, puis des inconnus." },
+  { a: [20, 45], i: '💐', when: sibs, fr: "L'un de vos frères et sœurs se marie. Toute la famille est réunie." },
+  { a: [25, 55], i: '🍼', rep: false, when: sibs, fr: "Vous devenez {oncle|tante} : votre neveu vient au monde." },
+  { a: [60, 60], i: '🎂', rep: false, fr: "Vous fêtez vos soixante ans entouré{e} des vôtres." },
+  { a: [18, 20], i: '🗳️', rep: false, when: (l) => !NO_VOTE.includes(l.country), fr: "Vous votez pour la première fois, avec le sentiment que ça compte." },
+  { a: [5, 70], i: '🌧️', w: 4, when: (l) => isRural(l) && pppOf(l) < 5000, fr: "La saison des pluies coupe la route : le village reste isolé pendant des semaines." },
+  { a: [18, 65], i: '✊', w: 4, when: (l) => heavyOk() && reg('lac', 'mena', 'sa', 'ssa', 'eca')(l), fr: "Des manifestations bloquent le centre-ville pendant plusieurs jours." },
+  { a: [25, 85], i: '😮‍💨', w: 10, when: (l) => !!l.smoker, fx: { health: -1 }, fr: "Votre toux du matin ne passe plus." },
+  { a: [45, 85], i: '🫁', rep: false, w: 12, when: (l) => !!l.smoker, fx: { health: -6 }, fr: "On vous diagnostique une bronchite chronique : respirer devient un effort." },
+  { a: [25, 80], i: '🤲', w: 10, when: (l) => !!l.drinker, fx: { health: -2, happy: -2 }, fr: "Vos mains tremblent le matin tant que vous n'avez pas bu." },
+  { a: [16, 60], i: '💸', w: 10, when: (l) => !!l.addicted, fx: { money: -300, social: -3 }, fr: "Vous empruntez de l'argent à vos proches pour payer votre prochaine dose." },
+  { a: [25, 70], i: '🪜', w: 8, when: (l) => !!l.sporty, fx: { health: 1 }, fr: "Vous montez trois étages sans être essouflé{e}." },
+  { a: [30, 80], i: '🌬️', rep: false, w: 10, when: (l) => !!l.exSmoker, fx: { health: 2 }, fr: "Votre souffle revient : vous sentez la différence depuis que vous ne fumez plus." },
+  { a: [8, 80], i: '🐕', w: 6, when: (l) => l.pet === 'dog', fx: { health: 1 }, fr: "Votre chien vous traîne dehors par tous les temps : vous marchez plus qu'avant." },
+  { a: [8, 80], i: '🐈', w: 6, when: (l) => l.pet === 'cat', fx: { happy: 1 }, fr: "Votre chat s'endort sur vos genoux chaque soir." },
+  { a: [10, 85], i: '🕊️', rep: false, w: 4, when: (l) => !!l.pet && l.petSince != null && l.age - l.petSince >= 10, fx: { happy: -4, flag: ['pet', null] }, fr: "Votre animal meurt de vieillesse. La maison paraît soudain vide." },
+);
 // Décès dans la famille : annoncés l'année où ils surviennent.
 function familyDeathEvents(life, age) {
   if (age < 3 || !life.family) return [];
@@ -1905,6 +2119,15 @@ function rollCountry(target, done) {
 const REGIONS_FR = { eap: 'Asie de l\'Est et Pacifique', eca: 'Europe et Asie centrale', hi: 'Pays à revenu élevé', lac: 'Amérique latine et Caraïbes', mena: 'Moyen-Orient et Afrique du Nord', sa: 'Asie du Sud', ssa: 'Afrique subsaharienne' };
 const FR_REGION_NAMES = new Intl.DisplayNames(['fr'], { type: 'region' });
 // Le drapeau emoji encode le code ISO à 2 lettres : on s'en sert pour demander le nom français au navigateur.
+// « en France », « au Japon », « aux États-Unis », « à Singapour » : la préposition dépend du pays.
+const PREP_AU = new Set('JPN CAN BRA MEX MAR PER CHL NER SEN MLI TCD TGO BEN CMR GHA KEN NGA ZWE SDN LBN PAK BGD NPL VNM KHM LAO PRT DNK GBR QAT KWT BFA GAB COG RWA BDI MWI MOZ LSO BWA PRY VEN SLV HND NIC GTM PAN CRI SUR BTN LKA KAZ KGZ TJK TKM URY'.split(' '));
+const PREP_AUX = new Set('NLD USA PHL ARE COM MDV'.split(' '));
+const PREP_A = new Set('SGP HKG MAC MLT CYP CUB TWN BHR MUS MDG DJI'.split(' '));
+function inCountry(c) {
+  const n = localize(c).name;
+  if (LANG !== 'fr') return n;
+  return (PREP_AUX.has(c.id) ? 'aux ' : PREP_A.has(c.id) ? 'à ' : PREP_AU.has(c.id) ? 'au ' : 'en ') + n;
+}
 function nameFr(c) {
   try { return FR_REGION_NAMES.of([...c.flag].map(ch => String.fromCharCode(ch.codePointAt(0) - 0x1F1A5)).join('')) || c.name_en; }
   catch (e) { return c.name_en; }
@@ -2214,6 +2437,18 @@ function causeWeights(c, age, sex) {
   if (STATE.life && STATE.life.smoker) {
     w['癌症'] *= 1.4; w['心血管'] *= 1.3; w['呼吸系統'] *= 1.5;
   }
+  if (STATE.life) {
+    const Lf = STATE.life;
+    const mul = (k, f) => { if (w[k] !== undefined) w[k] *= f; };
+    if (Lf.exSmoker) { mul('癌症', 1.15); mul('心血管', 1.1); mul('呼吸系統', 1.2); }
+    if (Lf.drinker) { mul('其他', 1.6); mul('事故', 1.3); mul('癌症', 1.15); mul('心血管', 1.15); mul('自殺', 1.3); }
+    if (Lf.addicted) { mul('事故', 2.5); mul('自殺', 1.8); mul('他殺', 1.5); mul('感染性疾病', 1.5); mul('其他', 1.4); }
+    if (Lf.gang) { mul('他殺', 6); }
+    if (Lf.sporty) { mul('心血管', 0.8); mul('糖尿病', 0.7); }
+    if (Lf.screened) { mul('癌症', 0.7); }
+    if (Lf.vaccinated) { mul('感染性疾病', 0.85); }
+    if (Lf.bednet) { mul('瘧疾', 0.2); }
+  }
   if (STATE.life && STATE.life.conditions) {
     if (STATE.life.conditions.diabetes) w['糖尿病'] = (w['糖尿病'] || 1) * 3;
     if (STATE.life.conditions.heart) w['心血管'] *= 1.5;
@@ -2221,6 +2456,16 @@ function causeWeights(c, age, sex) {
   return w;
 }
 
+// Multiplicateur du risque de décès de l'année selon les habitudes (ordres de grandeur : un fumeur perd environ dix ans).
+function habitMort(life) {
+  let m = 1;
+  if (life.smoker && life.age >= 35) m *= 2.5;      // simulé : environ 8 ans de vie en moins
+  if (life.exSmoker) m *= 1.2;
+  if (life.drinker && life.age >= 30) m *= 1.5;     // environ 4 ans
+  if (life.addicted) m *= 2.2;                      // environ 8 ans
+  if (life.sporty) m *= 0.8;                        // environ 2 ans de plus
+  return m;
+}
 function pickCause(c, age, sex) {
   const w = causeWeights(c, age, sex);
   const keys = Object.keys(w);
@@ -2722,6 +2967,7 @@ function milestoneEvents(life, newAge) {
     life.pendingMarriage = false;
     life.stats.married = true;
     life.stats.relationship = 'married';
+    life.marriedAt = newAge;
     if (!life.stats.partner) life.stats.partner = newPartner(life, 0);
     const partnerName = life.stats.partner.name;
     if (life.family) {
@@ -2953,7 +3199,7 @@ function tick() {
       if (STATE.life.died || STATE.paused || STATE.pendingDecision) break;
       STATE.life.age += 1;
       STATE.life.yearOffset += 1;
-      if (Math.random() < pDie(STATE.life.age, c, sex)) { dieNow(); break; }
+      if (Math.random() < Math.min(1, pDie(STATE.life.age, c, sex) * habitMort(STATE.life))) { dieNow(); break; }
       if ([5,15,30,50,70].includes(STATE.life.age)) {
         STATE.pendingDecision = { age: STATE.life.age, type: 'pause' };
         if (STATE.autoDecide) resolvePendingDecision();
@@ -2966,7 +3212,7 @@ function tick() {
   STATE.life.age += 1;
   STATE.life.yearOffset += 1;
   // 死亡判定
-  if (Math.random() < pDie(STATE.life.age, c, sex)) {
+  if (Math.random() < Math.min(1, pDie(STATE.life.age, c, sex) * habitMort(STATE.life))) {
     dieNow();
     return;
   }
@@ -2982,6 +3228,11 @@ function tick() {
     const ceil_ = Math.max(40, 100 - Math.max(0, STATE.life.age - 18) * 0.55);
     hs.health += (ceil_ - hs.health) * 0.05;
     if (STATE.life.age > 60) hs.health -= 0.3;
+    const Lh = STATE.life;
+    if (Lh.smoker) hs.health -= 0.5;
+    if (Lh.drinker) hs.health -= 0.5;
+    if (Lh.addicted) hs.health -= 1.5;
+    if (Lh.sporty) hs.health += 0.4;
     hs.health = Math.max(0, Math.min(100, hs.health));
   }
   // v5.59：年收入 — 舊碼 annualIncome 永遠是 0，所以「在職」也存不到錢。
@@ -3046,6 +3297,11 @@ function tick() {
         showFinanceModal();
       }, 100);
     }
+  }
+  // Instantané de l'année pour la grille de vie.
+  {
+    const Lh2 = STATE.life, b = Lh2.budget || {};
+    (Lh2.hist || (Lh2.hist = {}))[Lh2.age] = { h: Lh2.stats.happiness, he: Lh2.stats.health, a: Lh2.stats.netAssets, saved: b.saved || 0, habit: b.habit || 0 };
   }
   // v5.55：通用決策 — 在每年 tick 末尾試一個未觸發過的事件
   setTimeout(() => tryTriggerDecision(STATE.life, STATE.life.age), 120);
@@ -3422,7 +3678,7 @@ function generateYearlyEvent(life) {
   const focus = life.focusThisYear;
   // 隨機事件池（依年齡分層）
   const events = [];
-  RECIT.forEach(r => { if (age >= r.a[0] && age <= r.a[1] && (!r.when || r.when(life))) events.push({ weight: r.w || 14, icon: r.i, en: r.en, zh: r.en, fr: r.fr, rep: r.rep !== false, fx: r.fx }); });
+  RECIT.forEach(r => { if (age >= r.a[0] && age <= r.a[1] && (!r.when || r.when(life))) events.push({ weight: r.w || 14, icon: r.i, en: r.en || r.fr, zh: r.en || r.fr, fr: r.fr, rep: r.rep !== false, fx: r.fx }); });
 // v5.89：每個年齡層的池子都補到「夠撐過整個年齡層」的大小。
   // 舊版 65+ 只有 5 條、其中 4 條可重複，於是二十幾年的老年就在那幾條裡輪流；
   // 實測 60 條人生的最後 20 年有 45% 的 feed 是看過的舊句、376 次「四年內又見同一句」。
@@ -4000,6 +4256,7 @@ function renderLife() {
     const ha = $('#heroAge'); if (ha) ha.textContent = age;
     const hw = $('#heroAssets'); if (hw) hw.textContent = money(STATE.life.stats.netAssets);
     renderBudget();
+    renderLifeGrid();
     const hi = $('#heroIncome'); if (hi) hi.textContent = STATE.life.stats.annualIncome ? money(STATE.life.stats.annualIncome) : '—';
     const hb = $('#heroYearBar');
     if (hb) {
@@ -6215,7 +6472,9 @@ function wire() {
       situation.append(...['.cert-age-row', '.cert-meta'].map(q => document.querySelector('#lifeCert ' + q)).filter(Boolean));
       const budget = document.createElement('div');
       budget.id = 'lifeBudget';
-      const first = [document.getElementById('lifeThisYear'), document.getElementById('lifeEventsFeed'), situation, budget,
+      const lgrid = document.createElement('div');
+      lgrid.id = 'lifeGrid';
+      const first = [document.getElementById('lifeThisYear'), document.getElementById('lifeEventsFeed'), lgrid, situation, budget,
         ...['lifeManualDecisions', 'certFamily', 'lifeFamilyDetail', 'lifeActualVsRandom', 'lifeScene', 'lifeCompanions'].map(id => document.getElementById(id))]
         .filter(Boolean);
       const toggle = document.getElementById('btnDetailToggle');
@@ -6566,7 +6825,7 @@ function yearBudget(life) {
   const base = 0.55 * (c.ppp || 12000);
   const r = socialRate(c);
   const q = Math.min(4, Math.max(1, s.incomeQuartile || 2));
-  const zero = { income: 0, pension: 0, taxes: 0, aid: 0, living: 0, health: 0, school: 0, comfort: 0, saved: 0, r };
+  const zero = { income: 0, pension: 0, taxes: 0, aid: 0, living: 0, health: 0, school: 0, habit: 0, comfort: 0, saved: 0, r };
   if (age < 18) return zero;
   let income = 0;
   if (s.employment === 'employed') {
@@ -6575,7 +6834,7 @@ function yearBudget(life) {
     income = base * Math.pow(quartileShare(c, q), 0.7) * edu * experience * (life.job?.mult || 1);
     life.lastWage = income;
   }
-  const pension = s.employment === 'retired' ? (life.lastWage || base * 0.6) * Math.min(0.7, r * 2.3) : 0;
+  const pension = s.employment === 'retired' ? (life.lastWage || base * 0.6) * Math.min(0.7, r * 2.3) * (life.retireSaver ? 1.15 : 1) : 0;
   const gross = income + pension;
   const taxes = gross * Math.min(0.5, r * [0.6, 0.9, 1.15, 1.5][q - 1]);
   const kidsAtHome = (s.kids || []).filter(k => age - k.bornAt < 20).length;
@@ -6586,8 +6845,9 @@ function yearBudget(life) {
   const living = Math.min(fullLiving, Math.max(0, net * 0.9));      // les plus pauvres se privent : on ne dépense pas ce qu'on n'a pas
   const health = 0.07 * base * (age < 40 ? 0.5 : age < 60 ? 1 : age < 75 ? 1.8 : 2.6) * (c.oop ?? 30) / 100;
   const school = s.employment === 'university' ? 0.25 * base * (1 - Math.min(0.9, r * 3)) : 0;
-  const comfort = Math.max(0, net - living - health - school) * 0.5;
-  return { income, pension, taxes, aid, living, health, school, comfort, saved: net - living - health - school - comfort, r };
+  const habit = (life.smoker ? 0.03 * base : 0) + (life.drinker ? 0.025 * base : 0) + (life.addicted ? 0.15 * base : 0);
+  const comfort = Math.max(0, net - living - health - school - habit) * 0.5;
+  return { income, pension, taxes, aid, living, health, school, habit, comfort, saved: net - living - health - school - habit - comfort, r };
 }
 function applyYearBudget(life) {
   const b = yearBudget(life);
@@ -6595,22 +6855,94 @@ function applyYearBudget(life) {
   life.stats.annualIncome = Math.round(b.income + b.pension);
   life.stats.netAssets += Math.round(b.saved);
 }
+/* ==== Grille de vie ====
+   Une case par année : la couleur suit le bonheur, une lettre marque les grands évènements.
+   Au survol (ou au toucher) d'une case, une fenêtre sombre résume l'année. */
+const GRID_MARKS = [['É', /🎓|📚|🎒|🧑‍🏫|📖/], ['T', /💼|🏭|📈|🧱|🛠|📉/], ['♡', /❤|💍|💞|💔|💐/], ['✿', /🕯|🕊/], ['→', /✈|🧳|🌍|🚤|🏠|📦|🛂/], ['+', /👶|🍼/]];
+function gridMark(entries, age) {
+  const icons = entries.map(e => e.icon || '').join('');
+  for (const [ch, re] of GRID_MARKS) { if (re.test(icons.replace(age === 0 ? /👶/g : '', ''))) return ch; }
+  return '';
+}
+function gridColor(h) {
+  const t = Math.max(0, Math.min(1, (h - 40) / 45));
+  const a = [214, 218, 168], b = [43, 110, 106];
+  return 'rgb(' + a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(',') + ')';
+}
+function ensureGridTip() {
+  let tip = document.getElementById('lgTip');
+  if (!tip) { tip = document.createElement('div'); tip.id = 'lgTip'; tip.className = 'lg-tip'; tip.hidden = true; document.body.appendChild(tip); }
+  return tip;
+}
+function showGridTip(cell) {
+  const L = STATE.life; if (!L) return;
+  const age = +cell.dataset.age;
+  const fr = LANG === 'fr';
+  const hist = (L.hist || {})[age];
+  const year = L.year + age;
+  const lines = ['<b>' + age + (fr ? ' ans' : ' y') + ' · ' + year + '</b>'];
+  if (hist) {
+    lines.push((fr ? 'Bonheur ' : 'Happiness ') + Math.round(hist.h) + ' · ' + (fr ? 'Santé ' : 'Health ') + Math.round(hist.he) + ' · ' + (fr ? 'patrimoine net ' : 'net worth ') + money(hist.a));
+    const bits = [];
+    if (hist.habit) bits.push((fr ? 'Tabac, alcool, drogues −' : 'Tobacco, alcohol, drugs −') + money(hist.habit));
+    if (hist.saved) bits.push((fr ? 'Mis de côté ' : 'Saved ') + (hist.saved < 0 ? '−' : '+') + money(Math.abs(hist.saved)));
+    if (bits.length) lines.push(bits.join(' · '));
+  }
+  L.log.filter(e => e.age === age).slice(0, 5).forEach(e => lines.push((e.icon ? e.icon + ' ' : '') + escapeHtml(e.text)));
+  const tip = ensureGridTip();
+  tip.innerHTML = lines.join('<br>');
+  tip.hidden = false;
+  const r = cell.getBoundingClientRect();
+  const w = Math.min(340, innerWidth - 24);
+  tip.style.width = w + 'px';
+  tip.style.left = Math.max(12, Math.min(innerWidth - w - 12, r.left + r.width / 2 - w / 2)) + 'px';
+  const below = r.bottom + 10;
+  tip.style.top = (below + tip.offsetHeight > innerHeight ? Math.max(8, r.top - tip.offsetHeight - 10) : below) + 'px';
+}
+function hideGridTip() { const t = document.getElementById('lgTip'); if (t) t.hidden = true; }
+function renderLifeGrid() {
+  const el = $('#lifeGrid');
+  if (!el || !STATE.life) return;
+  const L = STATE.life, fr = LANG === 'fr';
+  const c = L.countryData || {};
+  const le = Math.round(L.sex === 'M' ? (c.le || 75) - (c.gap || 5) / 2 : (c.le || 75) + (c.gap || 5) / 2);
+  const total = Math.ceil(Math.max(le + 8, L.age + 4) / 10) * 10;
+  let html = '<h4>' + (fr ? 'Grille de vie' : 'Life grid') + ' <span class="muted">' + (fr ? '1 case = 1 an' : '1 cell = 1 year') + '</span></h4><div class="lg-grid" role="list">';
+  for (let a = 0; a < total; a++) {
+    const past = a <= L.age, hist = (L.hist || {})[a];
+    const entries = past ? L.log.filter(e => e.age === a) : [];
+    const mark = past ? gridMark(entries, a) : '';
+    const style = past ? ' style="background:' + gridColor(hist ? hist.h : L.stats.happiness) + '"' : '';
+    html += '<button type="button" class="lg-cell' + (a === L.age ? ' now' : '') + (a === le ? ' le' : '') + (past ? '' : ' future') + '" data-age="' + a + '"' + style + (past ? '' : ' disabled') + ' aria-label="' + a + (fr ? ' ans' : '') + '">' + mark + '</button>';
+  }
+  html += '</div><p class="muted lg-legend">' + (fr ? 'Plus le vert est foncé, plus l\'année a été heureuse. É études · T travail · ♡ amour · ✿ deuil · → déménagement · + naissance. Case encadrée en gris : espérance de vie de votre pays pour ' + (L.sex === 'M' ? 'un homme' : 'une femme') + ' (' + le + ' ans).'
+    : 'The darker the green, the happier the year. Grey outline: life expectancy for your country (' + le + ' years).') + '</p>';
+  el.innerHTML = html;
+  el.querySelectorAll('.lg-cell:not(.future)').forEach(cell => {
+    cell.addEventListener('mouseenter', () => showGridTip(cell));
+    cell.addEventListener('focus', () => showGridTip(cell));
+    cell.addEventListener('click', (e) => { e.stopPropagation(); showGridTip(cell); });
+    cell.addEventListener('mouseleave', hideGridTip);
+    cell.addEventListener('blur', hideGridTip);
+  });
+}
+document.addEventListener('click', () => hideGridTip());
 function renderBudget() {
   const el = $('#lifeBudget');
   if (!el || !STATE.life) return;
   const T = LANG === 'fr'
     ? { title: "Budget de l'année", child: "Vos parents subviennent à vos besoins jusqu'à 18 ans.", income: 'Revenu du travail', pension: 'Pension de retraite', aid: 'Aides et prestations sociales',
-        taxes: 'Impôts et cotisations', living: 'Logement, alimentation, énergie', health: 'Santé (reste à charge)', school: "Frais d'études", comfort: 'Loisirs et équipement', saved: "Épargne de l'année",
+        taxes: 'Impôts et cotisations', living: 'Logement, alimentation, énergie', health: 'Santé (reste à charge)', school: "Frais d'études", habit: 'Tabac, alcool, drogues', comfort: 'Loisirs et équipement', saved: "Épargne de l'année",
         note: 'Dépenses sociales du pays : environ {r} % de la richesse nationale (estimation). Plus ce taux est élevé, plus les impôts, les aides et la retraite pèsent dans le budget.' }
     : { title: "This year's budget", child: 'Your parents provide for you until 18.', income: 'Work income', pension: 'Retirement pension', aid: 'Benefits and allowances',
-        taxes: 'Taxes and contributions', living: 'Housing, food, energy', health: 'Health (out of pocket)', school: 'Tuition', comfort: 'Leisure and equipment', saved: "This year's savings",
+        taxes: 'Taxes and contributions', living: 'Housing, food, energy', health: 'Health (out of pocket)', school: 'Tuition', habit: 'Tobacco, alcohol, drugs', comfort: 'Leisure and equipment', saved: "This year's savings",
         note: "The country's social spending: about {r}% of national income (estimate). The higher it is, the more taxes, benefits and pensions weigh in the budget." };
   const b = STATE.life.budget;
   if (!b || STATE.life.age < 18) { el.innerHTML = '<h4>💶 ' + T.title + '</h4><p class="muted">' + T.child + '</p>'; return; }
   const row = (label, v, sign) => Math.round(v) ? '<div class="bud-row"><span>' + label + '</span><b class="' + (sign > 0 ? 'bud-plus' : 'bud-minus') + '">' + (sign > 0 ? '+ ' : '− ') + money(Math.abs(v)) + '</b></div>' : '';
   el.innerHTML = '<h4>💶 ' + T.title + '</h4>'
     + row(T.income, b.income, 1) + row(T.pension, b.pension, 1) + row(T.aid, b.aid, 1)
-    + row(T.taxes, b.taxes, -1) + row(T.living, b.living, -1) + row(T.health, b.health, -1) + row(T.school, b.school, -1) + row(T.comfort, b.comfort, -1)
+    + row(T.taxes, b.taxes, -1) + row(T.living, b.living, -1) + row(T.health, b.health, -1) + row(T.school, b.school, -1) + row(T.habit, b.habit, -1) + row(T.comfort, b.comfort, -1)
     + '<div class="bud-row bud-total"><span>' + T.saved + '</span><b>' + (b.saved < 0 ? '− ' : '+ ') + money(Math.abs(b.saved)) + '</b></div>'
     + '<p class="muted bud-note">' + T.note.replace('{r}', Math.round(b.r * 100)) + '</p>';
 }
