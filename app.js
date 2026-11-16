@@ -42,7 +42,7 @@ const STATE = {
   fastForward: false, // v5.9 新增：快轉到下一個抉擇
   sharedShown: 8,    // v5.80：書架「共享人生」先顯示幾張
   shelfShown: 12,    // v5.81：書架「書本」先顯示幾本
-  thoughtsEnabled: true, // v5.10：✎ 寫下想法 啟用（5/15/30/50/70 暫停時彈出 modal）
+  thoughtsEnabled: false, // v5.10：✎ 寫下想法 啟用（5/15/30/50/70 暫停時彈出 modal）
   pastLives: [],
   modal: null,
   eduMode: false,      // v5.19：教學版（?edu=1）— 過濾沉重事件、隱藏訃聞/書架
@@ -1303,7 +1303,7 @@ const EXTRA_DECISIONS = [
       { k: 'work', icon: '💼', fr: "Travailler tout de suite", en: "Start working right away", fx: { edu: 3, money: 1500 } },
     ] },
   { id: 'de_first_job', kind: 'big', min: 14, max: 45, p: 1, priority: true, when: (life) => life.stats.employment === 'employed' && !life.job,
-    fr: ["Votre premier emploi", "Voici les emplois que vous pouvez trouver, avec vos études et là où vous vivez."],
+    fr: ["Votre premier emploi", (l) => (l.univ && l.univ.status === 'graduated' ? "Votre diplôme universitaire en poche, vous cherchez un premier poste. " : l.univ && l.univ.status === 'failed' ? "Sans le diplôme que vous visiez, vous cherchez un premier poste. " : "Vos études terminées, vous cherchez un premier poste. ") + "Voici ce que l'on vous propose là où vous vivez."],
     en: ["Your first job", "These are the jobs you can find, with your schooling and where you live."],
     choices: (life) => jobOffers(life).map((j, n) => ({ k: 'job' + n, icon: j.i, fr: j.fr, en: j.en,
       sub: (l) => money(wageFor(l, j.mult)) + (LANG === 'fr' ? ' par an avant impôts' : ' a year before tax'),
@@ -1320,9 +1320,9 @@ const EXTRA_DECISIONS = [
     fr: ["Un nouveau loisir ?", "Vous avez un peu de temps libre et l'envie d'en faire quelque chose."],
     en: ["A new hobby?", "You have some free time and want to make something of it."],
     choices: [
-      { k: 'sport', icon: '🏃', fr: "Un sport", en: "A sport", fx: { health: 4, social: 2 } },
-      { k: 'music', icon: '🎸', fr: "La musique", en: "Music", fx: { happy: 4, know: 1 } },
-      { k: 'read', icon: '📚', fr: "La lecture", en: "Reading", fx: { know: 4, happy: 1 } },
+      { k: 'sport', icon: '🏃', fr: "Un sport", en: "A sport", fx: { health: 4, social: 2, hobby: 'Sport' } },
+      { k: 'music', icon: '🎸', fr: "La musique", en: "Music", fx: { happy: 4, know: 1, hobby: 'Musique' } },
+      { k: 'read', icon: '📚', fr: "La lecture", en: "Reading", fx: { know: 4, happy: 1, hobby: 'Lecture' } },
       { k: 'none', icon: '🛋️', fr: "Le repos suffit", en: "Rest is enough", fx: { happy: 1 } },
     ] },
   // ---- Santé, argent, famille, vie sociale : décisions adaptées au pays ----
@@ -1657,6 +1657,22 @@ const EXTRA_DECISIONS = [
       { k: 'go', icon: '🌍', fr: "Partir", fx: { money: -2500, happy: 5, know: 2, social: -1 } },
       { k: 'no', icon: '📘', fr: "Enchaîner directement", fx: {} },
     ] },
+  // ---- Suites : maladie diagnostiquée, échec à l'université ----
+  { id: 'de_illness_followup', kind: 'big', min: 18, max: 90, p: 1, priority: true, when: (l) => illActive(l),
+    fr: [(l) => ({ cancer: "Face au cancer", heart: "Un cœur fragile", stroke: "Après l'AVC", diabetes: "Vivre avec le diabète" })[l.illness.type],
+         (l) => { const c = l.countryData || {}, o = Math.round(c.oop ?? 30); const acc = illnessAccess(c);
+           return "Dans votre pays, " + o + " % des dépenses de santé restent à la charge des ménages, et les soins spécialisés sont " + (acc >= 0.8 ? "faciles à obtenir." : acc >= 0.6 ? "assez difficiles à obtenir." : "très difficiles à obtenir, loin de chez vous.") + " Comment voulez-vous vous soigner ?"; }],
+    choices: (life) => [
+      { k: 'full', icon: '🏥', fr: "Suivre le traitement complet", sub: (l) => "Environ " + money(illnessCost(l, 'full')) + " par an", fx: { illTreat: 'full', health: 1 } },
+      { k: 'partial', icon: '💊', fr: "Se limiter aux soins essentiels", sub: (l) => "Environ " + money(illnessCost(l, 'partial')) + " par an · moins de chances", fx: { illTreat: 'partial' } },
+      { k: 'none', icon: '🕯️', fr: "Renoncer au traitement", sub: () => "La maladie suivra son cours", fx: { illTreat: 'none' } },
+    ] },
+  { id: 'de_univ_failed', kind: 'big', min: 20, max: 28, p: 1, priority: true, when: (l) => !!(l.univ && l.univ.status === 'failed' && !l.univAsked),
+    fr: ["Un échec difficile", "Vous n'avez pas obtenu votre diplôme. Vos parents et vos amis attendent de savoir ce que vous allez faire."],
+    choices: [
+      { k: 'retry', icon: '📚', fr: "Retenter votre chance l'année suivante", sub: () => "Une année de plus, sans revenu", fx: { univRetry: true, money: -1000, happy: -2 } },
+      { k: 'work', icon: '💼', fr: "Chercher du travail", sub: () => "Un emploi sans le diplôme visé", fx: { univWork: true } },
+    ] },
 ];
 // Emplois proposés au premier poste, selon les études et le lieu de vie. mult module le revenu du pays.
 const JOBS = {
@@ -1702,15 +1718,27 @@ function applyFx(life, fx, label) {
   if (e.know) s.knowledge = clamp(s.knowledge + e.know);
   if (e.retire) s.employment = 'retired';
   if (e.smoker) life.smoker = true;
-  if (e.flag) { life[e.flag[0]] = e.flag[1]; if (e.flag[0] === 'pet' && e.flag[1]) life.petSince = life.age; }
+  if (e.flag) {
+    life[e.flag[0]] = e.flag[1];
+    if (e.flag[0] === 'pet') {
+      const pets = life.pets || (life.pets = []);
+      if (e.flag[1]) { life.petSince = life.age; pets.push({ name: pick(['Luna', 'Bella', 'Max', 'Rex', 'Nala', 'Milo', 'Tigre', 'Pépita', 'Choupette', 'Rocky']), type: e.flag[1], from: life.age, to: null }); }
+      else { const last = pets.filter(x => x.to == null).pop(); if (last) last.to = life.age; }
+    }
+  }
+  if (e.hobby) { const hb = life.hobbies || (life.hobbies = {}); hb[e.hobby] = (hb[e.hobby] || 0) + 1; }
+  if (e.friend) { const fl = life.friends || (life.friends = []); fl.push({ name: randomName(life.countryData, Math.random() < 0.5 ? 'M' : 'F').first, closeness: 'proche' }); }
   if (e.edu != null) life.eduTarget = e.edu === 'stop' ? s.education : Math.min(life.eduTarget ?? 4, e.edu);
   if (e.eduUp) life.eduTarget = Math.max(life.eduTarget ?? 0, e.eduUp);
-  if (e.job) life.job = { fr: e.job.fr, en: e.job.en, mult: e.job.mult };
+  if (e.job) { life.job = { fr: e.job.fr, en: e.job.en, mult: e.job.mult }; life.jobStart = life.age; }
   if (e.rel === 'dating' || e.rel === 'cohab') { if (!s.partner) s.partner = newPartner(life, 0); s.relationship = e.rel; }
   if (e.rel === 'single') { s.partner = null; s.married = false; s.relationship = 'single'; }
   if (e.marry && !s.married) { if (!s.partner) s.partner = newPartner(life, life.age < 18 ? 9 : 0); life.pendingMarriage = true; }
   if (e.leave) { s.married = false; s.partner = null; s.relationship = 'divorced'; }
   if (e.migrate) migrateLife(life);
+  if (e.illTreat) startTreatment(life, e.illTreat);
+  if (e.univRetry) { life.univ = { start: life.age - 2, status: 'enrolled' }; s.employment = 'university'; life.univAsked = true; }
+  if (e.univWork) { life.univAsked = true; s.employment = 'employed'; }
   if (e.msg) {
     const m = genderize(LANG === 'fr' ? e.msg.fr : e.msg.en, life);
     life.log.push({ age: life.age, kind: 'decision', icon: '❗', text: m });
@@ -2053,7 +2081,21 @@ const enfr = (en, zh) => LANG === 'en' ? en : LANG === 'fr' ? (FR_BY_EN[en] || e
    {e} ajoute un « e » au féminin, {masculin|féminin} choisit l'une des deux formes. */
 function genderize(txt, life) {
   const f = !!life && life.sex === 'F';
-  return String(txt).replace(/\{([^|{}]*)\|([^{}]*)\}/g, (m, a, b) => (f ? b : a)).replace(/\{e\}/g, f ? 'e' : '');
+  let out = String(txt).replace(/\{([^|{}]*)\|([^{}]*)\}/g, (m, a, b) => (f ? b : a)).replace(/\{e\}/g, f ? 'e' : '');
+  if (life && /\{(ami|frere|conj|collegue|age_mere|animal)\}/.test(out)) {
+    const yr = life.year + life.yearOffset;
+    const rnd = (a) => a[Math.floor(Math.random() * a.length)];
+    const sibs = ((life.family && life.family.siblings) || []).map(x => String(x.name).split(' ')[0]);
+    const mother = ((life.family && life.family.parents) || []).find(x => x.sex === 'F');
+    const pet = (life.pets || []).filter(x => x.to == null).pop();
+    out = out.replace(/\{ami\}/g, () => (life.friends && life.friends.length ? rnd(life.friends).name : "un ami d'enfance"))
+      .replace(/\{frere\}/g, () => (sibs.length ? rnd(sibs) : 'votre frère'))
+      .replace(/\{conj\}/g, () => (life.stats && life.stats.partner && life.stats.partner.name ? String(life.stats.partner.name.first || life.stats.partner.name.full || '').split(' ')[0] || 'votre conjoint' : 'votre conjoint'))
+      .replace(/\{collegue\}/g, () => randomName(life.countryData, Math.random() < 0.5 ? 'M' : 'F').first)
+      .replace(/\{age_mere\}/g, () => (mother && mother.birth ? yr - mother.birth.year : '60'))
+      .replace(/\{animal\}/g, () => (pet ? pet.name : 'votre animal'));
+  }
+  return out;
 }
 Object.assign(FR_BY_EN, {
   'Learned to walk': "Vous faites vos premiers pas, les bras tendus vers vos parents.",
@@ -2264,7 +2306,7 @@ RECIT.push(
   { a: [8, 17], i: '🌙', w: 4, when: (l) => reg('eap')(l) && comfortable(8000)(l), fx: { know: 1, happy: -1 }, fr: "Chaque soir, vous suivez des cours privés après l'école." },
   { a: [6, 14], i: '👔', w: 3, when: (l) => reg('ssa', 'sa', 'lac')(l) && inSchool(l), fr: "Vous portez l'uniforme de l'école, un peu trop grand pour que ça dure." },
   { a: [6, 14], i: '🪑', w: 4, when: (l) => poorish(l) && inSchool(l), fx: { know: -1 }, fr: "Votre instituteur est absent pendant des semaines et la classe se vide." },
-  { a: [18, 22], i: '🏛️', w: 4, when: (l) => l.stats.education >= 4, fx: { social: 2 }, fr: "Vous découvrez la vie de campus : cours, cafétéria, nuits blanches avant les examens." },
+  { a: [18, 22], i: '🏛️', w: 4, when: (l) => l.stats.employment === 'university', fx: { social: 2 }, fr: "Vous découvrez la vie de campus : cours, cafétéria, nuits blanches avant les examens." },
   { a: [19, 25], i: '📎', w: 3, when: (l) => l.stats.education >= 3 && comfortable(8000)(l), fx: { know: 1 }, fr: "Vous faites un stage non rémunéré en espérant qu'il débouche sur un emploi." },
   { a: [18, 60], i: '🧱', w: 5, when: (l) => isEmployed(l) && poorish(l), fr: "Vous travaillez sans contrat, payé à la journée, sans savoir de quoi demain sera fait." },
   { a: [20, 55], i: '🥵', w: 4, when: (l) => isEmployed(l) && poorish(l), fx: { health: -1 }, fr: "Dans l'atelier, la chaleur est étouffante : vous buvez toute la journée." },
@@ -2296,6 +2338,73 @@ RECIT.push(
   { a: [18, 50], i: '🛬', w: 3, when: (l) => !!l.birthOrigin, fr: "Un cousin arrive du pays pour quelques semaines : vous lui montrez la ville." },
   { a: [20, 45], i: '🪪', w: 3, when: (l) => !!l.birthOrigin && !l.naturalized, fx: { money: -80 }, fr: "Il faut renouveler vos papiers de séjour : files d'attente et justificatifs à n'en plus finir." },
   { a: [6, 60], i: '🎈', w: 3, when: comfortable(8000), fr: "Vous fêtez un anniversaire dans un parc, avec des ballons et trop de gâteau." },
+);
+
+const motherAlive = (l) => { const m = ((l.family && l.family.parents) || []).find(x => x.sex === 'F'); return !!m && isAliveAt(m, l.year + l.yearOffset); };
+const fatherAlive = (l) => { const m = ((l.family && l.family.parents) || []).find(x => x.sex === 'M'); return !!m && isAliveAt(m, l.year + l.yearOffset); };
+const gpAlive = (l) => ((l.family && l.family.grandparents) || []).some(g => isAliveAt(g, l.year + l.yearOffset));
+const hasFriends = (l) => !!(l.friends && l.friends.length);
+const hasPartner = (l) => !!(l.stats && l.stats.partner);
+
+// ---- Cinquante scènes de vie : proches nommés, gestes, souvenirs, culture du pays ----
+RECIT.push(
+  // amis et voisins
+  { a: [9, 60], i: '🔔', w: 6, when: hasFriends, fx: { social: 1 }, fr: "Un matin, {ami} sonne à votre porte sans prévenir. Vous passez la journée à ne rien faire, et c'est parfait." },
+  { a: [18, 60], i: '🚚', w: 4, when: hasFriends, fr: "{ami} vous annonce son départ dans une autre ville. Vous promettez de vous écrire, tout en sachant que ce sera plus rare." },
+  { a: [25, 60], i: '🥂', w: 4, when: hasFriends, fx: { social: 1 }, fr: "Vous êtes témoin au mariage de {ami}. Au moment du discours, vous avez du mal à parler." },
+  { a: [22, 65], i: '🫂', w: 5, when: hasFriends, fx: { social: 1 }, fr: "{ami} traverse une mauvaise passe. Vous passez des soirées à l'écouter, sans rien dire de très malin, et cela suffit." },
+  { a: [20, 70], i: '👋', w: 4, fx: { social: 1 }, fr: "Un voisin vous dépanne sous la pluie. Depuis ce jour, vous vous saluez chaque matin." },
+  { a: [30, 75], i: '🍯', w: 3, when: (l) => !isRural(l) || l.age > 45, fr: "Votre voisine âgée vous remet un pot de confiture maison pour vous remercier de lui monter ses courses." },
+  { a: [30, 70], i: '🙂', w: 4, fx: { social: 1 }, fr: "Le visage plus léger, une personne que vous avez aidée vous a dit merci. Vous y avez repensé toute la journée." },
+  { a: [35, 75], i: '🤝', w: 4, fx: { social: 2 }, fr: "Vous avez donné de votre temps à une association du quartier. On vous a demandé de revenir." },
+  // famille
+  { a: [20, 60], i: '☎️', w: 6, when: motherAlive, fr: "Vous appelez votre mère un dimanche soir. Elle a {age_mere} ans et vous demande, comme toujours, si vous mangez bien." },
+  { a: [25, 70], i: '📷', w: 3, when: fatherAlive, fr: "Votre père vous montre une vieille photo de lui à votre âge. Vous vous ressemblez plus que vous ne l'auriez cru." },
+  { a: [40, 75], i: '🩺', w: 3, when: motherAlive, fx: { social: 1 }, fr: "Vous accompagnez votre mère à un rendez-vous chez le médecin. Les rôles s'inversent, doucement." },
+  { a: [28, 60], i: '😤', w: 3, when: sibs, fx: { social: -2 }, fr: "Une dispute avec {frere}, pour une broutille, tourne mal. Vous restez trois mois sans vous parler." },
+  { a: [25, 60], i: '📦', w: 3, when: sibs, fx: { social: 1 }, fr: "{frere} vous appelle à l'aide pour un déménagement. La camionnette est trop petite et vous riez de tout." },
+  { a: [3, 12], i: '🎶', w: 4, when: gpAlive, fr: "Votre grand-mère vous apprend une chanson que vous chanterez encore des années plus tard." },
+  { a: [6, 16], i: '🏡', w: 5, when: gpAlive, fx: { happy: 1 }, fr: "Vous passez les vacances chez vos grands-parents. La maison sent le pain et la cire." },
+  { a: [25, 50], i: '🌌', w: 4, when: hasKids, fr: "Votre enfant vous demande pourquoi le ciel est bleu. Vous inventez une réponse, il vous croit." },
+  { a: [25, 50], i: '🌙', w: 3, when: hasKids, fr: "Un cauchemar réveille votre enfant. Vous restez près de lui jusqu'au matin." },
+  { a: [30, 60], i: '🖼️', w: 4, when: hasKids, fx: { happy: 1 }, fr: "Votre enfant rentre de l'école avec un dessin de vous deux. Vous le fixez au mur." },
+  { a: [25, 70], i: '🕯️', w: 5, when: hasPartner, fx: { happy: 1 }, fr: "Vous dînez en tête-à-tête avec {conj}, sans téléphone. Vous aviez oublié à quel point vous aimiez ça." },
+  { a: [25, 70], i: '💢', w: 3, when: hasPartner, fr: "Une dispute avec {conj} éclate pour un détail. Vous vous réconciliez tard dans la nuit." },
+  { a: [25, 75], i: '🎁', w: 3, when: hasPartner, fx: { happy: 1 }, fr: "{conj} vous surprend avec un petit cadeau, pour rien." },
+  // travail
+  { a: [22, 60], i: '🧑‍💼', w: 5, when: isEmployed, fx: { social: 1 }, fr: "Une nouvelle recrue arrive dans votre équipe. {collegue} semble perdu{e} ; vous lui montrez les ficelles." },
+  { a: [22, 60], i: '👏', w: 4, when: isEmployed, fx: { happy: 2 }, fr: "Votre chef vous complimente devant toute l'équipe. Vous rentrez chez vous en souriant." },
+  { a: [22, 60], i: '😰', w: 3, when: isEmployed, fx: { happy: -2 }, fr: "Une erreur de votre part coûte cher à l'entreprise. Vous y repensez toute la semaine." },
+  { a: [22, 60], i: '🕰️', w: 4, when: (l) => isEmployed(l) && poorish(l), fr: "Vous faites des heures supplémentaires non payées : refuser serait mal vu." },
+  { a: [22, 60], i: '🍜', w: 4, when: isEmployed, fr: "Vous déjeunez avec {collegue} et découvrez que vous avez grandi dans le même quartier." },
+  { a: [40, 62], i: '🧓', w: 4, when: isEmployed, fr: "Un jeune collègue vous demande conseil. Vous réalisez que vous êtes devenu{e} celui qu'on écoute." },
+  { a: [22, 65], i: '🚪', w: 4, when: (l) => heavyOk() && (l.countryData?.hom || 0) > 3, fx: { money: -300, happy: -3 }, fr: "Votre logement a été cambriolé pendant que vous travailliez. Vous mettrez longtemps à vous sentir de nouveau chez vous." },
+  // moments de vie
+  { a: [25, 60], i: '🌇', w: 4, fr: "Vous passez une soirée sur un toit à regarder la ville s'allumer." },
+  { a: [12, 18], i: '📖', w: 4, fx: { know: 1 }, fr: "Vous vous perdez dans un livre tard dans la nuit, une lampe de poche sous les draps." },
+  { a: [10, 16], i: '💬', w: 4, fx: { happy: 1 }, fr: "Un adulte vous dit un mot gentil au bon moment. Vous ne l'oublierez pas." },
+  { a: [40, 75], i: '🪞', w: 3, when: (l) => motherAlive(l) || fatherAlive(l), fr: "Le jour où vous avez compris que vos parents avaient vieilli, vous êtes resté longtemps silencieux." },
+  { a: [30, 80], i: '🎵', w: 4, fr: "Un parfum, une chanson : la maison de votre enfance revient d'un coup, intacte." },
+  { a: [45, 80], i: '📸', w: 4, fr: "Vous triez de vieilles photos et riez en reconnaissant des visages que vous aviez oubliés." },
+  { a: [50, 85], i: '✉️', w: 3, fr: "Vous écrivez une longue lettre à quelqu'un que vous aimez. Vous ne l'enverrez pas." },
+  { a: [60, 90], i: '🌳', w: 4, fx: { happy: 1 }, fr: "Vous passez l'après-midi à regarder les enfants jouer dans le parc, et cela suffit." },
+  { a: [65, 90], i: '🏥', w: 3, when: hasFriends, fx: { social: 1 }, fr: "Vous rendez visite à {ami}, malade. Vous repartez plus léger qu'à l'arrivée." },
+  { a: [6, 12], i: '🏫', rep: false, when: inSchool, fr: "Le jour de la rentrée, vous ne retrouvez plus votre classe. Un camarade vous prend par la main et vous y conduit." },
+  // habitudes
+  { a: [28, 70], i: '🚬', w: 6, when: (l) => !!l.smoker, fr: "Vous avez tenté de réduire les cigarettes. Au troisième jour, la fatigue a gagné." },
+  { a: [28, 70], i: '🍷', w: 6, when: (l) => !!l.drinker, fx: { happy: -1 }, fr: "L'alcool a failli reprendre de la place, mais une fois de plus, vous avez posé le verre." },
+  { a: [25, 60], i: '🏃', rep: false, w: 8, when: (l) => !!l.sporty, fx: { happy: 3, health: 1 }, fr: "Vous avez couru votre premier dix kilomètres. Vous avez fini en larmes, et fi{er|ère}." },
+  // pays et cultures
+  { a: [10, 70], i: '🔦', w: 5, when: (l) => reg('lac', 'ssa', 'sa')(l) && poorish(l), fx: { social: 1 }, fr: "Pendant une coupure de courant, tout le quartier est sorti sur le trottoir. On a partagé des histoires, à boire et des rires." },
+  { a: [20, 80], i: '🌿', w: 3, when: reg('eap'), fr: "Vous passez la journée à nettoyer la tombe de vos ancêtres, comme chaque année." },
+  { a: [15, 80], i: '🌅', w: 3, when: isMuslim, fr: "Au coucher du soleil, toute la famille partage le repas du soir dans la même pièce." },
+  { a: [25, 70], i: '⛰️', w: 3, when: (l) => reg('hi', 'eca')(l) && comfortable(15000)(l), fx: { health: 1, happy: 1 }, fr: "Vous passez un long week-end dans un village de montagne. Le silence vous fait du bien." },
+  { a: [12, 70], i: '🏈', w: 3, when: inList('USA'), fr: "Vous regardez un match de football américain chez des voisins, un bol de chips à la main." },
+  { a: [20, 70], i: '🌸', w: 4, when: inList('JPN'), fx: { happy: 1 }, fr: "Vous contemplez les cerisiers en fleurs avec vos collègues, pour la saison du hanami." },
+  { a: [10, 60], i: '🎭', w: 4, when: inList('BRA'), fx: { happy: 1 }, fr: "Vous défilez au carnaval avec votre rue : plumes, tambours et rires jusqu'au matin." },
+  { a: [8, 70], i: '🏏', w: 4, when: inList('IND'), fr: "Toute la famille se serre devant la même télévision pour un match de cricket." },
+  { a: [14, 60], i: '🚶', w: 3, when: (l) => reg('ssa')(l) && isRural(l), fr: "Vous marchez des kilomètres jusqu'à une fête de village où toute la région se retrouve." },
+  { a: [10, 80], i: '🍷', w: 3, when: inList('FRA'), fr: "Un dimanche entier à table en famille : la conversation dérive vers la politique et personne ne se fâche vraiment." },
 );
 // Décès dans la famille : annoncés l'année où ils surviennent.
 function familyDeathEvents(life, age) {
@@ -2729,6 +2838,7 @@ function causeWeights(c, age, sex) {
     if (Lf.vaccinated) { mul('感染性疾病', 0.85); }
     if (Lf.hivPos) { w['愛滋病'] = (w['愛滋病'] || 0) + (Lf.hivTreated ? 0.1 : 0.6); }
     if (Lf.htnIgnored) { mul('心血管', 1.3); mul('中風', 1.5); }
+    { const il = Lf.illness; if (il && il.status === 'active') { if (il.type === 'cancer') mul('癌症', 6); else if (il.type === 'heart') { mul('心血管', 4); mul('中風', 3); } else if (il.type === 'stroke') { mul('中風', 6); mul('心血管', 2); } } }
     if (Lf.bednet) { mul('瘧疾', 0.2); }
   }
   if (STATE.life && STATE.life.conditions) {
@@ -2746,6 +2856,9 @@ function habitMort(life) {
   if (life.age >= 35) m *= 1 / (1 + ((life.countryData && life.countryData.sm) || 20) / 100 * 0.5 * 1.5);
   if (life.smoker && life.age >= 35) m *= 2.5;      // simulé : environ 8 ans de vie en moins
   if (life.hivPos && life.age >= 18) m *= life.hivTreated ? 1.4 : 4;
+  { const il = life.illness; if (il && il.status !== 'resolved' && il.treated != null) {
+    if (il.type === 'cancer') m *= il.status === 'remission' ? 1.3 : il.treated === 'full' ? 2 : il.treated === 'partial' ? 3 : 5;
+    else if (il.type === 'heart' || il.type === 'stroke') m *= il.treated === 'full' ? 1.4 : il.treated === 'partial' ? 1.8 : 2.8; } }
   if (life.exSmoker) m *= 1.2;
   if (life.drinker && life.age >= 30) m *= 1.5;     // environ 4 ans
   if (life.addicted) m *= 2.2;                      // environ 8 ans
@@ -2944,6 +3057,12 @@ function newLife(countryCode) {
     deathAge: null,
     // 族譜
     family: fam,
+    // personnalité tirée à la naissance (fiche d'identité)
+    traits: {
+      temperament: pick(['Persévérant{e}', 'Curieu{x|se}', 'Rêveu{r|se}', 'Sociable', 'Timide', 'Têtu{e}', 'Généreu{x|se}', 'Prudent{e}', 'Impulsi{f|ve}', 'Joyeu{x|se}']),
+      talents: pick(['Relations avec les autres', 'Activités physiques', 'Sens de la musique', 'Bricolage', 'Calcul et logique', 'Cuisine', 'Dessin', 'Langues', 'Sens des affaires', 'Soin des autres']),
+      dream: pick(['Sportif{|ve} de haut niveau', 'Médecin', 'Enseignant{e}', 'Pilote', 'Chanteu{r|se}', 'Agricult{eur|rice}', 'Ingénieu{r|re}', 'Footballeu{r|se}', 'Artiste', 'Voyageu{r|se}', 'Commerçant{e}']),
+    },
   };
 }
 
@@ -3160,7 +3279,7 @@ function generateFamily(countryCode, selfSex, fc) {
       name: nm.full || nm.full_en || '?',
       sex: sibSex, country: countryCode, countryData: c,
       // jamais né avant que le plus jeune parent ait 17 ans
-      birth: { year: Math.max(baseYear - (Math.floor(Math.random()*8)+1), baseYear - fAge + 3 + 17) }
+      birth: { year: Math.max(baseYear - 2 * (i + 1) - Math.floor(Math.random() * 2) + (Math.random() < 0.35 ? 2 * (i + 1) + 2 : 0), baseYear - fAge + 3 + 17) }
     });
   }
   // 祖父母：有父母才合理；戰區祖父母多半死亡
@@ -3207,6 +3326,122 @@ function rollEducation(c) {
   return lvl;
 }
 
+
+/* ==== Maladies suivies dans le temps ====
+   Un diagnostic ouvre un parcours : choix du traitement (coût selon la part des soins payée par les ménages du pays),
+   années de soins avec leurs aléas, puis rémission ou aggravation. Le coût annuel entre dans le budget de santé. */
+function illnessAccess(c) { return Math.min(1, 0.45 + (c.ppp || 0) / 30000); }   // facilité d'accès aux soins spécialisés
+function illnessCost(life, level) {
+  const c = life.countryData || {}, base = 0.55 * (c.ppp || 12000), o = (c.oop ?? 30) / 100, t = life.illness.type;
+  const k = t === 'cancer' ? 0.1 : t === 'heart' ? 0.03 : t === 'stroke' ? 0.05 : 0.02;
+  return base * k * (0.3 + 3 * o) * (level === 'full' ? 1 : 0.45);
+}
+function startTreatment(life, level) {
+  const ill = life.illness; if (!ill) return;
+  ill.treated = level; ill.treatStart = life.age;
+  life.careCost = level === 'none' ? 0 : illnessCost(life, level);
+  if (level === 'none') { life.stats.happiness = Math.max(0, life.stats.happiness - 4); }
+}
+function illnessYear(life, newAge) {
+  const ill = life.illness; if (!ill || ill.status === 'resolved' || ill.treated == null) return [];
+  const fr = LANG === 'fr', out = [], s = life.stats, c = life.countryData || {};
+  const say = (icon, txt) => out.push({ age: newAge, kind: 'illness', icon, text: genderize(txt, life) });
+  if (ill.type === 'cancer') {
+    if (ill.status === 'active') {
+      if (ill.treated === 'none') {
+        bumpHealth(life, -6); s.happiness = Math.max(0, s.happiness - 3);
+        say('🥀', "La maladie progresse. Chaque semaine vous épuise un peu plus et vous renoncez à presque tout.");
+      } else {
+        bumpHealth(life, -2);
+        say('💉', pick(["Une séance de traitement vous laisse épuisé{e} pour plusieurs jours.", "Vos cheveux tombent. Vous restez un long moment devant le miroir.", "Un proche vous accompagne à chaque séance et ne vous quitte pas des yeux.", "Vous comptez les semaines qui vous séparent du prochain examen."]));
+        if (newAge - ill.treatStart >= 2) {
+          const p = (ill.treated === 'full' ? 0.7 : 0.4) * illnessAccess(c);
+          if (Math.random() < p) {
+            ill.status = 'remission'; ill.remissionAt = newAge; life.careCost = illnessCost(life, 'partial') * 0.3;
+            s.happiness = Math.min(100, s.happiness + 6);
+            say('🌤️', "Les derniers examens sont clairs : vous êtes en rémission. Il faudra rester surveillé{e} pendant des années.");
+          } else {
+            ill.treatStart = newAge;
+            say('😔', "Les examens montrent que la maladie résiste. Il faut poursuivre le traitement.");
+          }
+        }
+      }
+    } else if (ill.status === 'remission') {
+      if (newAge - ill.remissionAt >= 5) { ill.status = 'resolved'; life.careCost = 0; say('🎉', "Cinq ans après, le médecin vous déclare guéri{e}. Vous n'osiez plus l'espérer."); }
+      else if (Math.random() < 0.05) { ill.status = 'active'; ill.treatStart = newAge; life.careCost = illnessCost(life, ill.treated === 'none' ? 'partial' : ill.treated); say('⚠️', "Un contrôle révèle une récidive. Tout recommence."); }
+      else if (Math.random() < 0.5) say('🩺', "Vous passez votre contrôle annuel. Tout va bien, cette fois encore.");
+    }
+  } else if (ill.type === 'heart' || ill.type === 'stroke') {
+    if (ill.treated === 'none') { bumpHealth(life, -3); if (Math.random() < 0.6) say('😮‍💨', "Votre essoufflement s'aggrave : le moindre escalier devient une épreuve."); }
+    else if (Math.random() < 0.4) say('💊', pick(["Votre cardiologue ajuste le traitement. Vous prenez vos comprimés chaque matin sans y penser.", "Un contrôle montre que votre cœur tient le coup. Vous respirez.", "Vous renoncez au sel et aux escaliers pressés, à contrecœur."]));
+  } else if (ill.type === 'diabetes') {
+    if (ill.treated === 'none') { bumpHealth(life, -2); }
+    else if (Math.random() < 0.4) say('🩸', "Vous contrôlez votre glycémie chaque matin, comme un rituel.");
+  }
+  return out;
+}
+const illActive = (l) => !!(l.illness && l.illness.treated === null);
+
+/* ==== Priorité de l'année ====
+   Un choix permanent, modifiable à tout moment, qui oriente chaque année de la vie : jauges, revenu, loisirs. */
+const PRIORITIES = {
+  study:   { fr: 'Études', sub: 'Savoir↑ · moins de temps libre', fx: { know: 1.2, happy: -0.3 } },
+  play:    { fr: 'Jeux et amis', sub: 'Bonheur↑ · Relations↑', fx: { happy: 1, social: 1 } },
+  help:    { fr: 'Aider la famille', sub: 'Relations↑ · Savoir↓', fx: { social: 1, know: -0.3 } },
+  sport:   { fr: 'Sport', sub: 'Santé↑', fx: { health: 1.2, happy: 0.3 } },
+  work:    { fr: 'Priorité au travail', sub: 'Revenu et promotion↑ · Santé et Relations↓', fx: { health: -0.6, social: -0.8, happy: -0.2 }, legacy: 'work' },
+  balance: { fr: 'Équilibre', sub: 'Un peu de tout', fx: { happy: 0.3, health: 0.2, social: 0.2 } },
+  family:  { fr: 'Famille et amis', sub: 'Relations↑ · Bonheur↑', fx: { social: 1.2, happy: 0.6 }, legacy: 'family' },
+  health:  { fr: 'Prendre soin de sa santé', sub: 'Santé↑ · Argent un peu↓', fx: { health: 1.5, happy: 0.2 }, legacy: 'health' },
+  growth:  { fr: 'Développement personnel', sub: 'Savoir↑ · Offres d\'emploi↑ · Argent un peu↓', fx: { know: 1.5 }, legacy: 'study' },
+  leisure: { fr: 'Loisirs', sub: 'Bonheur↑ · Niveau dans vos loisirs↑', fx: { happy: 1.5 }, legacy: 'play' },
+  rest:    { fr: 'Repos', sub: 'Santé↑ · Bonheur↑', fx: { health: 0.8, happy: 0.8 }, legacy: 'rest' },
+};
+function priorityOptions(life) {
+  const a = life.age;
+  if (a < 6) return [];
+  if (a < 12) return ['study', 'play', 'help', 'sport'];
+  if (a < 18) return ['study', 'play', 'sport', 'help'];
+  if (a < 25 || life.stats.employment === 'university') return ['growth', 'work', 'family', 'health', 'leisure'];
+  if (a < 63) return ['work', 'balance', 'family', 'health', 'growth', 'leisure'];
+  return ['health', 'family', 'leisure', 'rest', 'growth'];
+}
+function applyPriority(life) {
+  const opts = priorityOptions(life);
+  if (!opts.length) { life.priority = null; return; }
+  if (!opts.includes(life.priority)) life.priority = opts.includes('balance') ? 'balance' : opts[0];
+  const P = PRIORITIES[life.priority], s = life.stats;
+  const clamp = v => Math.max(0, Math.min(100, v));
+  if (P.fx.health) bumpHealth(life, P.fx.health);
+  if (P.fx.happy) s.happiness = clamp(s.happiness + P.fx.happy);
+  if (P.fx.social) s.social = clamp(s.social + P.fx.social);
+  if (P.fx.know) s.knowledge = clamp(s.knowledge + P.fx.know);
+  life.focusThisYear = P.legacy || null;   // oriente aussi le tirage des petits évènements
+  // loisirs : les niveaux montent plus vite quand c'est la priorité
+  Object.keys(life.hobbies || {}).forEach(h => { life.hobbies[h] = Math.min(30, life.hobbies[h] + (life.priority === 'leisure' ? 1 : 0.3)); });
+}
+function yearSocial(life, newAge) {
+  const out = [], fr = LANG === 'fr';
+  const taken = () => new Set([...(life.family?.siblings || []).map(x => String(x.name).split(' ')[0]), ...(life.friends || []).map(f => f.name)]);
+  const first = () => { let n, g = 0; do { n = randomName(life.countryData, Math.random() < 0.5 ? 'M' : 'F').first; } while (taken().has(n) && g++ < 12); return n; };
+  if (newAge === 7 && !life.friends) {
+    life.friends = [{ name: first(), closeness: 'proche' }, { name: first(), closeness: 'proche' }];
+    if (fr) out.push({ age: newAge, kind: 'milestone', icon: '👫', text: "Vous vous liez d'amitié avec " + life.friends[0].name + " et " + life.friends[1].name + " : on ne vous voit plus l'un sans l'autre." });
+  }
+  if (life.friends && newAge >= 10 && newAge % 4 === 0 && Math.random() < 0.25) {
+    const f = pick(life.friends.filter(x => x.closeness === 'proche'));
+    if (f && fr) { f.closeness = 'distante'; out.push({ age: newAge, kind: 'social', icon: '📞', text: "Avec " + f.name + ", les nouvelles se font plus rares. Chacun a sa vie maintenant." }); }
+  }
+  if (newAge === 8 && !life.hobbies) {
+    const h = pick(['Football', 'Musique', 'Dessin', 'Course à pied', 'Danse', 'Lecture', 'Basket', 'Cuisine']);
+    life.hobbies = { [h]: 1 };
+    if (fr) out.push({ age: newAge, kind: 'milestone', icon: '🎯', text: "Vous vous passionnez pour une activité : " + h.toLowerCase() + ". Vous y passez tout votre temps libre." });
+  }
+  // relation avec les parents : elle évolue avec les années
+  const rel = life.rel || (life.rel = { mother: 'proche', father: 'proche' });
+  if (newAge >= 20 && newAge % 5 === 0 && Math.random() < 0.2 && rel.mother === 'proche') { rel.mother = 'distante'; if (fr) out.push({ age: newAge, kind: 'social', icon: '💭', text: "Vous parlez de moins en moins à votre mère. Aucune dispute : simplement la vie qui prend la place." }); }
+  return out;
+}
 function milestoneEvents(life, newAge) {
   const events = [];
   // v5.59：教育歷程改為「往上限爬」而非用絕對值當門檻。
@@ -3240,13 +3475,24 @@ function milestoneEvents(life, newAge) {
   if (newAge >= 19 && newAge <= 23 && life.stats.employment === 'seeking' && chance(0.4)) {
     life.stats.employment = 'employed';
   }
-  if (newAge === 22 && life.stats.education >= 3 && tgt >= 4 && chance(0.6)) {
-    life.stats.education = 4;
+  // Université : entrée à 19 ans pour qui vise le niveau supérieur, trois ans d'études, puis réussite ou échec.
+  if (newAge === 19 && life.stats.education >= 3 && tgt >= 4 && !life.univ && ['seeking', 'none'].includes(life.stats.employment)) {
+    life.univ = { start: 19, status: 'enrolled' };
     life.stats.employment = 'university';
-    events.push({ age: 22, kind: 'milestone', icon: '🎓', text: t('event.education.university') });
+    events.push({ age: newAge, kind: 'milestone', icon: '🎓', text: LANG === 'fr' ? "Vous entrez à l'université. Trois années d'études vous attendent." : t('event.education.university') });
   }
-  if (life.stats.employment === 'university' && newAge >= 24 && newAge <= 27) {
-    life.stats.employment = 'employed';              // 研究所/大學畢業後進入職場
+  if (life.univ && life.univ.status === 'enrolled' && newAge >= life.univ.start + 3) {
+    const pass = Math.max(0.25, Math.min(0.9, 0.6 + 0.25 * (life.stats.knowledge - 55) / 45 + 0.05 * (quartOf(life) - 2) - (life.stats.happiness < 40 ? 0.1 : 0)));
+    life.stats.employment = 'employed';
+    if (Math.random() < pass) {
+      life.univ.status = 'graduated'; life.stats.education = 4;
+      life.stats.happiness = Math.min(100, life.stats.happiness + 6);
+      events.push({ age: newAge, kind: 'milestone', icon: '🎓', text: LANG === 'fr' ? "Vous obtenez votre diplôme universitaire. Votre famille est fière de vous." : 'You earn your university degree.' });
+    } else {
+      life.univ.status = 'failed'; life.univ.failedAt = newAge;
+      life.stats.happiness = Math.max(0, life.stats.happiness - 6);
+      events.push({ age: newAge, kind: 'milestone', icon: '📉', text: LANG === 'fr' ? "Vous échouez aux examens de dernière année et quittez l'université sans diplôme." : 'You fail your final exams and leave university without a degree.' });
+    }
   }
   // Le mariage ne tombe plus du ciel : il vient d'un choix du joueur (rencontre, vie commune, demande, mariage arrangé).
   if (life.pendingMarriage && !life.stats.married) {
@@ -3297,15 +3543,19 @@ function milestoneEvents(life, newAge) {
   }
   // 偶發事件（教學版過濾掉疾病）
   // v5.62：只挑還沒得過的病 — 否則同一個人生會重複出現「罹患癌症」
-  if (!STATE.eduMode && !STATE.softMode && newAge >= 18 && newAge <= 65 && chance(0.04)) {
+  if (!STATE.eduMode && !STATE.softMode && newAge >= 18 && newAge <= 65 && !life.illness && chance(0.04)) {
     const fresh = ['cancer', 'heart', 'stroke', 'diabetes']
       .filter(c => !(c === 'stroke' ? life.conditions.heart : life.conditions[c]));
     if (fresh.length) {
       const cond = pick(fresh);
       life.conditions[cond === 'stroke' ? 'heart' : cond] = true;
-      events.push({ age: newAge, kind: 'illness', icon: '💊', text: t('event.illness.' + cond) });
+      life.illness = { type: cond, since: newAge, treated: null, status: 'active' };
+      const dx = { cancer: "Un examen de contrôle révèle une tumeur. On vous annonce un cancer ; le médecin parle de traitement, sans rien promettre.", heart: "Après un malaise, on vous diagnostique une maladie du cœur. Il faudra un traitement et un suivi.", stroke: "Un matin, votre bras ne répond plus : c'est un AVC.", diabetes: "Une prise de sang trahit un diabète. Il va falloir changer vos habitudes." };
+      events.push({ age: newAge, kind: 'illness', icon: '💊', text: LANG === 'fr' ? dx[cond] : t('event.illness.' + cond) });
     }
   }
+  events.push(...illnessYear(life, newAge));
+  events.push(...yearSocial(life, newAge));
   if (newAge >= 12 && newAge <= 25 && chance(0.02)) {
     events.push({ age: newAge, kind: 'social', icon: '🎓', text: t('event.event.school.exam') });
   }
@@ -3564,7 +3814,7 @@ function tick() {
   const maxAge = c.le * 1.8;
   if (STATE.life.age > maxAge) dieNow('自然衰老');
   // v5.20：每 5 年套用投資收益
-  if (STATE.life.age % 5 === 0 && STATE.life.age > 0) applyInvestmentReturn();
+  if (STATE.life.age > 0) applyInvestmentReturn();   // rendement du patrimoine chaque année
   // v5.20：每 5 年彈出財務管理 modal（25/30/35/40/45/50/55/60）
   // v5.73：若這一刻已經有別的 modal 開著，就不要疊上去 ——
   // 否則玩家對上方的決策按 Escape，下一瞬間又看到財務 modal，感覺「按了沒反應」。
@@ -3587,6 +3837,7 @@ function tick() {
       }, 100);
     }
   }
+  applyPriority(STATE.life);
   // Instantané de l'année pour la grille de vie.
   {
     const Lh2 = STATE.life, b = Lh2.budget || {};
@@ -3621,6 +3872,7 @@ function resolvePendingDecision() {
 
 /* v5.10：顯示暫停問題 modal（✎ 寫下想法） */
 function showPauseQuestion() {
+  return;   // fenêtre de réflexion supprimée
   if (!STATE.pendingDecision || STATE.pendingDecision.type !== 'pause') return;
   STATE.life.lastInterruptAge = STATE.life.age;   // v5.61
   const age = STATE.pendingDecision.age;
@@ -3726,77 +3978,57 @@ const INVEST_OPTIONS = [
 
 function showFinanceModal(forceOpt) {
   if (!STATE.life) return;
-  // v5.61：記錄「今年真的被打斷了」，讓通用決策避開（延遲開啟時觸發年跟實際年會差一歲）
   STATE.life.lastInterruptAge = STATE.life.age;
-  const _fm = $('#financeModal');
-  if (_fm && !_fm.hasAttribute('hidden')) return; // 已在開啟中，避免重複掛 listener
-  STATE.paused = true;
-  const life = STATE.life;
-  const s = life.stats;
-  const isEn = LANG === 'en';
   const modal = $('#financeModal');
-  if (!modal) return;
-  const currency = life.currency || 'NT$';
-  const netAssets = Math.round(s.netAssets || 0);
-  const currentInvest = life.investChoice || 'savings';
-  // v5.42：修掉 ReferenceError — `auto` 未宣告，應讀 life.autoInvest
-  const auto = life.autoInvest ? 'active' : '';
-  const annualCost = Math.round(netAssets * 0.02);   // même taux que la dépense automatique  // 假設生活方式成本 3%
+  if (!modal || !modal.hasAttribute('hidden')) return;
+  STATE.paused = true;
+  const L = STATE.life, c = L.countryData || {}, fr = LANG === 'fr';
+  const b = L.budget || {};
   const q = $('#financeQuestion');
-  if (q) q.textContent = isEn ? `Net Worth: ${money(netAssets)}` : LANG === 'fr' ? `Patrimoine : ${money(netAssets)}` : `積蓄：${currency || 'NT$'}${netAssets.toLocaleString()}`;
+  if (q) q.textContent = fr ? 'Votre situation financière' : 'Your financial situation';
+  const help = modal.querySelector('.modal-help'); if (help) help.textContent = fr ? "Là où l'on vit change ce qu'un même travail permet de vivre." : 'Where you live changes what the same job can buy you.';
+  const rows = [];
+  const line = (lab, v, sign) => Math.round(v) ? '<div class="bud-row"><span>' + lab + '</span><b class="' + (sign > 0 ? 'bud-plus' : 'bud-minus') + '">' + (sign > 0 ? '+ ' : '− ') + money(Math.abs(v)) + '</b></div>' : '';
+  const year = line(fr ? 'Revenu du travail' : 'Work income', b.income, 1) + line(fr ? 'Pension' : 'Pension', b.pension, 1) + line(fr ? 'Aides sociales' : 'Benefits', b.aid, 1)
+    + line(fr ? 'Impôts et cotisations' : 'Taxes', b.taxes, -1) + line(fr ? 'Logement, alimentation, énergie' : 'Housing, food, energy', b.living, -1) + line(fr ? 'Santé (reste à charge)' : 'Health (out of pocket)', b.health, -1);
+  // même parcours dans d'autres pays
+  const ids = [L.country, 'FRA', 'USA', 'BRA', 'IND', 'NER'].filter((x, k, a) => a.indexOf(x) === k).slice(0, 6);
+  const cmp = ids.map(id => countryById(id)).filter(Boolean).map(c2 => {
+    const probe = { ...L, countryData: c2, lastWage: null, careCost: 0, stats: { ...L.stats, employment: 'employed' }, age: Math.max(L.age, 25) };
+    const bb = yearBudget(probe);
+    const net = bb.income - bb.taxes + bb.aid;
+    return '<tr' + (c2.id === L.country ? ' class="fin-me"' : '') + '><td>' + c2.flag + ' ' + localize(c2).name + '</td><td>' + money(net) + '</td><td>' + money(bb.health) + '</td><td>' + Math.round(socialRate(c2) * 100) + ' %</td></tr>';
+  }).join('');
+  const choices = [
+    { id: 'family', icon: '🤲', fr: "Aider votre famille", cost: 0.06, fx: { social: 4, happy: 2 } },
+    { id: 'treat', icon: '🎁', fr: "Vous faire plaisir", cost: 0.04, fx: { happy: 4 } },
+    { id: 'save', icon: '🏦', fr: "Mettre davantage de côté", cost: 0, fx: { happy: -1, savingsBoost: true } },
+    { id: 'give', icon: '💛', fr: "Faire un don à une association", cost: 0.03, fx: { social: 2, happy: 3 } },
+  ];
   const body = $('#financeBody');
-  if (body) {
-    body.innerHTML = `
-      <p class="muted fin-intro">${isEn ? 'Spending affects happiness, social, health and future.':LANG === 'fr' ? "Vos dépenses changent votre bonheur, vos relations, votre santé et votre avenir." : '金額以當地物價換算。你怎麼花錢，會改變你的幸福、人際關係、健康和未來。'}</p>
-      <div class="fin-actions">
-        <div class="fin-cost">
-          <strong>${isEn?'Family/friend dinners + gifts':LANG === 'fr' ? "Repas et cadeaux avec la famille et les amis" : '和家人朋友聚餐·送禮'}</strong>
-          <span class="fin-effect">${isEn?'social +4 · happy +2' + (netAssets > 0 ? '' : ' · not enough'):LANG === 'fr' ? "relations +4 · bonheur +2" + (netAssets > 0 ? '' : " · pas assez d'argent") : '人際關係 +4 · 幸福 +2 · 錢不夠'}</span>
-          <span class="fin-price">${money(annualCost)}</span>
-        </div>
-      </div>
-      <h4>${isEn?'Idle money investment':LANG === 'fr' ? "Placer l'argent qui dort" : '閒錢理財'}</h4>
-      <div class="fin-grid">
-        ${INVEST_OPTIONS.map(o => `
-          <button class="fin-opt ${o.id===currentInvest?'active':''}" data-id="${o.id}">
-            <span class="fin-icon">${o.id==='savings'?'🏦':o.id==='bonds'?'📜':o.id==='60-40'?'📊':o.id==='index'?'📈':o.id==='global'?'🌐':'🎲'}</span>
-            <span class="fin-name">${enfr(o.en, o.zh)}</span>
-            <span class="fin-desc">${enfr(o.desc.en, o.desc.zh)}</span>
-          </button>
-        `).join('')}
-      </div>
-      <p class="fin-info muted">${isEn?'Switching choices pays fees; profits may be taxed. Real estate is separate. Most traders underperform the index.':LANG === 'fr' ? "Changer de placement coûte des frais, et les gains peuvent être imposés. L'immobilier est à part. La plupart des particuliers font moins bien que l'indice." : '點選其他選項，就會賣出後轉過去。賣出時要付手續費，依國家而定，獲利可能還要繳稅。不動產基金和自己的房子是分開的：自己住的房子請在「買自己的房子」中購買，出租用的房子請在「出租用的房子」中購買。多數人賺得比指數少。'}</p>
-      <div class="fin-auto">
-        <button id="finAutoBtn" class="${auto === 'active' ? 'active':''}">${isEn?'▶ Auto-execute (yearly)':LANG === 'fr' ? "▶ Exécution automatique (chaque année)" : '▶ 自動進行（每年）'}</button>
-        <p class="muted">${isEn?'Once enabled, when triggered: family gifts, dates, dining, travel, classes, donations happen automatically. Only if savings > 3× the cost.':LANG === 'fr' ? "Une fois activé, les dépenses se font toutes seules quand elles se présentent : cadeaux, sorties, restaurants, voyages, cours, dons. Seulement si l'épargne dépasse 3 fois le coût." : '開啟後，每到時候就會自動進行。需要花錢的事，只有在存款超過費用的三倍時才會進行。孝親費、約會、外食、旅行、上課和捐款，只有在花完之後還能剩下一般人一年的收入時才會進行；開啟得越多，能存下的錢就越少。'}</p>
-      </div>
-    `;
-    // wire
-    body.querySelectorAll('.fin-opt').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const choice = btn.dataset.id;
-        life.investChoice = choice;
-        const opt = INVEST_OPTIONS.find(o => o.id === choice);
-        if (opt) {
-          // apply current return rate
-          toast(isEn ? `Investment set to ${opt.en}` : LANG === 'fr' ? `Placement choisi : ${enfr(opt.en, opt.zh)}` : `投資已設為 ${opt.zh}`);
-        }
-        closeModal('financeModal');
-      });
-    });
-    $('#finAutoBtn')?.addEventListener('click', () => {
-      life.autoInvest = !life.autoInvest;
-      $('#finAutoBtn')?.classList.toggle('active', life.autoInvest);
-      toast(LANG === 'fr' ? (life.autoInvest ? 'Placement automatique activé' : 'Placement automatique désactivé') : isEn ? (life.autoInvest ? 'Auto-invest enabled' : 'Auto-invest disabled') : (life.autoInvest ? '已開啟自動投資' : '已關閉自動投資'));
-      closeModal('financeModal');
-    });
-  }
+  body.innerHTML = '<p class="fin-intro">' + (fr ? "Patrimoine : " : 'Net worth: ') + '<b>' + money(L.stats.netAssets) + '</b> · ' + (fr ? 'dans ce pays, la santé reste à la charge des ménages à ' : 'households pay ') + Math.round(c.oop ?? 30) + ' %.</p>'
+    + '<h4>' + (fr ? 'Votre année en chiffres' : 'Your year in numbers') + '</h4>' + (year || '<p class="muted">—</p>')
+    + '<h4>' + (fr ? 'Le même parcours, ailleurs' : 'The same path elsewhere') + '</h4>'
+    + '<table class="fin-cmp"><thead><tr><th></th><th>' + (fr ? 'Revenu net' : 'Net income') + '</th><th>' + (fr ? 'Santé à votre charge' : 'Health costs') + '</th><th>' + (fr ? 'Dépenses sociales' : 'Social spending') + '</th></tr></thead><tbody>' + cmp + '</tbody></table>'
+    + '<p class="muted fin-note">' + (fr ? "À niveau d'études et milieu familial identiques. Les impôts et les aides, la santé et la retraite dépendent du pays où l'on vit." : 'Same schooling and family background. Taxes, benefits, health and pensions depend on where you live.') + '</p>'
+    + '<h4>' + (fr ? 'Que faites-vous de votre argent cette année ?' : 'What do you do with your money this year?') + '</h4>'
+    + '<div class="fin-choices">' + choices.map(ch => '<button class="fin-choice" data-id="' + ch.id + '"><span>' + ch.icon + ' ' + ch.fr + '</span>' + (ch.cost ? '<small>− ' + money(ch.cost * 0.55 * (c.ppp || 12000)) + '</small>' : '') + '</button>').join('') + '</div>'
+    + '<button class="primary fin-close" id="finClose">' + (fr ? 'Continuer' : 'Continue') + '</button>';
+  body.querySelectorAll('.fin-choice').forEach(btn => btn.addEventListener('click', () => {
+    const ch = choices.find(x => x.id === btn.dataset.id);
+    const fx = { ...ch.fx }; if (ch.cost) fx.pppx = -ch.cost * 0.55;
+    if (fx.savingsBoost) { delete fx.savingsBoost; L.stats.netAssets += Math.round(Math.max(0, (b.comfort || 0)) * 0.8); }
+    applyFx(L, fx, fr ? ch.fr : ch.id);
+    closeModal('financeModal');
+  }));
+  $('#finClose')?.addEventListener('click', () => closeModal('financeModal'));
   modal.removeAttribute('hidden');
 }
 
 /* v5.20：每年套用投資收益（依 investChoice） */
 function applyInvestmentReturn() {
   if (!STATE.life || !STATE.life.stats) return;
+  STATE.life.lastReturn = 0;
   const life = STATE.life;
   const choice = life.investChoice || 'savings';
   const opt = INVEST_OPTIONS.find(o => o.id === choice);
@@ -3808,6 +4040,7 @@ function applyInvestmentReturn() {
   const yearReturn = baseReturn + noise;
   const gained = Math.round(life.stats.netAssets * yearReturn);
   life.stats.netAssets = Math.max(0, life.stats.netAssets + gained);
+  life.lastReturn = gained;
   if (life.autoInvest && life.stats.netAssets > 1000) {
     // 自動社交支出（家庭聚餐等）
     const socialCost = Math.round(life.stats.netAssets * 0.02);
@@ -4549,6 +4782,8 @@ function renderLife() {
     renderBudget();
     renderLifeGrid();
     renderIndicators();
+    renderIdCard();
+    renderFamilyLife();
     const hi = $('#heroIncome'); if (hi) hi.textContent = STATE.life.stats.annualIncome ? money(STATE.life.stats.annualIncome) : '—';
     const hb = $('#heroYearBar');
     if (hb) {
@@ -4777,40 +5012,28 @@ function renderManualDecisions() {
   if (!STATE.life) return;
   const wrap = $('#lifeManualDecisions');
   if (!wrap) return;
-  const isEn = LANG === 'en';
-  const life = STATE.life;
-  const age = life.age;
-  const financeAges = [18, 25, 35, 50];
-  const financeAvail = financeAges.includes(age) && !life.financeDecisions?.find(d => d.age === age);
-  const financePast = (life.financeDecisions || []).filter(d => financeAges.includes(d.age));
-  // 焦點按鈕永遠可用（玩家可主動選擇今年焦點）
-  wrap.innerHTML = `
-    <h4>🎯 ${isEn ? 'Manual Decisions' : LANG === 'fr' ? "Décisions manuelles" : '手動決策'} <span class="muted">${isEn ? '(player chooses when to act)':LANG === 'fr' ? "(vous choisissez quand agir)" : '（由玩家主動選擇）'}</span></h4>
-    <div class="md-row">
-      <button id="mdFocusBtn" class="md-btn">🎯 ${isEn ? 'Choose this year\'s focus' : LANG === 'fr' ? "Choisir la priorité de l'année" : '設定本年焦點'} <span class="md-hint">${life.focus ? (isEn?'Now: ':LANG === 'fr' ? 'Actuelle : ' : '目前：')+life.focus : (isEn?'(not set)':LANG === 'fr' ? '(non définie)' : '（未設定）')}</span></button>
-      ${financeAvail ? `<button id="mdFinanceBtn" class="md-btn">💰 ${LANG === 'fr' ? 'Décider de ses finances à ' + age + ' ans' : isEn?'Make financial decision at age '+age:'決定 ' + age + ' 歲的財務規劃'}</button>` : financePast.length ? `<span class="md-hint">${isEn?'Financial decisions made: ':LANG === 'fr' ? "Décisions financières prises : " : '已做的財務決策：'} ${financePast.map(d => d.age).join('、')}</span>` : ''}
-      <button id="mdQuickDecideBtn" class="md-btn md-btn-auto" title="${isEn ? 'Auto-apply: focus=work + finance=cheapest. Lets you watch a full life without manual input.' : LANG === 'fr' ? "Application automatique : priorité au travail et option la moins chère. Permet de regarder une vie entière sans intervenir." : '自動套：焦點→work / 財務→最便宜。可以放手看完整個人生。'}">⚡ ${isEn ? 'Quick-decide all (focus=work + cheapest)' : LANG === 'fr' ? "Tout décider vite (travail + le moins cher)" : '快速決定（焦點→work、最便宜）'}</button>
-      <button id="mdMusicBtn" class="md-btn md-btn-music" title="${isEn ? 'Soft background music' : LANG === 'fr' ? "Musique de fond douce" : '輕柔的背景音樂'}">♪ ${isEn ? 'Background music' : LANG === 'fr' ? "Musique de fond" : '背景音樂'}</button>
-      <button id="mdSpendBtn" class="md-btn md-btn-spend" title="${isEn ? 'Family gifts · Lifestyle · Travel · Donate' : LANG === 'fr' ? "Cadeaux · Train de vie · Voyages · Dons" : '聚餐·生活方式·旅行·捐款'}">💸 ${isEn ? 'Spend' : LANG === 'fr' ? 'Dépenser' : '花錢'}</button>
-    </div>
-  `;
-  // wire
-  $('#mdFocusBtn')?.addEventListener('click', () => showFocusChoice());
-  $('#mdFinanceBtn')?.addEventListener('click', () => showFinancialChoice());
-  $('#mdSpendBtn')?.addEventListener('click', () => showSpendModal());
-  // v5.19：「快速決定」= 焦點→work、財務→最便宜、然後加速看完一生
-  $('#mdQuickDecideBtn')?.addEventListener('click', () => {
-    if (!STATE.life) return;
-    STATE.life.focus = 'work';
-    applyFocusEffects('work');
-    toast(isEn ? '⚡ Auto: focus=work, finance→cheapest. Speeding up ×4.' : LANG === 'fr' ? "⚡ Auto : priorité au travail, option la moins chère. Vitesse ×4." : '⚡ 自動：焦點→work、財務→最便宜。加速 ×4 中。');
-    // 加快速度，讓玩家「放手看完」
-    STATE.speed = 4;
-    STATE.autoDecide = true;
-    $$('.ltb-speed-btn').forEach(b => b.classList.toggle('active', +b.dataset.speed === STATE.speed));
-    renderSpeedBtns && renderSpeedBtns();
-  });
-  // v5.19：「♪ 背景音樂」= 沒有音樂資源，顯示 toast
+  const life = STATE.life, fr = LANG === 'fr';
+  const opts = priorityOptions(life);
+  const c = life.countryData || {};
+  const job = life.job ? genderize(fr ? life.job.fr : life.job.en, life) : (life.stats.employment === 'university' ? (fr ? 'Étudiant(e)' : 'Student') : life.stats.employment === 'retired' ? (fr ? 'Retraité(e)' : 'Retired') : life.age < 18 ? (fr ? 'Élève' : 'Pupil') : (fr ? 'Sans emploi' : 'Without work'));
+  const where = (life.stats.birthPlaceType === 'rural' ? (fr ? 'Campagne' : 'Countryside') : (fr ? 'Ville' : 'City')) + ' · ' + localize(c).name;
+  const jobBits = [genderize(job, life)];
+  if (life.job && life.jobStart != null) jobBits.push((fr ? 'année ' : 'year ') + Math.max(1, life.age - life.jobStart + 1));
+  if (life.job) jobBits.push(pppOf(life) < 8000 ? (fr ? 'emploi informel' : 'informal job') : (fr ? 'emploi formel' : 'formal job'));
+  jobBits.push(where);
+  wrap.innerHTML = '<h4>' + (fr ? "Priorité de l'année" : 'Priority of the year') + ' <span class="muted">' + (fr ? 'modifiable à tout moment' : 'change it any time') + '</span></h4>'
+    + '<p class="pri-job">' + jobBits.join(' · ') + '</p>'
+    + (opts.length
+      ? '<div class="pri-chips">' + opts.map(id => '<button type="button" class="pri-chip' + (life.priority === id ? ' on' : '') + '" data-pri="' + id + '"><b>' + PRIORITIES[id].fr + '</b><small>' + PRIORITIES[id].sub + '</small></button>').join('') + '</div>'
+      : '<p class="muted">' + (fr ? "Vous êtes encore un petit enfant : vos parents s'occupent de tout." : 'You are still a small child.') + '</p>')
+    + '<div class="pri-actions"><button type="button" class="ghost" id="mdFinanceNow">' + (fr ? 'Votre situation financière' : 'Your financial situation') + '</button>'
+    + '<button type="button" class="ghost" id="mdMusicBtn">' + (fr ? '♪ Musique de fond' : '♪ Background music') + '</button></div>';
+  wrap.querySelectorAll('.pri-chip').forEach(b => b.addEventListener('click', () => {
+    life.priority = b.dataset.pri;
+    life.focusThisYear = PRIORITIES[life.priority].legacy || null;
+    renderManualDecisions();
+  }));
+  $('#mdFinanceNow')?.addEventListener('click', () => showFinanceModal());
   $('#mdMusicBtn')?.addEventListener('click', toggleBackgroundMusic);
 }
 
@@ -6785,13 +7008,16 @@ function wire() {
       const situation = document.createElement('div');
       situation.id = 'lifeSituation';
       situation.append(...['.cert-age-row', '.cert-meta'].map(q => document.querySelector('#lifeCert ' + q)).filter(Boolean));
-      { const ind = document.createElement('div'); ind.id = 'lifeIndicators'; const st0 = $('#lifeStats'); if (st0) st0.appendChild(ind); }
+      { const ind = document.createElement('div'); ind.id = 'lifeIndicators'; const st0 = $('#lifeStats'); if (st0) st0.appendChild(ind);
+        const idc = document.createElement('div'); idc.id = 'lifeIdCard'; const hero0 = document.querySelector('.life-hero'); if (hero0) hero0.after(idc); }
+      const famLife = document.createElement('div'); famLife.id = 'lifeFamilyLife';
       const budget = document.createElement('div');
       budget.id = 'lifeBudget';
       const lgrid = document.createElement('div');
       lgrid.id = 'lifeGrid';
-      const first = [document.getElementById('lifeThisYear'), document.getElementById('lifeEventsFeed'), lgrid, situation, budget,
-        ...['lifeManualDecisions', 'certFamily', 'lifeFamilyDetail', 'lifeActualVsRandom', 'lifeScene', 'lifeCompanions'].map(id => document.getElementById(id))]
+      situation.hidden = true;
+      const first = [document.getElementById('lifeThisYear'), document.getElementById('lifeManualDecisions'), document.getElementById('lifeEventsFeed'), famLife, lgrid, situation, budget,
+        ...['lifeActualVsRandom', 'lifeScene', 'lifeCompanions'].map(id => document.getElementById(id))]
         .filter(Boolean);
       const toggle = document.getElementById('btnDetailToggle');
       const isDetail = e => e.classList.contains('life-detail-only');
@@ -7147,7 +7373,7 @@ function yearBudget(life) {
   if (s.employment === 'employed') {
     const edu = [0.6, 0.75, 0.9, 1.0, 1.4][Math.min(s.education, 4)] ?? 0.9;
     const experience = Math.min(1, 0.6 + (age - 18) * 0.02);
-    income = base * Math.pow(quartileShare(c, q), 0.7) * edu * experience * (life.job?.mult || 1);
+    income = base * Math.pow(quartileShare(c, q), 0.7) * edu * experience * (life.job?.mult || 1) * (life.priority === 'work' ? 1.06 : life.priority === 'growth' ? 1.02 : 1);
     life.lastWage = income;
   }
   const pension = s.employment === 'retired' ? (life.lastWage || base * 0.6) * Math.min(0.7, r * 2.3) * (life.retireSaver ? 1.15 : 1) : 0;
@@ -7159,12 +7385,13 @@ function yearBudget(life) {
   const couple = s.married || s.relationship === 'cohab';
   const fullLiving = 0.42 * base * (s.birthPlaceType === 'rural' ? 0.85 : 1.15) * (couple ? 0.8 : 1) * (1 + 0.2 * kidsAtHome);
   const living = Math.min(fullLiving, Math.max(0, net * 0.9));      // les plus pauvres se privent : on ne dépense pas ce qu'on n'a pas
-  const health = 0.07 * base * (age < 40 ? 0.5 : age < 60 ? 1 : age < 75 ? 1.8 : 2.6) * (c.oop ?? 30) / 100;
+  const health = 0.07 * base * (age < 40 ? 0.5 : age < 60 ? 1 : age < 75 ? 1.8 : 2.6) * (c.oop ?? 30) / 100 + (life.careCost || 0);
   const school = s.employment === 'university' ? 0.25 * base * (1 - Math.min(0.9, r * 3)) : 0;
   // On ne dépense pas en tabac ou en alcool ce qu'on n'a pas : le coût est plafonné au disponible après les dépenses de base.
   const habitRaw = (life.smoker ? 0.03 * base : 0) + (life.drinker ? 0.025 * base : 0) + (life.addicted ? 0.15 * base : 0);
   const habit = Math.min(habitRaw, Math.max(0, net - living - health - school));
-  const comfort = Math.max(0, net - living - health - school - habit) * 0.5;
+  const priCost = ({ health: 0.02, growth: 0.015, leisure: 0.02, family: 0.01 })[life.priority] || 0;
+  const comfort = Math.max(0, net - living - health - school - habit) * 0.5 + Math.min(priCost * base, Math.max(0, net - living - health - school - habit) * 0.4);
   return { income, pension, taxes, aid, living, health, school, habit, comfort, saved: net - living - health - school - habit - comfort, r };
 }
 function applyYearBudget(life) {
@@ -7320,6 +7547,76 @@ function renderIndicators() {
   }
   el.innerHTML = pos + yearHtml + assetsHtml + moveHtml + splitHtml;
 }
+
+/* ==== Fiche d'identité et « Famille et vie » ==== */
+function eduLabel(life) {
+  const e = life.stats.education, fr = LANG === 'fr';
+  if (life.age < 6) return fr ? "Pas encore à l'école" : 'Not in school yet';
+  if (life.stats.employment === 'university') return fr ? "Université (en cours)" : 'University (ongoing)';
+  return (fr ? ['Aucune scolarité', 'Primaire', 'Collège', 'Lycée', 'Université (diplômé{e})'] : ['No schooling', 'Primary', 'Lower secondary', 'Upper secondary', 'University graduate'])[Math.min(4, Math.max(0, e))];
+}
+function jobLine(life) {
+  const fr = LANG === 'fr';
+  if (life.age < 6) return fr ? 'Enfant' : 'Child';
+  if (life.job && life.stats.employment === 'employed') return genderize(fr ? life.job.fr : life.job.en, life);
+  if (life.stats.employment === 'university') return fr ? 'Étudiant{e}' : 'Student';
+  if (life.stats.employment === 'retired') return fr ? 'Retraité{e}' : 'Retired';
+  if (life.age < 18) return fr ? 'Élève' : 'Pupil';
+  if (life.stats.employment === 'seeking') return fr ? 'En recherche d\'emploi' : 'Job seeking';
+  return life.stats.employment === 'employed' ? (fr ? 'En poste' : 'Employed') : '—';
+}
+function renderIdCard() {
+  const el = $('#lifeIdCard');
+  if (!el || !STATE.life) return;
+  const L = STATE.life, c = L.countryData || {}, fr = LANG === 'fr';
+  const home = L.birthOrigin ? countryById(L.birthOrigin.country) : c;
+  const G = (t2) => genderize(t2, L);
+  const dots = '●'.repeat(L.stats.incomeQuartile || 1) + '○'.repeat(4 - (L.stats.incomeQuartile || 1));
+  const rows = [
+    [fr ? 'Sexe' : 'Sex', L.sex === 'M' ? (fr ? 'Homme' : 'Male') : (fr ? 'Femme' : 'Female')],
+    [fr ? 'Naissance' : 'Born', localize(home).name + ' · ' + (L.year) ],
+    [fr ? 'Résidence' : 'Residence', (L.stats.birthPlaceType === 'rural' ? (fr ? 'Campagne, ' : 'Countryside, ') : (fr ? 'Ville, ' : 'City, ')) + localize(c).name + (L.birthOrigin ? (fr ? " (à l'étranger)" : ' (abroad)') : '')],
+  ];
+  if (L.birthOrigin) rows.push([fr ? 'Nationalité' : 'Nationality', localize(home).name + (L.naturalized ? ' · ' + localize(c).name + (fr ? ' (double nationalité)' : ' (dual)') : '')]);
+  rows.push([fr ? 'Religion' : 'Religion', L.stats.religion || '—'],
+            [fr ? 'Milieu familial' : 'Family background', dots],
+            [fr ? 'Études' : 'Education', G(eduLabel(L))],
+            [fr ? 'Profession' : 'Occupation', G(jobLine(L))]);
+  if (L.traits) rows.push([fr ? 'Tempérament' : 'Temperament', G(L.traits.temperament)], [fr ? 'Talents' : 'Talents', G(L.traits.talents)], [fr ? 'Rêve d\'enfant' : 'Childhood dream', G(L.traits.dream)]);
+  const iso = (c.id || '').toString();
+  el.innerHTML = '<div class="id-head"><span>' + (fr ? "Fiche d'identité" : 'Identity card') + ' · ' + iso + '</span><span>' + (L.year) + '</span></div>'
+    + rows.map(r => '<div class="id-line"><span>' + r[0] + '</span><b>' + r[1] + '</b></div>').join('');
+}
+function renderFamilyLife() {
+  const el = $('#lifeFamilyLife');
+  if (!el || !STATE.life) return;
+  const L = STATE.life, fr = LANG === 'fr', year = L.year + L.yearOffset;
+  const F = L.family || { parents: [], siblings: [] };
+  const rel = L.rel || {};
+  const person = (p, relKey, label, detail) => {
+    if (!p) return '<div class="fl-row"><span>' + label + '</span><b class="muted">' + (fr ? 'Ne vit pas avec vous' : 'Not part of your life') + '</b></div>';
+    const dead = pastDeathYear(p), age = (dead || year) - (p.birth?.year || year);
+    const r = rel[relKey] === 'distante' ? ' <em>· ' + (fr ? 'relation distante' : 'distant') + '</em>' : '';
+    return '<div class="fl-row"><span>' + label + '</span><b' + (dead ? ' class="gone"' : '') + '>' + escapeHtml(p.name) + ' · ' + age + (fr ? ' ans' : '') + (dead ? ' ✝' : '') + r + (detail ? '<small>' + detail + '</small>' : '') + '</b></div>';
+  };
+  const mother = (F.parents || []).find(p => p.sex === 'F'), father = (F.parents || []).find(p => p.sex === 'M');
+  const jobOf = (p, d) => (d && d.job ? (year - (p.birth?.year || year) >= 62 ? d.job + (fr ? ' à la retraite' : ' (retired)') : d.job) : '');
+  let h = '<h4>' + (fr ? 'Famille et vie' : 'Family and life') + '</h4>';
+  h += person(mother, 'mother', fr ? 'Mère' : 'Mother', jobOf(mother, L.motherDetail));
+  h += person(father, 'father', fr ? 'Père' : 'Father', jobOf(father, L.fatherDetail));
+  const sibs = (F.siblings || []).map(x => escapeHtml(x.name.split(' ')[0]) + ' (' + (year - (x.birth?.year || year)) + ')').join(', ');
+  h += '<div class="fl-row"><span>' + (fr ? 'Frères et sœurs' : 'Siblings') + '</span><b>' + (sibs || (fr ? 'Aucun' : 'None')) + '</b></div>';
+  if (L.stats.partner) { const pn = L.stats.partner.name; h += '<div class="fl-row"><span>' + (fr ? 'Conjoint(e)' : 'Partner') + '</span><b>' + escapeHtml(pn.full || pn.full_en || '') + ' · ' + relLabel(L) + '</b></div>'; }
+  if ((L.stats.kids || []).length) h += '<div class="fl-row"><span>' + (fr ? 'Enfants' : 'Children') + '</span><b>' + L.stats.kids.map(k => (L.age - k.bornAt) + (fr ? ' ans' : '')).join(', ') + '</b></div>';
+  if (L.friends && L.friends.length) h += '<div class="fl-row"><span>' + (fr ? 'Amis' : 'Friends') + '</span><b>' + L.friends.map(f => escapeHtml(f.name) + (f.closeness === 'distante' ? ' <em>· ' + (fr ? 'relation distante' : 'distant') + '</em>' : '')).join(', ') + '</b></div>';
+  if (L.pets && L.pets.length) h += '<div class="fl-row"><span>' + (fr ? 'Animal de compagnie' : 'Pets') + '</span><b>' + L.pets.map(x => '<span' + (x.to != null ? ' class="gone"' : '') + '>' + x.name + ' (' + (x.type === 'dog' ? (fr ? 'chien' : 'dog') : (fr ? 'chat' : 'cat')) + ')</span>').join(', ') + '</b></div>';
+  const hb = Object.entries(L.hobbies || {}).map(([k, v]) => k + ' Lv.' + Math.round(v)).join(', ');
+  if (hb) h += '<div class="fl-row"><span>' + (fr ? 'Loisirs' : 'Hobbies') + '</span><b>' + hb + '</b></div>';
+  const habits = [L.smoker ? (fr ? 'Tabac' : 'Smoking') : L.exSmoker ? (fr ? 'Ancien fumeur' : 'Ex-smoker') : null, L.drinker ? (fr ? 'Alcool' : 'Alcohol') : null, L.addicted ? (fr ? 'Drogues' : 'Drugs') : null, L.sporty ? (fr ? 'Sport régulier' : 'Regular sport') : null].filter(Boolean);
+  if (habits.length) h += '<div class="fl-row"><span>' + (fr ? 'Habitudes' : 'Habits') + '</span><b>' + habits.join(', ') + '</b></div>';
+  if (L.illness && L.illness.status !== 'resolved') h += '<div class="fl-row"><span>' + (fr ? 'Santé' : 'Health') + '</span><b>' + ({ cancer: fr ? 'Cancer' : 'Cancer', heart: fr ? 'Maladie du cœur' : 'Heart disease', stroke: 'AVC', diabetes: fr ? 'Diabète' : 'Diabetes' })[L.illness.type] + (L.illness.status === 'remission' ? (fr ? ' · en rémission' : ' · remission') : L.illness.treated === 'none' ? (fr ? ' · non soigné' : ' · untreated') : '') + '</b></div>';
+  el.innerHTML = h;
+}
 function renderBudget() {
   const el = $('#lifeBudget');
   if (!el || !STATE.life) return;
@@ -7331,12 +7628,23 @@ function renderBudget() {
         taxes: 'Taxes and contributions', living: 'Housing, food, energy', health: 'Health (out of pocket)', school: 'Tuition', habit: 'Tobacco, alcohol, drugs', comfort: 'Leisure and equipment', saved: "This year's savings",
         note: "The country's social spending: about {r}% of national income (estimate). The higher it is, the more taxes, benefits and pensions weigh in the budget." };
   const b = STATE.life.budget;
+  const prevSnap = (STATE.life.hist || {})[STATE.life.age - 1];
+  let tailRows = '';
+  if (b && prevSnap) {
+    const delta = STATE.life.stats.netAssets - prevSnap.a, ret = STATE.life.lastReturn || 0, ev = delta - (b.saved || 0) - ret;
+    const fr2 = LANG === 'fr';
+    const sg = (v) => (v < 0 ? '− ' : '+ ') + money(Math.abs(v));
+    tailRows = (Math.round(ret) ? '<div class="bud-row"><span>' + (fr2 ? "Rendement de l'épargne" : 'Return on savings') + '</span><b>' + sg(ret) + '</b></div>' : '')
+      + (Math.round(ev) ? '<div class="bud-row"><span>' + (fr2 ? 'Évènements et imprévus de l\'année' : 'Events and surprises') + '</span><b>' + sg(ev) + '</b></div>' : '')
+      + '<div class="bud-row bud-total"><span>' + (fr2 ? 'Variation du patrimoine' : 'Change in net worth') + '</span><b>' + sg(delta) + '</b></div>';
+  }
   if (!b || STATE.life.age < 18) { el.innerHTML = '<h4>💶 ' + T.title + '</h4><p class="muted">' + T.child + '</p>'; return; }
   const row = (label, v, sign) => Math.round(v) ? '<div class="bud-row"><span>' + label + '</span><b class="' + (sign > 0 ? 'bud-plus' : 'bud-minus') + '">' + (sign > 0 ? '+ ' : '− ') + money(Math.abs(v)) + '</b></div>' : '';
   el.innerHTML = '<h4>💶 ' + T.title + '</h4>'
     + row(T.income, b.income, 1) + row(T.pension, b.pension, 1) + row(T.aid, b.aid, 1)
     + row(T.taxes, b.taxes, -1) + row(T.living, b.living, -1) + row(T.health, b.health, -1) + row(T.school, b.school, -1) + row(T.habit, b.habit, -1) + row(T.comfort, b.comfort, -1)
     + '<div class="bud-row bud-total"><span>' + T.saved + '</span><b>' + (b.saved < 0 ? '− ' : '+ ') + money(Math.abs(b.saved)) + '</b></div>'
+    + tailRows
     + '<p class="muted bud-note">' + T.note.replace('{r}', Math.round(b.r * 100)) + '</p>';
 }
 

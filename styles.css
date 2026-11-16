@@ -2558,3 +2558,47 @@ body { font-size: 16px; }
 .ind-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--ink-2); }
 .ind-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
 @media (min-width: 1000px) { #view-life .cert-body { max-height: calc(100vh - 160px); overflow-y: auto; scrollbar-width: thin; } }
+
+#btnThoughts { display: none !important; }
+
+/* Fenêtre de patrimoine recentrée */
+.fin-cmp { width: 100%; border-collapse: collapse; font-size: 14px; margin: 4px 0 8px; }
+.fin-cmp th, .fin-cmp td { padding: 7px 6px; border-bottom: 1px solid var(--line); text-align: right; }
+.fin-cmp th:first-child, .fin-cmp td:first-child { text-align: left; }
+.fin-cmp th { font-weight: 600; color: var(--ink-2); font-size: 12px; }
+.fin-cmp .fin-me td { background: var(--gold-soft); font-weight: 600; }
+.fin-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 6px 0 14px; }
+.fin-choice { text-align: left; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg-2); min-height: 56px; display: flex; flex-direction: column; gap: 2px; font-size: 15px; }
+.fin-choice small { color: var(--ink-2); }
+.fin-choice:hover { border-color: var(--accent); }
+.fin-close { width: 100%; min-height: 48px; }
+#financeModal h4 { margin: 16px 0 6px; }
+@media (max-width: 520px) { .fin-choices { grid-template-columns: 1fr; } }
+
+/* Fiche d'identité, Famille et vie, priorité de l'année, grille plus petite */
+#view-life #certFamily, #view-life #lifeFamilyDetail, #view-life .cert-age-row { display: none; }
+#lifeIdCard { border: 1px solid var(--line); border-radius: 10px; margin: 0 0 18px; overflow: hidden; background: var(--bg); }
+.id-head { display: flex; justify-content: space-between; background: var(--accent); color: #fff; padding: 8px 12px; font-family: var(--mono); font-size: 12px; letter-spacing: .04em; }
+.id-line { display: grid; grid-template-columns: 112px 1fr; gap: 8px; padding: 6px 12px; font-size: 14px; border-bottom: 1px dotted var(--line); }
+.id-line span { color: var(--ink-2); }
+.id-line b { font-weight: 500; }
+#lifeFamilyLife h4 { margin-bottom: 8px; }
+.fl-row { display: grid; grid-template-columns: 120px 1fr; gap: 8px; padding: 6px 0; border-bottom: 1px dotted var(--line); font-size: 14px; }
+.fl-row span { color: var(--ink-2); }
+.fl-row b { font-weight: 500; text-align: right; }
+.fl-row small { display: block; color: var(--ink-2); font-size: 12px; }
+.fl-row em, .fl-row .gone { color: var(--ink-3); font-style: normal; }
+.fl-row .gone { text-decoration: line-through; }
+.pri-job { font-weight: 600; margin: 0 0 12px; font-size: 15px; }
+.pri-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.pri-chip { text-align: left; border: 1px solid var(--line); border-radius: 22px; padding: 8px 16px; background: var(--bg-2); min-height: 52px; display: flex; flex-direction: column; }
+.pri-chip b { font-weight: 600; font-size: 15px; }
+.pri-chip small { color: var(--ink-2); font-size: 12px; }
+.pri-chip.on { background: #2b6e6a; border-color: #2b6e6a; color: #fff; }
+.pri-chip.on small { color: #d6e6e4; }
+.pri-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+#view-life #lifeGrid, #view-life #lifeFamilyLife { grid-column: auto; }
+.lg-grid { gap: 3px; max-width: 260px; }
+.lg-cell { min-height: 18px; border-radius: 4px; font-size: 10px; }
+.lg-legend { font-size: 12px; max-width: 320px; }
+@media (max-width: 720px) { #view-life #lifeGrid, #view-life #lifeFamilyLife { grid-column: 1 / -1; } .id-line { grid-template-columns: 100px 1fr; } }
