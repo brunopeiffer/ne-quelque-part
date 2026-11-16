@@ -499,7 +499,7 @@ const DECISIONS = [
         { k: 'buy', icon: '🏠',
           label: t('de.home.buy'),
           sub: t('de.home.buy.sub'),
-          apply: (life) => { addMoney(life, -20000); life.stats.social += 1; logLife(t('de.home.buy.log')); } },
+          apply: (life) => { addMoney(life, -20000); life.stats.social += 1; life.ownsHome = true; logLife(t('de.home.buy.log')); } },
         { k: 'rent', icon: '🔑',
           label: t('de.home.rent'),
           sub: t('de.home.rent.sub'),
@@ -888,6 +888,12 @@ const NO_VOTE = ['PRK', 'SAU', 'ARE', 'QAT', 'KWT', 'OMN', 'BHR', 'TKM', 'ERI', 
 const OVERWORK = ['JPN', 'KOR', 'TWN', 'CHN', 'SGP', 'HKG'];
 const bribery = (life) => pppOf(life) < 15000 && ['lac', 'ssa', 'mena', 'sa', 'eca'].includes(life.countryData?.region);
 const sibs = (life) => ((life.family && life.family.siblings) || []).length > 0;
+const GUNNY = ['USA', 'BRA', 'MEX', 'COL', 'VEN', 'HND', 'SLV', 'GTM', 'JAM', 'ZAF', 'ECU', 'PAN', 'DOM', 'HTI', 'TTO'];
+const FIRE = ['AUS', 'CAN', 'PRT', 'GRC', 'USA', 'CHL', 'ESP'];
+const TOURIST = ['ESP', 'ITA', 'GRC', 'THA', 'PRT', 'HRV', 'MLT', 'CYP', 'MEX', 'FRA'];
+const gunny = (l) => GUNNY.includes(l.country);
+const poorish = (l) => pppOf(l) < 8000;
+const online = (min) => (life) => (life.countryData?.net || 0) >= min;
 const EXTRA_DECISIONS = [
   { id: 'sm_stray', kind: 'small', min: 6, max: 12, p: 0.10,
     fr: ["Le chien errant", "Un chien sans collier vous suit jusqu'à la maison et s'assoit devant la porte."],
@@ -1484,6 +1490,173 @@ const EXTRA_DECISIONS = [
       { k: 'join', icon: '✊', fr: "Défiler avec eux", fx: () => roll([0.9, { social: 3, happy: 2 }], [0.1, { health: -6, social: 2, msg: { fr: "La manifestation dégénère, vous êtes blessé{e}.", en: "The march turns violent and you are hurt." } }]) },
       { k: 'home', icon: '🏠', fr: "Rester chez vous", fx: {} },
     ] },
+  // ---- Santé et maladies du pays, violence, argent, famille, climat ----
+  { id: 'de_hiv_test', kind: 'big', min: 18, max: 45, p: 0.12, when: (life) => (life.countryData?.hiv || 0) > 1 && !life.hivTested,
+    fr: ["Faire le test du VIH ?", "Dans votre pays, le virus du sida est loin d'être rare. Un centre de santé propose un test gratuit et confidentiel."],
+    choices: [
+      { k: 'test', icon: '🩸', fr: "Faire le test", sub: () => "Savoir pour pouvoir se soigner",
+        fx: (life) => roll([Math.min(0.5, (life.countryData.hiv || 0) / 100 * 2), { flag: ['hivPos', true], happy: -8, social: -2, msg: { fr: "Le test est positif. Un traitement existe, mais il faut s'y tenir toute la vie.", en: "The test is positive. A treatment exists, but it must be taken for life." } }],
+                           [1, { flag: ['hivTested', true], happy: 2, msg: { fr: "Le test est négatif.", en: "The test is negative." } }]) },
+      { k: 'no', icon: '🙈', fr: "Ne pas savoir", fx: { flag: ['hivTested', true] } },
+    ] },
+  { id: 'de_hiv_treatment', kind: 'big', min: 18, max: 70, p: 0.7, priority: true, when: (life) => !!life.hivPos && !life.hivTreated,
+    fr: ["Un traitement à vie", "On vous propose un traitement antirétroviral. Il demande une prise chaque jour et un suivi régulier."],
+    choices: [
+      { k: 'treat', icon: '💊', fr: "Commencer le traitement", fx: { flag: ['hivTreated', true], pppx: -0.04, health: 3, msg: { fr: "Sous traitement, le virus devient indétectable.", en: "Under treatment, the virus becomes undetectable." } } },
+      { k: 'later', icon: '⏳', fr: "Attendre", fx: { health: -4 } },
+      { k: 'healer', icon: '🌿', fr: "Vous en remettre à un guérisseur", fx: { health: -6, pppx: -0.03 } },
+    ] },
+  { id: 'de_hypertension', kind: 'big', min: 40, max: 70, p: 0.1, when: (life) => !life.htnIgnored && !life.htnTreated,
+    fr: ["Une tension trop haute", "Le médecin vous prescrit des médicaments et vous demande de manger moins salé."],
+    choices: [
+      { k: 'follow', icon: '💊', fr: "Suivre le traitement", fx: { health: 3, pppx: -0.02, flag: ['htnTreated', true] } },
+      { k: 'ignore', icon: '🧂', fr: "Ne rien changer", fx: { flag: ['htnIgnored', true] } },
+    ] },
+  { id: 'de_weight', kind: 'big', min: 30, max: 60, p: 0.08, when: (life) => pppOf(life) > 20000,
+    fr: ["Reprendre en main votre santé", "Vous avez pris dix kilos en quelques années. L'escalier vous essouffle."],
+    choices: [
+      { k: 'sport', icon: '🏃', fr: "Vous mettre au sport", fx: { health: 3, happy: 1, flag: ['sporty', true] } },
+      { k: 'diet', icon: '🥗', fr: "Surveiller l'assiette", fx: { health: 2, money: -200 } },
+      { k: 'no', icon: '🛋️', fr: "Vous n'y pensez pas", fx: { health: -3 } },
+    ] },
+  { id: 'de_gym', kind: 'small', min: 18, max: 55, p: 0.06, when: (life) => comfortable(8000)(life) && !life.sporty,
+    fr: ["Un club de sport", "Un collègue vous propose de l'accompagner à son club de sport deux fois par semaine."],
+    choices: [
+      { k: 'yes', icon: '🏋️', fr: "S'inscrire", fx: { health: 2, social: 2, money: -300, flag: ['sporty', true] } },
+      { k: 'no', icon: '🛋️', fr: "Garder vos soirées", fx: {} },
+    ] },
+  { id: 'de_car', kind: 'big', min: 22, max: 50, p: 0.08, when: (life) => isEmployed(life) && pppOf(life) >= 12000 && !life.hasCar,
+    fr: ["Acheter une voiture ?", "Les transports en commun vous coûtent une bonne heure par trajet. Une voiture changerait votre quotidien, et votre budget."],
+    choices: [
+      { k: 'buy', icon: '🚗', fr: "L'acheter", fx: { money: -4000, happy: 2, flag: ['hasCar', true] } },
+      { k: 'transit', icon: '🚌', fr: "Continuer en transports", fx: { happy: -1 } },
+    ] },
+  { id: 'de_motorbike', kind: 'big', min: 18, max: 45, p: 0.07, when: (life) => isEmployed(life) && (life.countryData?.road || 0) > 12 && pppOf(life) < 12000 && !life.hasMoto,
+    fr: ["Une moto pour aller travailler", "Une moto d'occasion vous ferait gagner deux heures par jour. Elle expose aussi aux accidents."],
+    choices: [
+      { k: 'buy', icon: '🏍️', fr: "L'acheter", fx: { pppx: -0.35, happy: 2, flag: ['hasMoto', true] } },
+      { k: 'no', icon: '🚶', fr: "Continuer à pied et en minibus", fx: {} },
+    ] },
+  { id: 'de_drunk_driving', kind: 'big', min: 18, max: 60, p: 0.05, when: (life) => !!life.drinker && pppOf(life) >= 5000,
+    fr: ["Les clés en main", "La soirée a duré, vous avez bu et vous tenez vos clés."],
+    choices: [
+      { k: 'drive', icon: '🚗', fr: "Conduire quand même", fx: () => roll([0.02, { die: '事故', msg: { fr: "Vous sortez de la route.", en: "You leave the road." } }], [0.1, { health: -12, money: -800, msg: { fr: "Un accident vous envoie à l'hôpital.", en: "A crash sends you to hospital." } }], [0.88, { happy: -1 }]) },
+      { k: 'taxi', icon: '🚕', fr: "Prendre un taxi", fx: { money: -40 } },
+      { k: 'sleep', icon: '🛏️', fr: "Dormir sur place", fx: {} },
+    ] },
+  { id: 'de_gun_home', kind: 'big', min: 21, max: 60, p: 0.05, when: (life) => gunny(life) && heavyOk() && !life.gun,
+    fr: ["Une arme à la maison ?", "Après des cambriolages dans le quartier, vos voisins parlent de s'armer. Une arme en vente libre est à votre portée."],
+    choices: [
+      { k: 'buy', icon: '🔫', fr: "En acheter une", fx: () => roll([0.9, { money: -400, happy: 1, flag: ['gun', true] }], [0.1, { money: -400, health: -10, flag: ['gun', true], msg: { fr: "Un coup part par accident : vous êtes blessé{e}.", en: "A shot goes off by accident and you are hurt." } }]) },
+      { k: 'no', icon: '🚪', fr: "Renforcer la porte et les serrures", fx: { money: -150, happy: 1 } },
+    ] },
+  { id: 'de_extortion', kind: 'big', min: 22, max: 55, p: 0.08, when: (life) => heavyOk() && (life.countryData?.hom || 0) > 20 && pppOf(life) < 20000 && isEmployed(life),
+    fr: ["La « taxe » du quartier", "Des hommes armés réclament chaque mois une somme pour vous laisser travailler."],
+    choices: [
+      { k: 'pay', icon: '💵', fr: "Payer", fx: { pppx: -0.06, happy: -2 } },
+      { k: 'refuse', icon: '✋', fr: "Refuser", fx: () => roll([0.06, { die: '槍擊', msg: { fr: "Ils tiennent leurs menaces.", en: "They carry out their threats." } }], [0.3, { health: -8, pppx: -0.1, msg: { fr: "Ils vous passent à tabac et saccagent votre local.", en: "They beat you up and wreck your premises." } }], [0.64, { social: 1 }]) },
+      { k: 'leave', icon: '🧳', fr: "Quitter le quartier", fx: { pppx: -0.2, social: -3 } },
+    ] },
+  { id: 'de_witness', kind: 'small', min: 18, max: 65, p: 0.06, when: (life) => heavyOk() && (life.countryData?.hom || 0) > 15,
+    fr: ["Une agression sous vos yeux", "Dans la rue, un homme en frappe un autre. Personne ne bouge."],
+    choices: [
+      { k: 'step', icon: '✋', fr: "Intervenir", fx: () => roll([0.7, { social: 3, happy: 2 }], [0.25, { health: -8, social: 2 }], [0.05, { die: '他殺', msg: { fr: "L'agresseur était armé.", en: "The attacker was armed." } }]) },
+      { k: 'call', icon: '📞', fr: "Appeler la police", fx: { social: 1 } },
+      { k: 'away', icon: '🚶', fr: "Passer votre chemin", fx: { happy: -2 } },
+    ] },
+  { id: 'de_neighbourhood_watch', kind: 'small', min: 25, max: 65, p: 0.05, when: (life) => (life.countryData?.hom || 0) > 15,
+    fr: ["La ronde du quartier", "Les voisins s'organisent pour surveiller la rue à tour de rôle, la nuit."],
+    choices: [
+      { k: 'join', icon: '🔦', fr: "Participer aux tours de garde", fx: { social: 3, health: -1 } },
+      { k: 'no', icon: '🏠', fr: "Laisser les autres faire", fx: { social: -1 } },
+    ] },
+  { id: 'de_stall', kind: 'big', min: 20, max: 45, p: 0.1, when: (life) => !isEmployed(life) && poorish(life),
+    fr: ["Un petit étal", "Faute d'emploi, un cousin vous propose de partager son étal au marché."],
+    choices: [
+      { k: 'yes', icon: '🧺', fr: "Vous lancer", fx: () => roll([0.7, { pppx: 0.15, happy: 2 }], [0.3, { pppx: -0.05, happy: -1 }]) },
+      { k: 'wait', icon: '⏳', fr: "Attendre un vrai emploi", fx: { happy: -1 } },
+    ] },
+  { id: 'de_tontine', kind: 'small', min: 22, max: 60, p: 0.06, when: (life) => pppOf(life) < 12000 && reg('ssa', 'sa', 'mena', 'lac')(life),
+    fr: ["Entrer dans une tontine", "Des voisins forment un groupe d'épargne : chaque mois, chacun verse la même somme et l'un d'eux la reçoit."],
+    choices: [
+      { k: 'join', icon: '🪙', fr: "Rejoindre le groupe", fx: () => roll([0.85, { pppx: 0.1, social: 2 }], [0.15, { pppx: -0.08, social: -2, msg: { fr: "Un membre disparaît avec la cagnotte.", en: "A member disappears with the pot." } }]) },
+      { k: 'no', icon: '🙅', fr: "Garder votre argent", fx: {} },
+    ] },
+  { id: 'de_inflation_hedge', kind: 'big', min: 25, max: 60, p: 0.07, when: (life) => pppOf(life) < 15000 && life.stats.netAssets > 0,
+    fr: ["Les prix flambent", "La monnaie perd de la valeur de mois en mois. Vos économies fondent."],
+    choices: [
+      { k: 'goods', icon: '🐄', fr: "Acheter du bétail, de l'or ou des matériaux", fx: () => roll([0.7, { pppx: 0.05 }], [0.3, { pppx: -0.08 }]) },
+      { k: 'dollar', icon: '💵', fr: "Changer en devises fortes", fx: { pppx: 0.03 } },
+      { k: 'keep', icon: '🏦', fr: "Laisser l'argent à la banque", fx: { pppx: -0.1, happy: -1 } },
+    ] },
+  { id: 'de_build_house', kind: 'big', min: 28, max: 55, p: 0.07, when: (life) => !life.ownsHome && reg('ssa', 'lac', 'sa', 'mena')(life) && pppOf(life) < 12000 && isEmployed(life),
+    fr: ["Construire sa maison", "Comme beaucoup autour de vous, vous pourriez construire votre maison brique après brique, au fil des salaires."],
+    choices: [
+      { k: 'build', icon: '🧱', fr: "Commencer les travaux", fx: { pppx: -0.5, happy: 3, flag: ['ownsHome', true] } },
+      { k: 'rent', icon: '🔑', fr: "Rester locataire", fx: {} },
+    ] },
+  { id: 'de_funeral_cost', kind: 'family', min: 30, max: 70, p: 0.07, when: (life) => reg('ssa', 'lac', 'sa', 'mena')(life),
+    fr: ["Les frais des obsèques", "Un parent âgé est mort. La famille attend que chacun participe aux frais, et aux trois jours de cérémonie."],
+    choices: [
+      { k: 'big', icon: '⚰️', fr: "Participer largement", fx: { pppx: -0.12, social: 4 } },
+      { k: 'small', icon: '✉️', fr: "Donner ce que vous pouvez", fx: { pppx: -0.04, social: 1 } },
+      { k: 'none', icon: '🙅', fr: "Ne pas participer", fx: { social: -5 } },
+    ] },
+  { id: 'de_gulf_job', kind: 'big', min: 20, max: 40, p: 0.07, when: (life) => pppOf(life) < 6000 && reg('sa', 'ssa', 'eap')(life) && !life.birthOrigin,
+    fr: ["Un contrat dans le Golfe", "Un recruteur propose un travail dans un pays du Golfe, avec un salaire trois fois supérieur à celui d'ici. Il réclame des frais d'agence."],
+    choices: [
+      { k: 'go', icon: '✈️', fr: "Payer les frais et partir", fx: () => roll([0.6, { pppx: 0.6, social: -3, msg: { fr: "Vous rentrez deux ans plus tard avec des économies.", en: "You come home two years later with savings." } }], [0.3, { pppx: -0.2, happy: -4, msg: { fr: "Le contrat n'est pas respecté : vous rentrez sans rien.", en: "The contract is not honoured: you come home with nothing." } }], [0.1, { pppx: -0.2, health: -8, happy: -5, msg: { fr: "Votre passeport est confisqué et les conditions sont très dures.", en: "Your passport is confiscated and conditions are harsh." } }]) },
+      { k: 'stay', icon: '🏡', fr: "Refuser", fx: {} },
+    ] },
+  { id: 'de_child_fees', kind: 'family', min: 28, max: 45, p: 0.1, when: (life) => hasKids(life) && pppOf(life) < 5000,
+    fr: ["Les frais de scolarité", "Votre enfant est en âge d'aller à l'école. Les frais, l'uniforme et les fournitures dépassent ce que vous gagnez en un mois."],
+    choices: [
+      { k: 'school', icon: '🎒', fr: "Payer, en vous serrant la ceinture", fx: { pppx: -0.15, happy: 1 } },
+      { k: 'work', icon: '🧺', fr: "Le faire travailler avec vous", fx: { pppx: 0.05, happy: -3 } },
+    ] },
+  { id: 'de_child_vaccines', kind: 'family', min: 22, max: 40, p: 0.1, when: (life) => hasKids(life) && pppOf(life) < 15000,
+    fr: ["Les vaccins de votre enfant", "Le centre de santé est à une demi-journée de marche. Le calendrier de vaccination n'attend pas."],
+    choices: [
+      { k: 'go', icon: '💉', fr: "Faire le trajet", fx: { pppx: -0.01, health: 1 } },
+      { k: 'skip', icon: '⏭️', fr: "Remettre à plus tard", fx: () => roll([0.9, {}], [0.1, { happy: -6, health: -3, msg: { fr: "Votre enfant tombe gravement malade.", en: "Your child falls seriously ill." } }]) },
+    ] },
+  { id: 'de_retirement_savings', kind: 'big', min: 30, max: 50, p: 0.08, when: (life) => pppOf(life) >= 15000 && !life.retireSaver && isEmployed(life),
+    fr: ["Préparer la retraite", "Un conseiller vous explique qu'une épargne régulière dès maintenant changerait beaucoup de choses plus tard."],
+    choices: [
+      { k: 'save', icon: '🏦', fr: "Mettre de l'argent de côté chaque mois", fx: { pppx: -0.08, flag: ['retireSaver', true] } },
+      { k: 'later', icon: '⏳', fr: "Y penser plus tard", fx: {} },
+    ] },
+  { id: 'de_wildfire', kind: 'big', min: 18, max: 70, p: 0.02, when: inList(...FIRE),
+    fr: ["Un incendie approche", "Les flammes progressent vers votre quartier. Les autorités appellent à évacuer."],
+    choices: [
+      { k: 'leave', icon: '🚗', fr: "Évacuer tout de suite", fx: { money: -300, happy: -1 } },
+      { k: 'stay', icon: '🏠', fr: "Rester défendre la maison", fx: () => roll([0.85, { money: -500, health: -3 }], [0.15, { health: -15, money: -2000 }]) },
+    ] },
+  { id: 'de_drought', kind: 'big', min: 18, max: 65, p: 0.06, when: (life) => isRural(life) && reg('ssa', 'sa')(life) && (life.countryData?.agr || 0) > 20,
+    fr: ["La sécheresse", "La pluie n'est pas venue pour la deuxième année. Il faut décider quoi faire des bêtes et des champs."],
+    choices: [
+      { k: 'sell', icon: '🐄', fr: "Vendre une partie du troupeau", fx: { pppx: -0.1, happy: -2 } },
+      { k: 'migrate', icon: '🧳', fr: "Partir travailler en ville quelques mois", fx: { pppx: 0.05, social: -3 } },
+      { k: 'wait', icon: '🙏', fr: "Attendre la prochaine saison", fx: { health: -3, happy: -3 } },
+    ] },
+  { id: 'de_screens', kind: 'small', min: 14, max: 60, p: 0.05, when: online(60),
+    fr: ["Moins d'écrans ?", "Vous passez de plus en plus d'heures sur votre téléphone, et vous dormez de moins en moins."],
+    choices: [
+      { k: 'cut', icon: '📵', fr: "Limiter votre temps d'écran", fx: { happy: 2, health: 1, social: 1 } },
+      { k: 'keep', icon: '📱', fr: "Continuer comme avant", fx: { happy: -1, health: -1 } },
+    ] },
+  { id: 'de_retire_abroad', kind: 'big', min: 60, max: 70, p: 0.06, when: (life) => pppOf(life) >= 25000 && life.stats.employment === 'retired' && life.stats.netAssets > 0,
+    fr: ["Une retraite au soleil", "Avec votre pension, la vie coûterait moitié moins cher dans un pays plus chaud, loin de vos proches."],
+    choices: [
+      { k: 'go', icon: '🏝️', fr: "Partir", fx: { money: 3000, happy: 2, social: -5, health: 1 } },
+      { k: 'stay', icon: '🏡', fr: "Rester près des vôtres", fx: { social: 2 } },
+    ] },
+  { id: 'de_gap_year', kind: 'big', min: 18, max: 26, p: 0.06, when: (life) => comfortable(15000)(life) && !isEmployed(life),
+    fr: ["Une année pour voyager", "Entre deux étapes, vous pourriez prendre une année pour voyager, avec un petit budget."],
+    choices: [
+      { k: 'go', icon: '🌍', fr: "Partir", fx: { money: -2500, happy: 5, know: 2, social: -1 } },
+      { k: 'no', icon: '📘', fr: "Enchaîner directement", fx: {} },
+    ] },
 ];
 // Emplois proposés au premier poste, selon les études et le lieu de vie. mult module le revenu du pays.
 const JOBS = {
@@ -1513,7 +1686,7 @@ function fxSub(fx) {
   const v = { ...fx, money: (fx.money || 0) + (fx.pppx || 0) };
   return Object.keys(v).filter(k => lab[k] && v[k]).map(k => lab[k] + (v[k] > 0 ? '↑' : '↓')).join(' ');
 }
-function applyFx(life, fx) {
+function applyFx(life, fx, label) {
   let e = typeof fx === 'function' ? fx(life) : fx;
   if (e.die && !heavyOk()) e = { happy: -5 };   // mode protégé : aucun évènement ne tue
   const s = life.stats;
@@ -1521,7 +1694,8 @@ function applyFx(life, fx) {
   const scale = moneyScale(life);
   const clamp = v => Math.max(0, Math.min(100, v));
   if (e.money) s.netAssets += Math.round(e.money * scale);
-  if (e.pppx) s.netAssets += Math.round(e.pppx * (c.ppp || 12000));   // montant exprimé en années de revenu moyen du pays
+  if (e.pppx) s.netAssets += Math.round(e.pppx * (c.ppp || 12000));
+  if (e.money || e.pppx) { const amt = Math.round((e.money || 0) * scale + (e.pppx || 0) * (c.ppp || 12000)); if (amt) { const fl = life.flows || (life.flows = []); fl.push({ age: life.age, label: label || '', amt }); if (fl.length > 60) fl.shift(); } }   // montant exprimé en années de revenu moyen du pays
   if (e.happy) s.happiness = clamp(s.happiness + e.happy);
   if (e.health) bumpHealth(life, e.health);
   if (e.social) s.social = clamp(s.social + e.social);
@@ -1550,7 +1724,6 @@ const hasKids = (life) => (life.stats.kids || []).length > 0;
 // Encore scolarisé : entre 6 ans et l'âge de fin du niveau visé (primaire 12, collège 15, lycée 18, université 22).
 const inSchool = (life) => life.age >= 6 && life.age < [6, 12, 15, 18, 22][Math.min(life.eduTarget ?? 2, 4)];
 const isEmployed = (life) => life.stats.employment === 'employed';
-const online = (min) => (life) => (life.countryData?.net || 0) >= min;
 const FLAVOR_GUARDS = {
   'Fell in love': never, 'Got married': never, 'Had a child': never, 'Got divorced': never, 'Bought a home': never,   // gérés par l'état réel de la vie
   'Child graduated': hasKids, 'Helped the kids with homework': hasKids,
@@ -1597,7 +1770,7 @@ EXTRA_DECISIONS.forEach(d => DECISIONS.push({
     return {
       title: G(((fr || !d.en) ? (typeof d.fr[0] === 'function' ? d.fr[0](life) : d.fr[0]) : d.en[0])),
       body: G(((fr || !d.en) ? (typeof d.fr[1] === 'function' ? d.fr[1](life) : d.fr[1]) : d.en[1])),
-      choices: choices.map(c => ({ k: c.k, icon: c.icon, label: G((fr || !c.en) ? c.fr : c.en), sub: c.sub ? c.sub(life) : fxSub(c.fx), apply: (l) => applyFx(l, c.fx) })),
+      choices: choices.map(c => ({ k: c.k, icon: c.icon, label: G((fr || !c.en) ? c.fr : c.en), sub: c.sub ? c.sub(life) : fxSub(c.fx), apply: (l) => applyFx(l, c.fx, typeof d.fr[0] === 'function' ? '' : G(fr ? d.fr[0] : (d.en ? d.en[0] : d.fr[0]))) })),
     };
   },
 }));
@@ -2053,6 +2226,77 @@ RECIT.push(
   { a: [8, 80], i: '🐈', w: 6, when: (l) => l.pet === 'cat', fx: { happy: 1 }, fr: "Votre chat s'endort sur vos genoux chaque soir." },
   { a: [10, 85], i: '🕊️', rep: false, w: 4, when: (l) => !!l.pet && l.petSince != null && l.age - l.petSince >= 10, fx: { happy: -4, flag: ['pet', null] }, fr: "Votre animal meurt de vieillesse. La maison paraît soudain vide." },
 );
+
+// ---- Évènements du récit : santé et maladies du pays, violence, argent, travail, famille, climat, croyances ----
+RECIT.push(
+  // santé et maladies endémiques
+  { a: [15, 60], i: '🫁', rep: false, w: 3, when: (l) => pppOf(l) < 12000 && reg('ssa', 'sa', 'eap')(l), fx: { health: -5, money: -150 }, fr: "Une toux qui n'en finit pas vous inquiète : le dispensaire diagnostique une tuberculose, six mois de traitement." },
+  { a: [3, 70], i: '🦟', w: 4, when: reg('lac', 'ssa', 'sa', 'eap'), fx: { health: -2 }, fr: "La dengue vous cloue au lit pendant une semaine." },
+  { a: [3, 70], i: '🚰', w: 4, when: (l) => pppOf(l) < 4000, fx: { health: -2 }, fr: "L'eau du puits est contaminée : tout le quartier a la diarrhée pendant des jours." },
+  { a: [10, 75], i: '😷', w: 4, when: (l) => reg('sa', 'eap')(l) && (l.countryData?.urb || 0) > 40, fx: { health: -1 }, fr: "Un smog épais couvre la ville pendant des semaines." },
+  { a: [20, 50], i: '🤫', w: 3, when: (l) => (l.countryData?.hiv || 0) > 1, fx: { social: -1 }, fr: "Un voisin tombe malade du sida. On chuchote à son sujet et plus personne ne lui rend visite." },
+  { a: [10, 80], i: '🕐', w: 5, when: poorish, fr: "Vous passez une journée entière dans la file d'un dispensaire public." },
+  { a: [40, 70], i: '🩺', rep: false, fx: { health: -1 }, fr: "Le médecin découvre que votre tension est trop élevée." },
+  { a: [30, 60], i: '⚖️', w: 4, when: (l) => pppOf(l) > 20000, fx: { health: -1 }, fr: "Vous prenez du poids depuis quelques années. Votre médecin vous met en garde." },
+  { a: [5, 80], i: '🌿', w: 4, when: (l) => isRural(l) && pppOf(l) < 6000, fr: "Faute de médecin, vous consultez le guérisseur du village." },
+  { a: [3, 75], i: '🏥', w: 3, when: (l) => (l.countryData?.oop || 0) > 30, fx: { money: -200 }, fr: "Une ordonnance vous coûte une grosse part de la paie : ici, les soins se paient de sa poche." },
+  // route, violence, armes
+  { a: [15, 70], i: '🚗', w: 5, when: (l) => (l.countryData?.road || 0) > 15, fx: { happy: -1 }, fr: "Vous êtes témoin d'un grave accident sur la route que vous prenez chaque jour." },
+  { a: [18, 70], i: '🚙', w: 4, when: comfortable(8000), fx: { money: -300 }, fr: "Un accrochage sans gravité abîme votre véhicule." },
+  { a: [8, 70], i: '🔫', w: 6, when: (l) => heavyOk() && gunny(l), fx: { happy: -2 }, fr: "Des coups de feu retentissent dans le quartier. Les voisins s'enferment chez eux." },
+  { a: [6, 17], i: '🏫', w: 5, when: inList('USA'), fr: "À l'école, vous participez à un exercice de confinement en cas de tireur." },
+  { a: [18, 70], i: '🌃', w: 4, when: (l) => heavyOk() && ((l.countryData?.hom || 0) > 30 || (l.countryData?.war || 0) >= 1), fx: { social: -1 }, fr: "Un couvre-feu s'installe : plus personne ne sort le soir." },
+  { a: [18, 65], i: '🚓', w: 4, when: reg('lac', 'ssa', 'mena'), fr: "Un contrôle de police vous retient une heure au bord de la route." },
+  { a: [20, 60], i: '🧾', w: 4, when: (l) => heavyOk() && (l.countryData?.hom || 0) > 20 && pppOf(l) < 20000, fx: { money: -200 }, fr: "Des hommes du quartier exigent une « taxe » pour vous laisser travailler tranquille." },
+  { a: [3, 70], i: '💥', w: 3, when: (l) => heavyOk() && (l.countryData?.war || 0) >= 1, fx: { happy: -4 }, fr: "Un bombardement touche un quartier voisin. La nuit, personne ne dort." },
+  { a: [3, 70], i: '🏕️', w: 3, when: (l) => heavyOk() && (l.countryData?.war || 0) >= 1, fx: { social: 1 }, fr: "Votre famille héberge des déplacés venus d'une région en guerre." },
+  // argent
+  { a: [20, 60], i: '🪙', w: 5, when: (l) => pppOf(l) < 12000 && reg('ssa', 'sa', 'mena', 'lac')(l), fx: { social: 1 }, fr: "Vous participez à une tontine entre voisins : chacun reçoit la cagnotte à son tour." },
+  { a: [8, 80], i: '🛒', w: 5, when: (l) => pppOf(l) < 10000, fx: { money: -100 }, fr: "Les prix du marché augmentent encore ; le panier de la semaine coûte plus cher." },
+  { a: [20, 60], i: '⏳', w: 4, when: (l) => isEmployed(l) && pppOf(l) < 12000, fx: { happy: -1 }, fr: "Votre salaire arrive avec trois semaines de retard." },
+  { a: [18, 30], i: '🏦', rep: false, when: (l) => pppOf(l) >= 15000, fr: "Vous ouvrez votre premier compte en banque." },
+  { a: [18, 35], i: '📱', rep: false, when: (l) => reg('ssa', 'sa')(l) && pppOf(l) < 8000, fr: "Vous ouvrez un compte d'argent mobile : plus besoin de tout porter en liquide." },
+  { a: [20, 30], i: '🧮', rep: false, when: (l) => reg('hi', 'eca')(l) && pppOf(l) > 20000, fr: "Vous remplissez votre première déclaration d'impôts, en vous trompant deux fois." },
+  { a: [18, 70], i: '⛽', w: 4, when: (l) => reg('lac', 'ssa', 'mena', 'sa')(l), fx: { money: -100 }, fr: "Le prix de l'essence grimpe, et avec lui celui des transports." },
+  { a: [15, 70], i: '🧺', w: 5, when: (l) => isRural(l) && (l.countryData?.agr || 0) > 30, fr: "Le jour du marché, vous vendez votre récolte au bord de la route." },
+  // école et travail
+  { a: [15, 19], i: '📝', w: 5, when: reg('eap', 'sa', 'mena'), fx: { happy: -1 }, fr: "Vous attendez les résultats du grand examen, la gorge serrée." },
+  { a: [8, 17], i: '🌙', w: 4, when: (l) => reg('eap')(l) && comfortable(8000)(l), fx: { know: 1, happy: -1 }, fr: "Chaque soir, vous suivez des cours privés après l'école." },
+  { a: [6, 14], i: '👔', w: 3, when: (l) => reg('ssa', 'sa', 'lac')(l) && inSchool(l), fr: "Vous portez l'uniforme de l'école, un peu trop grand pour que ça dure." },
+  { a: [6, 14], i: '🪑', w: 4, when: (l) => poorish(l) && inSchool(l), fx: { know: -1 }, fr: "Votre instituteur est absent pendant des semaines et la classe se vide." },
+  { a: [18, 22], i: '🏛️', w: 4, when: (l) => l.stats.education >= 4, fx: { social: 2 }, fr: "Vous découvrez la vie de campus : cours, cafétéria, nuits blanches avant les examens." },
+  { a: [19, 25], i: '📎', w: 3, when: (l) => l.stats.education >= 3 && comfortable(8000)(l), fx: { know: 1 }, fr: "Vous faites un stage non rémunéré en espérant qu'il débouche sur un emploi." },
+  { a: [18, 60], i: '🧱', w: 5, when: (l) => isEmployed(l) && poorish(l), fr: "Vous travaillez sans contrat, payé à la journée, sans savoir de quoi demain sera fait." },
+  { a: [20, 55], i: '🥵', w: 4, when: (l) => isEmployed(l) && poorish(l), fx: { health: -1 }, fr: "Dans l'atelier, la chaleur est étouffante : vous buvez toute la journée." },
+  { a: [20, 50], i: '🌙', w: 4, when: isEmployed, fx: { health: -1 }, fr: "Vous enchaînez les semaines de travail de nuit : vous ne vous couchez qu'au lever du jour." },
+  { a: [25, 60], i: '🏠', w: 4, when: (l) => isEmployed(l) && online(60)(l) && comfortable(12000)(l), fr: "Vous travaillez de chez vous deux jours par semaine." },
+  { a: [60, 66], i: '🥂', rep: false, when: (l) => l.stats.employment === 'retired', fr: "Vos collègues vous offrent un pot de départ à la retraite." },
+  { a: [25, 60], i: '🤝', rep: false, when: (l) => isEmployed(l) && reg('hi', 'eca', 'lac')(l), fx: { social: 1 }, fr: "Vous adhérez à un syndicat après une réunion animée." },
+  // famille et vie sociale
+  { a: [25, 70], i: '⚰️', w: 4, when: reg('ssa', 'lac', 'sa'), fx: { money: -100, social: 1 }, fr: "Vous passez trois jours aux obsèques d'un oncle : toute la famille élargie est là." },
+  { a: [45, 60], i: '🚪', rep: false, when: hasKids, fr: "Votre aîné quitte la maison. Le silence vous surprend." },
+  { a: [50, 65], i: '↩️', rep: false, when: hasKids, fx: { money: -200 }, fr: "Votre enfant revient vivre chez vous après un échec." },
+  { a: [25, 40], i: '👵', w: 5, when: (l) => hasKids(l) && pppOf(l) < 15000, fr: "Votre mère garde les enfants pendant que vous travaillez." },
+  { a: [20, 80], i: '🍽️', w: 6, fx: { social: 1 }, fr: "Le dimanche, toute la famille se retrouve pour un long repas chez vos parents." },
+  { a: [20, 60], i: '💬', w: 4, when: online(50), fr: "Le groupe de messagerie du quartier ne se tait plus, même la nuit." },
+  { a: [25, 60], i: '💍', w: 4, when: (l) => l.stats.married, fx: { happy: 1 }, fr: "Vous fêtez votre anniversaire de mariage." },
+  { a: [10, 70], i: '🏟️', w: 5, fx: { social: 1 }, fr: "Vous suivez le championnat local avec toute la bande de copains." },
+  { a: [16, 40], i: '🎶', w: 4, when: (l) => comfortable(8000)(l) && reg('hi', 'lac', 'eca')(l), fx: { happy: 1, money: -80 }, fr: "Vous partez à un festival de musique avec vos amis." },
+  { a: [10, 80], i: '🛕', w: 4, when: (l) => isHindu(l), fx: { happy: 1 }, fr: "Vous vous baignez dans le fleuve sacré lors d'une grande fête." },
+  { a: [6, 80], i: '⛪', w: 5, when: (l) => isChristian(l) && reg('lac', 'eca', 'ssa')(l), fr: "Vous allez à la messe, puis déjeunez en famille." },
+  { a: [10, 80], i: '🕌', w: 5, when: isMuslim, fr: "Après la prière du vendredi, la famille se retrouve autour d'un grand plat." },
+  { a: [20, 80], i: '🗳️', w: 4, when: (l) => !NO_VOTE.includes(l.country), fr: "Jour d'élection : la file devant le bureau de vote est longue." },
+  // climat et environnement
+  { a: [5, 70], i: '🏜️', w: 4, when: (l) => isRural(l) && reg('ssa', 'sa')(l) && (l.countryData?.agr || 0) > 20, fx: { money: -100 }, fr: "La sécheresse dure : les puits baissent et les bêtes maigrissent." },
+  { a: [5, 70], i: '🦗', w: 2, when: (l) => isRural(l) && reg('ssa')(l), fx: { money: -100 }, fr: "Un nuage de criquets s'abat sur les champs voisins." },
+  { a: [5, 80], i: '🔥', w: 3, when: inList(...FIRE), fr: "Les incendies de forêt enfument la région pendant plusieurs jours." },
+  { a: [10, 70], i: '🏖️', w: 3, when: inList(...TOURIST), fr: "Des touristes envahissent votre quartier chaque été : tout y devient plus cher." },
+  { a: [3, 80], i: '❄️', w: 4, when: inList(...COLD), fr: "Il neige : l'école ferme et la ville s'arrête une journée." },
+  { a: [18, 80], i: '☎️', w: 3, when: (l) => !!l.birthOrigin, fr: "Un appel de la famille restée au pays vous rappelle d'où vous venez." },
+  { a: [18, 50], i: '🛬', w: 3, when: (l) => !!l.birthOrigin, fr: "Un cousin arrive du pays pour quelques semaines : vous lui montrez la ville." },
+  { a: [20, 45], i: '🪪', w: 3, when: (l) => !!l.birthOrigin && !l.naturalized, fx: { money: -80 }, fr: "Il faut renouveler vos papiers de séjour : files d'attente et justificatifs à n'en plus finir." },
+  { a: [6, 60], i: '🎈', w: 3, when: comfortable(8000), fr: "Vous fêtez un anniversaire dans un parc, avec des ballons et trop de gâteau." },
+);
 // Décès dans la famille : annoncés l'année où ils surviennent.
 function familyDeathEvents(life, age) {
   if (age < 3 || !life.family) return [];
@@ -2382,6 +2626,42 @@ const CAUSE_BASE = {
   elderly:  { '心血管':35, '癌症':25, '呼吸系統':12, '中風':8, '糖尿病':5, '其他':15 },
 };
 
+// Niveau relatif de suicide selon le pays (estimation d'après les grands écarts régionaux de l'OMS ; 1 = moyenne mondiale).
+function suicideFactor(c) {
+  const byId = { RUS: 1.8, KOR: 2.2, JPN: 1.4, LTU: 2.0, KAZ: 1.6, UKR: 1.4, BLR: 1.6, USA: 1.3, FIN: 1.3, HUN: 1.3, BEL: 1.2, FRA: 1.1, IND: 1.0 };
+  if (byId[c.id] !== undefined) return byId[c.id];
+  if (muslimShare(c) >= 70) return 0.3;
+  return ({ lac: 0.9, ssa: 0.8, mena: 0.5, eap: 1.0, sa: 1.0, eca: 1.2, hi: 1.0 })[c.region] ?? 1;
+}
+// Part des armes à feu parmi les homicides (estimation par région, quelques pays à part).
+function gunShare(c) {
+  const byId = { USA: 0.8, ZAF: 0.55, CAN: 0.3, JPN: 0.02, KOR: 0.02, SGP: 0.02, TWN: 0.02, GBR: 0.1 };
+  if (byId[c.id] !== undefined) return byId[c.id];
+  return ({ lac: 0.7, ssa: 0.35, mena: 0.4, eca: 0.35, sa: 0.3, eap: 0.15, hi: 0.2 })[c.region] ?? 0.3;
+}
+// Remplace, pour les causes liées au pays, les parts génériques par des parts déduites des taux observés :
+// homicides et routes (pour 100 000), prévalence du VIH, indice de paludisme, rapportés au risque total de décès à cet âge.
+function applyExternalShares(w, c, age, sex) {
+  const tot = Math.max(50, pDie(Math.max(1, age), c, sex) * 1e5);   // décès pour 100 000 à cet âge
+  const M = sex === 'M';
+  const hom = (c.hom || 0) * (age < 5 ? 0.3 : age < 15 ? 0.2 : age < 30 ? 2.0 : age < 50 ? 1.3 : age < 70 ? 0.6 : 0.3) * (M ? 1.6 : 0.4);
+  const road = (c.road || 0) * (age < 15 ? 0.5 : age < 30 ? 1.6 : age < 50 ? 1.1 : age < 70 ? 0.8 : 1.0) * (M ? 1.5 : 0.5);
+  const hiv = 1.5 * Math.pow(c.hiv || 0, 1.5) * (age < 15 ? 0.15 : age < 25 ? 0.5 : age < 50 ? 2.0 : age < 60 ? 1.0 : 0.2);
+  const mal = (c.mal || 0) * 30 * (age < 5 ? 6 : age < 15 ? 2 : 0.5);
+  const sh = (r, cap) => Math.min(cap, r / tot);
+  const sHom = STATE.softMode ? 0 : sh(hom, 0.55), sRoad = sh(road, 0.45), sHiv = sh(hiv, 0.6), sMal = sh(mal, 0.6);
+  const fixed = ['他殺', '槍擊', '事故', '愛滋病', '瘧疾'];
+  const T = Object.values(w).reduce((a, b) => a + b, 0) || 1;
+  const nonRoadAcc = 0.5 * (w['事故'] || 0) / T;
+  const g = gunShare(c);
+  const out = { '事故': sRoad + nonRoadAcc, '他殺': sHom * (1 - g), '槍擊': sHom * g, '愛滋病': sHiv, '瘧疾': sMal };
+  const ext = Object.values(out).reduce((a, b) => a + b, 0);
+  const rest = Math.max(0.15, 1 - ext);
+  let others = 0;
+  for (const k of Object.keys(w)) if (!fixed.includes(k)) others += w[k];
+  for (const k of Object.keys(w)) { if (fixed.includes(k)) delete w[k]; else w[k] = others ? w[k] / others * rest : 0; }
+  for (const k of fixed) if (out[k] > 0) w[k] = out[k];
+}
 function causeWeights(c, age, sex) {
   let bucket;
   if (age < 1) bucket = 'infant';
@@ -2395,7 +2675,7 @@ function causeWeights(c, age, sex) {
   // v5.39：略過可怕的情節 — 把自殺/他殺機率併入其他死因（不改變總死亡率）
   if (STATE.softMode) {
     let heavy = 0;
-    for (const k of ['自殺', '他殺']) {
+    for (const k of ['自殺', '他殺', '槍擊']) {
       if (w[k]) { heavy += w[k]; delete w[k]; }
     }
     if (heavy > 0) {
@@ -2416,7 +2696,7 @@ function causeWeights(c, age, sex) {
   // 這是比資料更強的主張，所以留一個很小的地板。
   // 注意用 ?? 不是 || —— sf=0 是「真的 0」，|| 會把它當成沒有值而回退到 10，
   // 那 5 國反而會拿到中位數權重，正好和實測抓到的那個 bug 相反。
-  if (w['自殺']) w['自殺'] *= Math.max(0.15, (c.sf ?? 10) / 10);
+  if (w['自殺']) w['自殺'] *= suicideFactor(c);
   if (c.road > 15 && w['事故']) w['事故'] *= c.road / 15;
   if (c.hiv > 1 && w['感染性疾病']) w['感染性疾病'] *= c.hiv / 0.5;
   if (c.sm > 30 && w['癌症']) w['癌症'] *= c.sm / 25;
@@ -2447,19 +2727,25 @@ function causeWeights(c, age, sex) {
     if (Lf.sporty) { mul('心血管', 0.8); mul('糖尿病', 0.7); }
     if (Lf.screened) { mul('癌症', 0.7); }
     if (Lf.vaccinated) { mul('感染性疾病', 0.85); }
+    if (Lf.hivPos) { w['愛滋病'] = (w['愛滋病'] || 0) + (Lf.hivTreated ? 0.1 : 0.6); }
+    if (Lf.htnIgnored) { mul('心血管', 1.3); mul('中風', 1.5); }
     if (Lf.bednet) { mul('瘧疾', 0.2); }
   }
   if (STATE.life && STATE.life.conditions) {
     if (STATE.life.conditions.diabetes) w['糖尿病'] = (w['糖尿病'] || 1) * 3;
     if (STATE.life.conditions.heart) w['心血管'] *= 1.5;
   }
+  applyExternalShares(w, c, age, sex);
   return w;
 }
 
 // Multiplicateur du risque de décès de l'année selon les habitudes (ordres de grandeur : un fumeur perd environ dix ans).
 function habitMort(life) {
   let m = 1;
+  // La table de mortalité du pays contient déjà ses fumeurs : on la normalise pour que la moyenne reste celle du pays.
+  if (life.age >= 35) m *= 1 / (1 + ((life.countryData && life.countryData.sm) || 20) / 100 * 0.5 * 1.5);
   if (life.smoker && life.age >= 35) m *= 2.5;      // simulé : environ 8 ans de vie en moins
+  if (life.hivPos && life.age >= 18) m *= life.hivTreated ? 1.4 : 4;
   if (life.exSmoker) m *= 1.2;
   if (life.drinker && life.age >= 30) m *= 1.5;     // environ 4 ans
   if (life.addicted) m *= 2.2;                      // environ 8 ans
@@ -3112,7 +3398,7 @@ function milestoneEvents(life, newAge) {
       let text = genderize(LANG === 'fr' && evt.fr ? evt.fr : enfr(evt.en, evt.zh), life);
       if (evt.fx) {
         if (evt.fx.money) text += ' (' + (evt.fx.money < 0 ? '− ' : '+ ') + money(Math.abs(evt.fx.money * moneyScale(life))) + ')';
-        applyFx(life, evt.fx);
+        applyFx(life, evt.fx, text.replace(/ \([^)]*\)$/, ''));
       }
       events.push({ age: newAge, kind: 'milestone', icon: evt.icon, text, zh: evt.zh });
       life.latestEvent = { age: newAge, icon: evt.icon, text };
@@ -3197,6 +3483,7 @@ function tick() {
     let tries = 0;
     while (tries++ < 500) {
       if (STATE.life.died || STATE.paused || STATE.pendingDecision) break;
+      if (STATE.life.age === 0 && Math.random() < pDie(0, c, sex)) { dieNow(); break; }
       STATE.life.age += 1;
       STATE.life.yearOffset += 1;
       if (Math.random() < Math.min(1, pDie(STATE.life.age, c, sex) * habitMort(STATE.life))) { dieNow(); break; }
@@ -3209,6 +3496,8 @@ function tick() {
     renderAll();
     return;
   }
+  // Mortalité infantile : le risque de mourir avant le premier anniversaire n'était jamais tiré.
+  if (STATE.life.age === 0 && Math.random() < pDie(0, c, sex)) { STATE.life.cause = null; dieNow(); return; }
   STATE.life.age += 1;
   STATE.life.yearOffset += 1;
   // 死亡判定
@@ -4255,8 +4544,11 @@ function renderLife() {
     const age = STATE.life.age || 0;
     const ha = $('#heroAge'); if (ha) ha.textContent = age;
     const hw = $('#heroAssets'); if (hw) hw.textContent = money(STATE.life.stats.netAssets);
+    const ppp = (v) => Math.round(v).toLocaleString(LANG === 'fr' ? 'fr-FR' : 'en-US') + ' $ US PPA';
+    { const a = $('#heroAssetsSub'); if (a) a.textContent = ppp(STATE.life.stats.netAssets); const b2 = $('#heroIncomeSub'); if (b2) b2.textContent = STATE.life.stats.annualIncome ? ppp(STATE.life.stats.annualIncome) + ' · ' + money(STATE.life.stats.annualIncome / 12) + (LANG === 'fr' ? ' par mois' : ' a month') : ''; }
     renderBudget();
     renderLifeGrid();
+    renderIndicators();
     const hi = $('#heroIncome'); if (hi) hi.textContent = STATE.life.stats.annualIncome ? money(STATE.life.stats.annualIncome) : '—';
     const hb = $('#heroYearBar');
     if (hb) {
@@ -4671,12 +4963,37 @@ function renderActualVsRandom() {
   if (!real) return;
   wrap.hidden = real.id === c.id;   // comparer un pays à lui-même n'apprend rien
   if (wrap.hidden) return;
+  const fr = LANG === 'fr';
+  const nf = (v, d = 1) => (+v).toLocaleString(fr ? 'fr-FR' : 'en-US', { maximumFractionDigits: d });
+  const LANGS_FR = { fr: 'français', ar: 'arabe', es: 'espagnol', en: 'anglais', pt: 'portugais', zh: 'chinois', hi: 'hindi', ru: 'russe', de: 'allemand', it: 'italien', tr: 'turc', fa: 'persan', id: 'indonésien', ja: 'japonais', ko: 'coréen', sw: 'swahili', bn: 'bengali', ur: 'ourdou', th: 'thaï', vi: 'vietnamien', pl: 'polonais', uk: 'ukrainien', nl: 'néerlandais', sv: 'suédois', ro: 'roumain', el: 'grec', he: 'hébreu', cs: 'tchèque', hu: 'hongrois', fi: 'finnois', da: 'danois', no: 'norvégien', am: 'amharique', ha: 'haoussa', yo: 'yoruba', zu: 'zoulou', af: 'afrikaans' };
+  const langOf = (c2) => String(c2.lang || '').split(',').slice(0, 2).map(x => (LANGS_FR[x.split(':')[0]] || x.split(':')[0])).join(', ') || '—';
+  const pct = (v) => v != null ? nf(v, 0) + ' %' : '—';
+  // dir : 1 = plus haut vaut mieux, -1 = plus bas vaut mieux, 0 = sans jugement de valeur
+  const R = (lab, dir, fmt, get) => ({ lab, dir, fmt, get });
   const rows = [
-    { key: 'le',   labelZh: '平均壽命',      labelEn: 'Life expectancy', fmt: v => (v ? (v + ' ' + t('unit.years')) : '—'), realVal: real.le, randVal: random.le },
-    { key: 'u5',   labelZh: '5 歲前死亡機率', labelEn: 'Under-5 mortality', fmt: v => v != null ? ((v / 1000) * 100).toFixed(2) + '%' : '—', realVal: real.u5, randVal: random.u5 },
-    { key: 'ppp',  labelZh: '人均 GDP (PPP)', labelEn: 'GDP per capita (PPP)', fmt: v => v != null ? ('$' + Math.round(v).toLocaleString()) : '—', realVal: real.ppp, randVal: random.ppp },
-    { key: 'eys',  labelZh: '預期受教育年數',  labelEn: 'Expected school years', fmt: v => v != null ? (v.toFixed(1) + ' ' + (isEn ? 'yrs' : LANG === 'fr' ? 'ans' : '年')) : '—', realVal: real.eys, randVal: random.eys },
-  ];
+    R(fr ? 'Naissances par an' : 'Births per year', 0, v => v != null ? nf(v / 1e6, 1) + (fr ? ' million(s)' : ' million') : '—', c2 => c2.births),
+    R(fr ? 'Population' : 'Population', 0, v => v != null ? nf(v / 1000, 1) + (fr ? ' million(s)' : ' million') : '—', c2 => c2.pop),
+    R(fr ? 'Espérance de vie (F / H)' : 'Life expectancy (F / M)', 1, v => v != null ? nf(v + 0, 1) + (fr ? ' ans' : ' yrs') : '—', c2 => c2.le),
+    R(fr ? 'Mortalité avant 5 ans' : 'Under-5 mortality', -1, v => v != null ? nf(v / 10, 2) + ' %' : '—', c2 => c2.u5),
+    R(fr ? 'PIB par habitant (PPA)' : 'GDP per capita (PPP)', 1, v => v != null ? '$' + nf(v, 0) : '—', c2 => c2.ppp),
+    R(fr ? 'Coefficient de Gini (inégalités)' : 'Gini coefficient', -1, v => v != null ? nf(v, 2) : '—', c2 => c2.gi),
+    R(fr ? 'Population urbaine' : 'Urban population', 0, pct, c2 => c2.urb),
+    R(fr ? 'Emploi dans l\'agriculture' : 'Farm employment', 0, pct, c2 => c2.agr),
+    R(fr ? 'Années de scolarité attendues' : 'Expected school years', 1, v => v != null ? nf(v, 1) + (fr ? ' ans' : ' yrs') : '—', c2 => c2.eys),
+    R(fr ? 'Accès à l\'enseignement supérieur' : 'Higher education enrolment', 1, pct, c2 => c2.ter),
+    R(fr ? 'Utilisation d\'Internet' : 'Internet use', 1, pct, c2 => c2.net),
+    R(fr ? 'Enfants par femme' : 'Children per woman', 0, v => v != null ? nf(v, 2) : '—', c2 => c2.tfr),
+    R(fr ? 'Mortalité maternelle (pour 100 000 naissances)' : 'Maternal mortality (per 100,000 births)', -1, v => v != null ? nf(v, 0) : '—', c2 => c2.mmr),
+    R(fr ? 'Prévalence du VIH (15-49 ans)' : 'HIV prevalence (15-49)', -1, v => v != null ? nf(v, 2) + ' %' : '—', c2 => c2.hiv),
+    R(fr ? 'Taux d\'homicide (pour 100 000)' : 'Homicide rate (per 100,000)', -1, v => v != null ? nf(v, 1) : '—', c2 => c2.hom),
+    R(fr ? 'Décès sur la route (pour 100 000)' : 'Road deaths (per 100,000)', -1, v => v != null ? nf(v, 1) : '—', c2 => c2.road),
+    R(fr ? 'Paludisme (indice de 0 à 1,5)' : 'Malaria (index 0 to 1.5)', -1, v => v != null ? nf(v, 1) : '—', c2 => c2.mal),
+    R(fr ? 'Tabagisme (hommes / femmes)' : 'Smoking (men / women)', -1, (v, c2) => c2 ? nf(c2.sm, 0) + ' % / ' + nf(c2.sf, 0) + ' %' : '—', c2 => c2.sm),
+    R(fr ? 'Santé payée de sa poche' : 'Out-of-pocket health spending', -1, pct, c2 => c2.oop),
+    R(fr ? 'Mariage avant 18 ans (femmes)' : 'Child marriage (women)', -1, pct, c2 => c2.cm),
+    R(fr ? 'Satisfaction de vie (0-10)' : 'Life satisfaction (0-10)', 1, v => v != null ? nf(v, 1) : '—', c2 => c2.wh),
+    R(fr ? 'Langues' : 'Languages', 0, (v, c2) => langOf(c2), c2 => null),
+  ].map(r => ({ ...r, realVal: r.get(real), randVal: r.get(random), realC: real, randC: random }));
   wrap.innerHTML = `
     <h4>${isEn ? '🧭 If you were born now' : LANG === 'fr' ? "🧭 Si vous naissiez maintenant" : '🧭 如果你現在出生'} <span class="muted">${isEn ? 'vs your random country' : LANG === 'fr' ? "face au pays de cette vie" : 'vs 你的隨機出生地'}</span></h4>
     <table class="ar-table">
@@ -4684,16 +5001,14 @@ function renderActualVsRandom() {
         <tr><th></th><th class="ar-you">${real.flag} ${localize(real).name} <span class="muted">${isEn?'(by your browser language)':LANG === 'fr' ? "(d'après la langue du navigateur)" : '（依瀏覽器語言推測）'}</span></th><th class="ar-rand">${random.flag} ${localize(random).name} <span class="muted">${isEn?'(random draw)':LANG === 'fr' ? '(cette vie)' : '（隨機）'}</span></th></tr>
       </thead>
       <tbody>${rows.map(r => {
-        const realV = r.fmt(r.realVal);
-        const randV = r.fmt(r.randVal);
-        const numReal = parseFloat(String(r.realVal).replace(/[^0-9.\-]/g, ''));
-        const numRand = parseFloat(String(r.randVal).replace(/[^0-9.\-]/g, ''));
+        const half = (c2) => (c2.gap || 0) / 2;
+        const fmtLe = (c2) => nf(c2.le + half(c2), 1) + ' / ' + nf(c2.le - half(c2), 1) + (fr ? ' ans' : ' yrs');
+        const realV = r.lab.startsWith(fr ? 'Espérance' : 'Life expectancy') ? fmtLe(r.realC) : r.fmt(r.realVal, r.realC);
+        const randV = r.lab.startsWith(fr ? 'Espérance' : 'Life expectancy') ? fmtLe(r.randC) : r.fmt(r.randVal, r.randC);
+        const a = parseFloat(r.realVal), b = parseFloat(r.randVal);
         let winner = '';
-        if (!isNaN(numReal) && !isNaN(numRand)) {
-          if (r.key === 'u5') winner = numReal < numRand ? '🟢' : (numReal > numRand ? '🔴' : '⚪');
-          else winner = numReal > numRand ? '🟢' : (numReal < numRand ? '🔴' : '⚪');
-        }
-        return `<tr><td class="ar-k">${enfr(r.labelEn, r.labelZh)}${winner ? ' ' + winner : ''}</td><td class="ar-v">${realV}</td><td class="ar-v">${randV}</td></tr>`;
+        if (r.dir !== 0 && !isNaN(a) && !isNaN(b)) winner = a === b ? '⚪' : ((a > b) === (r.dir > 0) ? '🟢' : '🔴');
+        return `<tr><td class="ar-k">${r.lab}${winner ? ' ' + winner : ''}</td><td class="ar-v">${realV}</td><td class="ar-v">${randV}</td></tr>`;
       }).join('')}</tbody>
     </table>
     <p class="muted ar-note">${isEn ? '🟢 = better than random · 🔴 = worse · ⚪ = same. ' : LANG === 'fr' ? "🟢 = mieux que cette vie · 🔴 = moins bien · ⚪ = pareil. " : '🟢 = 比隨機好 · 🔴 = 比隨機差 · ⚪ = 一樣。'}</p>
@@ -6470,6 +6785,7 @@ function wire() {
       const situation = document.createElement('div');
       situation.id = 'lifeSituation';
       situation.append(...['.cert-age-row', '.cert-meta'].map(q => document.querySelector('#lifeCert ' + q)).filter(Boolean));
+      { const ind = document.createElement('div'); ind.id = 'lifeIndicators'; const st0 = $('#lifeStats'); if (st0) st0.appendChild(ind); }
       const budget = document.createElement('div');
       budget.id = 'lifeBudget';
       const lgrid = document.createElement('div');
@@ -6845,7 +7161,9 @@ function yearBudget(life) {
   const living = Math.min(fullLiving, Math.max(0, net * 0.9));      // les plus pauvres se privent : on ne dépense pas ce qu'on n'a pas
   const health = 0.07 * base * (age < 40 ? 0.5 : age < 60 ? 1 : age < 75 ? 1.8 : 2.6) * (c.oop ?? 30) / 100;
   const school = s.employment === 'university' ? 0.25 * base * (1 - Math.min(0.9, r * 3)) : 0;
-  const habit = (life.smoker ? 0.03 * base : 0) + (life.drinker ? 0.025 * base : 0) + (life.addicted ? 0.15 * base : 0);
+  // On ne dépense pas en tabac ou en alcool ce qu'on n'a pas : le coût est plafonné au disponible après les dépenses de base.
+  const habitRaw = (life.smoker ? 0.03 * base : 0) + (life.drinker ? 0.025 * base : 0) + (life.addicted ? 0.15 * base : 0);
+  const habit = Math.min(habitRaw, Math.max(0, net - living - health - school));
   const comfort = Math.max(0, net - living - health - school - habit) * 0.5;
   return { income, pension, taxes, aid, living, health, school, habit, comfort, saved: net - living - health - school - habit - comfort, r };
 }
@@ -6927,6 +7245,81 @@ function renderLifeGrid() {
   });
 }
 document.addEventListener('click', () => hideGridTip());
+
+/* ==== Indicateurs complémentaires (colonne de gauche) ==== */
+function normCdf(z) {
+  const t = 1 / (1 + 0.2316419 * Math.abs(z)), d = 0.3989423 * Math.exp(-z * z / 2);
+  const p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+  return z > 0 ? 1 - p : p;
+}
+function sigmaOfGini(gi) {
+  const g = Math.min(0.7, Math.max(0.2, gi || 0.38)), pr = (g + 1) / 2;
+  return Math.SQRT2 * 4.91 * (Math.pow(pr, 0.14) - Math.pow(1 - pr, 0.14));
+}
+function topPercent(income, mean, sigma) {
+  if (!(income > 0)) return null;
+  return Math.max(0.1, Math.min(99.9, (1 - normCdf((Math.log(income / mean) + sigma * sigma / 2) / sigma)) * 100));
+}
+function vehicleOf(life) {
+  const c = life.countryData || {}, base = 0.55 * (c.ppp || 12000);
+  const r = (life.stats.annualIncome || 0) / base;
+  if (life.age < 18) return null;
+  if (r >= 0.9 && (c.ppp || 0) >= 12000) return 'car';
+  if ((c.ppp || 0) >= 2500 && (c.road || 0) > 12 && r >= 0.4) return 'moto';
+  if (r >= 0.3) return 'bike';
+  return null;
+}
+function renderIndicators() {
+  const el = $('#lifeIndicators');
+  if (!el || !STATE.life) return;
+  const L = STATE.life, c = L.countryData || {}, fr = LANG === 'fr';
+  const T = fr
+    ? { pos: 'Position de revenu', top: 'dans le top', world: 'Monde', year: 'Patrimoine net, année écoulée', assets: 'Vos biens', move: 'Déplacements', split: "Où va le revenu d'une année (estimation)",
+        home: 'Logement', parents: 'chez vos parents', owner: 'propriétaire', tenant: 'locataire', phone: 'Smartphone', basic: 'Téléphone simple', car: 'Voiture', moto: 'Moto', bike: 'Vélo', savings: 'Épargne', debt: 'Dette',
+        foot: 'À pied', bus: 'Bus', metro: 'Métro et bus', cycle: 'Vélo', carMove: 'Voiture', motoMove: 'Moto', saved: "Mis de côté sur vos revenus", habit: 'Tabac, alcool, drogues', none: 'Aucun mouvement notable',
+        cat: { taxes: 'Impôts et cotisations', food: 'Alimentation', housing: 'Logement et énergie', transport: 'Transports', health: 'Santé', school: 'Études', habit: 'Tabac, alcool, drogues', comfort: 'Loisirs et équipement', saved: 'Épargne' } }
+    : { pos: 'Income position', top: 'in the top', world: 'World', year: 'Net worth, past year', assets: 'Your belongings', move: 'Getting around', split: 'Where a year of income goes (estimate)',
+        home: 'Housing', parents: 'with your parents', owner: 'owner', tenant: 'tenant', phone: 'Smartphone', basic: 'Basic phone', car: 'Car', moto: 'Motorbike', bike: 'Bicycle', savings: 'Savings', debt: 'Debt',
+        foot: 'On foot', bus: 'Bus', metro: 'Metro and bus', cycle: 'Bicycle', carMove: 'Car', motoMove: 'Motorbike', saved: 'Saved from your income', habit: 'Tobacco, alcohol, drugs', none: 'Nothing notable',
+        cat: { taxes: 'Taxes', food: 'Food', housing: 'Housing and energy', transport: 'Transport', health: 'Health', school: 'Education', habit: 'Tobacco, alcohol, drugs', comfort: 'Leisure and equipment', saved: 'Savings' } };
+  const base = 0.55 * (c.ppp || 12000);
+  const inc = L.stats.annualIncome > 0 ? L.stats.annualIncome : base * quartileShare(c, Math.min(4, Math.max(1, L.stats.incomeQuartile || 2)));
+  const topC = topPercent(inc, base, sigmaOfGini(c.gi)), topW = topPercent(inc, 0.55 * 22000, 1.15);
+  const fmtTop = (v) => v == null ? '—' : (v < 10 ? v.toFixed(1) : Math.round(v)) + ' %';
+  const pos = '<div class="ind-block"><div class="ind-h">' + T.pos + '</div><div class="ind-v">' + localize(c).name + ' : ' + T.top + ' ' + fmtTop(topC) + ' · ' + T.world + ' : ' + T.top + ' ' + fmtTop(topW) + '</div></div>';
+  // flux de l'année
+  const b = L.budget || {};
+  const flows = (L.flows || []).filter(f => f.age === L.age);
+  const rows = [];
+  if (b.saved) rows.push([b.saved < 0 ? (fr ? 'Prélevé sur vos économies' : 'Taken from savings') : T.saved, b.saved]);
+  flows.forEach(f => rows.push([f.label || (fr ? 'Divers' : 'Other'), f.amt]));
+  if (b.habit) rows.push([T.habit, -b.habit]);
+  const delta = rows.reduce((a, r) => a + r[1], 0);
+  const yearHtml = '<div class="ind-block"><div class="ind-h">' + T.year + ' : ' + (delta < 0 ? '−' : '+') + money(Math.abs(delta)) + '</div>'
+    + (rows.length ? rows.map(r => '<div class="ind-row"><span>' + escapeHtml(r[0]) + '</span><b class="' + (r[1] < 0 ? 'bud-minus' : 'bud-plus') + '">' + (r[1] < 0 ? '−' : '+') + money(Math.abs(r[1])) + '</b></div>').join('') : '<div class="ind-row muted">' + T.none + '</div>') + '</div>';
+  // biens
+  const veh = vehicleOf(L), items = [];
+  items.push(T.home + ' : ' + (L.age < 18 ? T.parents : L.ownsHome ? T.owner : T.tenant));
+  if (L.age >= 10) items.push(L.stats.netAssets >= 30 && (c.net || 0) >= 30 ? T.phone : T.basic);
+  if (veh) items.push(T[veh]);
+  items.push(L.stats.netAssets >= 0 ? T.savings + ' : ' + money(L.stats.netAssets) : T.debt + ' : ' + money(-L.stats.netAssets));
+  const assetsHtml = '<div class="ind-block"><div class="ind-h">' + T.assets + '</div><div class="ind-v">' + items.join(' · ') + '</div></div>';
+  // déplacements
+  const urban = L.stats.birthPlaceType !== 'rural';
+  const mode = veh === 'car' ? T.carMove : veh === 'moto' ? T.motoMove : ['NLD', 'DNK'].includes(L.country) ? T.cycle : (urban && (c.ppp || 0) >= 20000) ? T.metro : (urban || (c.ppp || 0) >= 8000) ? T.bus : T.foot;
+  const moveHtml = '<div class="ind-block"><div class="ind-h">' + T.move + '</div><div class="ind-v">' + mode + '</div></div>';
+  // répartition
+  let splitHtml = '';
+  if (b && L.age >= 18 && (b.income + b.pension + b.aid) > 0) {
+    const parts = [['taxes', b.taxes], ['food', b.living * 0.45], ['housing', b.living * 0.4], ['transport', b.living * 0.15], ['health', b.health], ['school', b.school], ['habit', b.habit], ['comfort', b.comfort], ['saved', Math.max(0, b.saved)]].filter(x => x[1] > 0);
+    const sum = parts.reduce((a, x) => a + x[1], 0) || 1;
+    const colors = { taxes: '#5f6b70', food: '#9a7430', housing: '#7d2037', transport: '#2b6e6a', health: '#a63e32', school: '#4a6da8', habit: '#444', comfort: '#c8d0cc', saved: '#162126' };
+    splitHtml = '<div class="ind-block"><div class="ind-h">' + T.split + '</div><div class="ind-bar">'
+      + parts.map(x => '<i style="width:' + (x[1] / sum * 100).toFixed(1) + '%;background:' + colors[x[0]] + '" title="' + T.cat[x[0]] + '"></i>').join('') + '</div><div class="ind-legend">'
+      + parts.map(x => '<span><i style="background:' + colors[x[0]] + '"></i>' + T.cat[x[0]] + ' ' + Math.round(x[1] / sum * 100) + ' %</span>').join('') + '</div></div>';
+  }
+  el.innerHTML = pos + yearHtml + assetsHtml + moveHtml + splitHtml;
+}
 function renderBudget() {
   const el = $('#lifeBudget');
   if (!el || !STATE.life) return;

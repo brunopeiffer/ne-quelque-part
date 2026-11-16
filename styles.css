@@ -2544,3 +2544,17 @@ body { font-size: 16px; }
 .lg-legend { font-size: 13px; margin: 12px 0 0; max-width: 560px; }
 .lg-tip { position: fixed; z-index: 300; background: #162126; color: #f1f4f2; border-radius: 10px; padding: 12px 14px; font-size: 14px; line-height: 1.5; box-shadow: 0 8px 24px rgba(0,0,0,.3); pointer-events: none; }
 .lg-tip b { font-size: 15px; }
+
+/* Indicateurs complémentaires */
+.lh-money small { display: block; font-size: 11px; color: var(--ink-3); margin-top: 2px; line-height: 1.35; }
+#lifeIndicators { margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--line); }
+.ind-block { margin: 0 0 14px; }
+.ind-h { font-size: 13px; color: var(--ink-2); margin-bottom: 4px; }
+.ind-v { font-size: 15px; font-weight: 600; line-height: 1.4; }
+.ind-row { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-bottom: 1px dotted var(--line); font-size: 14px; }
+.ind-row b { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ind-bar { display: flex; height: 14px; border-radius: 7px; overflow: hidden; margin: 6px 0 8px; background: var(--bg-3); }
+.ind-bar i { display: block; height: 100%; }
+.ind-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--ink-2); }
+.ind-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+@media (min-width: 1000px) { #view-life .cert-body { max-height: calc(100vh - 160px); overflow-y: auto; scrollbar-width: thin; } }

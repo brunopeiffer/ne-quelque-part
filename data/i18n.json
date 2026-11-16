@@ -779,7 +779,9 @@
     "intro.bc.motherAbsent": "生產時去世",
     "intro.pace": "節奏：每一年",
     "life.income": "年收入",
-    "tree.back": "← 回到人生"
+    "tree.back": "← 回到人生",
+    "cause.槍擊": "槍擊",
+    "cause.愛滋病": "愛滋病"
   },
   "zh-Hans": {
     "title": "选出生地 · 人生模拟",
@@ -1561,7 +1563,9 @@
     "intro.bc.motherAbsent": "生產時去世",
     "intro.pace": "節奏：每一年",
     "life.income": "年收入",
-    "tree.back": "← 回到人生"
+    "tree.back": "← 回到人生",
+    "cause.槍擊": "槍擊",
+    "cause.愛滋病": "愛滋病"
   },
   "en": {
     "title": "Born Somewhere · Life Simulator",
@@ -2343,7 +2347,9 @@
     "intro.bc.motherAbsent": "Died when you were born",
     "intro.pace": "Pace: one year every",
     "life.income": "Annual income",
-    "tree.back": "← Back to the life"
+    "tree.back": "← Back to the life",
+    "cause.槍擊": "Firearm",
+    "cause.愛滋病": "HIV/AIDS"
   },
   "ko": {
     "title": "태어난 곳 · 인생 시뮬레이션",
@@ -3125,7 +3131,9 @@
     "intro.bc.motherAbsent": "Died when you were born",
     "intro.pace": "Pace: one year every",
     "life.income": "Annual income",
-    "tree.back": "← Back to the life"
+    "tree.back": "← Back to the life",
+    "cause.槍擊": "Firearm",
+    "cause.愛滋病": "HIV/AIDS"
   },
   "ja": {
     "title": "出生地 · 人生シミュレーション",
@@ -3907,7 +3915,9 @@
     "intro.bc.motherAbsent": "Died when you were born",
     "intro.pace": "Pace: one year every",
     "life.income": "Annual income",
-    "tree.back": "← Back to the life"
+    "tree.back": "← Back to the life",
+    "cause.槍擊": "Firearm",
+    "cause.愛滋病": "HIV/AIDS"
   },
   "vi": {
     "title": "Nơi sinh · Mô phỏng cuộc đời",
@@ -4689,7 +4699,9 @@
     "intro.bc.motherAbsent": "Died when you were born",
     "intro.pace": "Pace: one year every",
     "life.income": "Annual income",
-    "tree.back": "← Back to the life"
+    "tree.back": "← Back to the life",
+    "cause.槍擊": "Firearm",
+    "cause.愛滋病": "HIV/AIDS"
   },
   "fr": {
     "title": "Né quelque part · Simulateur de vie",
@@ -5493,7 +5505,11 @@
     "causeEx.自行結束": "Vous avez arrêté cette vie vous-même avec le bouton ■.",
     "intro.pace": "Rythme : une année toutes les",
     "life.income": "Revenu annuel",
-    "tree.back": "← Retour à la vie"
+    "tree.back": "← Retour à la vie",
+    "cause.槍擊": "Arme à feu",
+    "cause.愛滋病": "Sida (VIH)",
+    "causeEx.槍擊": "Par exemple : coup de feu lors d'une agression, d'un règlement de comptes ou d'un cambriolage.",
+    "causeEx.愛滋病": "Complications du sida, en l'absence de traitement ou à un stade avancé."
   },
   "th": {
     "title": "เกิดที่ไหน · จำลองชีวิต",
@@ -6275,7 +6291,9 @@
     "intro.bc.motherAbsent": "Died when you were born",
     "intro.pace": "Pace: one year every",
     "life.income": "Annual income",
-    "tree.back": "← Back to the life"
+    "tree.back": "← Back to the life",
+    "cause.槍擊": "Firearm",
+    "cause.愛滋病": "HIV/AIDS"
   },
   "es": {
     "title": "Nacido en algún lugar · Simulador de vida",
@@ -7057,6 +7075,8 @@
     "intro.bc.motherAbsent": "Died when you were born",
     "intro.pace": "Pace: one year every",
     "life.income": "Annual income",
-    "tree.back": "← Back to the life"
+    "tree.back": "← Back to the life",
+    "cause.槍擊": "Firearm",
+    "cause.愛滋病": "HIV/AIDS"
   }
 }
