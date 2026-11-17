@@ -1891,13 +1891,34 @@ const RETIRE_AGE = { FRA: [64, 64], DEU: [67, 67], ITA: [67, 67], ESP: [66, 66],
 const retireAge = (l) => { const a = RETIRE_AGE[l.country]; if (a) return a[l.sex === 'F' ? 1 : 0]; const r = l.countryData?.region; return r === 'hi' ? 65 : r === 'eca' ? 62 : r === 'lac' ? 62 : 60; };
 // Part de la population qui touche une pension : emplois déclarés, caisse de retraite ; très faible là où le travail est informel.
 const pensionCoverage = (c) => Math.max(0.03, Math.min(1, ((c.ppp || 12000) - 3000) / 30000)) * (1 - Math.min(0.4, (c.agr || 0) / 100));
+// Tirage reproductible, sans consommer le hasard du jeu : même personnage, même résultat, quel que soit le moment du calcul.
+function hashU(str) { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967296; }
+const lifeKey = (l) => String((l.name && (l.name.full || l.name.full_en)) || '') + '|' + l.country + '|' + (l.year || '');
+// Part de l'emploi total dans les administrations publiques. Sources : OCDE, Panorama des administrations publiques 2025 (données 2023) pour la Norvège, la Suède, le Danemark, la Finlande, l'Allemagne, le Japon, la Corée, le Chili (moins de 10 %) ; autres pays : estimation du modèle par région.
+const PUBLIC_EMP = { NOR: 0.301, SWE: 0.282, DNK: 0.273, FIN: 0.252, DEU: 0.115, JPN: 0.08, KOR: 0.08, CHL: 0.09 };
+const pubShare = (c) => PUBLIC_EMP[c.id] ?? ({ hi: 0.184, eca: 0.17, lac: 0.12, mena: 0.22, sa: 0.06, ssa: 0.05, eap: 0.08 })[c.region] ?? 0.1;
+const SECTOR_LABEL = { public: 'secteur public (administration)', semi: 'entreprise semi-publique', private: 'entreprise privée' };
+// Secteur de l'emploi : public (administrations, entreprises contrôlées par l'État), semi-public (capital partagé entre public et privé), privé.
+function sectorOf(l) {
+  if (l.sector) return l.sector;
+  if (l.age < 18 || !l.countryData) return null;
+  const u = hashU(lifeKey(l) + 'sector'), share = Math.min(0.6, pubShare(l.countryData) * (l.stats.education >= 4 ? 1.4 : 1));
+  const sec = u < share ? 'public' : u < share + 0.05 ? 'semi' : 'private';
+  if (l.stats.employment === 'employed') l.sector = sec;
+  return sec;
+}
 function hasPension(l) {
-  if (l.pensionRight === undefined) {
+  if (l.pensionRight !== undefined) return l.pensionRight;
+  const sec = l.age >= 18 ? sectorOf(l) : null;
+  let v;
+  if (sec === 'public' || sec === 'semi') v = true;   // emploi stable, affiliation d'office à un régime de retraite
+  else {
     const q = [0.5, 0.8, 1.1, 1.3][(l.stats.incomeQuartile || 2) - 1];
     const cov = pensionCoverage(l.countryData || {});
-    l.pensionRight = Math.random() < (cov >= 0.8 ? 0.97 : Math.min(1, cov * q * (l.stats.birthPlaceType === 'rural' ? 0.6 : 1) * (l.stats.education >= 4 ? 1.3 : 1)));
+    v = hashU(lifeKey(l) + 'pension') < (cov >= 0.8 ? 0.97 : Math.min(1, cov * q * (l.stats.birthPlaceType === 'rural' ? 0.6 : 1) * (l.stats.education >= 4 ? 1.3 : 1)));
   }
-  return l.pensionRight;
+  if (l.age >= 30) l.pensionRight = v;   // on ne fige le droit qu'une fois la carrière engagée
+  return v;
 }
 EXTRA_DECISIONS.push(
   { id: 'de_no_pension', kind: 'big', min: 52, max: 70, p: 0.2, when: (l) => isEmployed(l) && !hasPension(l) && l.age >= retireAge(l) - 6 && !l.noPensionAsked,
@@ -2702,6 +2723,13 @@ const fatherAlive = (l) => { const m = ((l.family && l.family.parents) || []).fi
 const gpAlive = (l) => ((l.family && l.family.grandparents) || []).some(g => isAliveAt(g, l.year + l.yearOffset));
 const hasFriends = (l) => !!(l.friends && l.friends.length);
 const hasPartner = (l) => !!(l.stats && l.stats.partner);
+const inSector = (sec) => (l) => l.stats.employment === 'employed' && l.sector === sec;
+RECIT.push(
+  { a: [25, 60], i: '🏛️', w: 4, rep: true, when: inSector('public'), fx: { happy: 1 }, fr: "Dans votre administration, les grilles de salaire sont connues d'avance et votre poste est protégé : vous n'avez pas peur du lendemain, mais l'évolution est lente." },
+  { a: [25, 60], i: '📈', w: 4, rep: true, when: inSector('private'), fx: { happy: 1 }, fr: "Votre entreprise a fait un très bon trimestre et vous touchez une prime. Une mauvaise année, et personne ne vous aurait protégé." },
+  { a: [30, 62], i: '🤝', w: 3, rep: true, when: inSector('semi'), fx: { social: 1 }, fr: "L'entreprise où vous travaillez appartient à la fois à l'État et à des actionnaires privés : les décisions se prennent entre l'intérêt public et la rentabilité." },
+  { a: [35, 62], i: '📉', w: 3, rep: true, when: inSector('private'), fx: { happy: -3, pppx: -0.05 }, fr: "Votre entreprise supprime des postes. Vous gardez le vôtre, cette fois, mais vous mesurez à quel point un emploi privé peut être fragile." },
+);
 const herdOf = (l) => !!l.herd;
 const renting = (l) => l.housing && l.housing.type === 'rent';
 const owning = (l) => l.housing && ['own', 'mortgage'].includes(l.housing.type);
@@ -8142,7 +8170,7 @@ function eduLabel(life) {
 function jobLine(life) {
   const fr = LANG === 'fr';
   if (life.age < 6) return fr ? 'Enfant' : 'Child';
-  if (life.job && life.stats.employment === 'employed') return genderize(fr ? life.job.fr : life.job.en, life);
+  if (life.job && life.stats.employment === 'employed') { const sec = sectorOf(life); return genderize(fr ? life.job.fr : life.job.en, life) + (fr && sec ? ' (' + ({ public: 'public', semi: 'semi-public', private: 'privé' })[sec] + ')' : ''); }
   if (life.stats.employment === 'university') return fr ? 'Étudiant{e}' : 'Student';
   if (life.stats.employment === 'retired') return fr ? 'Retraité{e}' : 'Retired';
   if (life.age < 18) return fr ? 'Élève' : 'Pupil';

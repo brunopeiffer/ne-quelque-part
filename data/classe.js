@@ -130,6 +130,10 @@
     de_war_flee: T(12, 'Pauvreté · conflits', "Les conflits détruisent revenus et patrimoine."),
   };
 
+  // Dette publique brute des administrations publiques, en % du PIB, 2024. Source : FMI, Perspectives de l'économie mondiale (série GGXWDG_NGDP, DataMapper).
+  const PUBLIC_DEBT = { FRA: 112.6, USA: 122.3, DEU: 61.4, GBR: 99.4, ITA: 134.7, ESP: 101.4, JPN: 213.6, SWE: 33.9, NOR: 52.8, BRA: 87.0, IND: 84.8, CHN: 90.5, ZAF: 76.0, MEX: 59.0, TUR: 23.6, NER: 48.1, ETH: 33.5, NGA: 39.3, KEN: 67.3, MAR: 67.0, HKG: 9.2, SGP: 165.8, CHL: 41.8, COL: 61.0 };
+  const debtTxt = (c) => PUBLIC_DEBT[c.id] != null ? String(PUBLIC_DEBT[c.id]).replace('.', ',') + ' % du PIB' : 'non renseignée';
+
   // ---------- Outils de calcul ----------
   const erf = (x) => { const s = x < 0 ? -1 : 1; x = Math.abs(x); const t = 1 / (1 + 0.3275911 * x); return s * (1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x)); };
   const Phi = (z) => 0.5 * (1 + erf(z / Math.SQRT2));
@@ -175,6 +179,8 @@
         I("Un service public (école, santé, vaccination)", logHit(L, /école|collège|lycée|universit|vaccin|hôpital|soins|médecin|dépistage|concours/i), "Cherchez dans le Récit une école, un soin ou un vaccin, ou les lignes « Santé » et « Éducation » de « Les chiffres »."),
         I("Une prestation versée par l'État", adult && (b.aid > 0 || b.pension > 0) ? 'cette année : ' + money$((b.aid || 0) + (b.pension || 0)) : (adult ? logHit(L, /aide|allocation|pension|bourse|prime/i) : null), "Dans « Les chiffres », lisez la ligne « Allocations familiales » (ou « Prestations » à l'âge adulte), puis cliquez ici pour la cocher."),
         I("Un prélèvement (impôt ou cotisation)", adult && b.taxes > 0 ? 'cette année : ' + money$(b.taxes) : null, "Dans « Les chiffres », lisez la ligne « Prélèvements », puis cliquez ici pour la cocher."),
+        I("L'État employeur ou actionnaire : un emploi public, semi-public ou privé", L.stats.employment === 'employed' && sectorOf(L) ? SECTOR_LABEL[sectorOf(L)] : null, "Apparaît à la vie active (ligne « Secteur d'emploi » dans « Les chiffres »)."),
+        I("La dette publique du pays", null, "Dans « Les chiffres », lisez la ligne « Dette publique », puis cliquez ici."),
       ];
       case '2': return [
         I("Une externalité positive", carnetHit(L, /externalité positive|bien public/i), "Continuez la vie : une décision de vaccination ou de prévention peut en montrer une."),
@@ -271,14 +277,16 @@
   }
   function compare(L) {
     const ids = ['FRA', 'USA', 'BRA', 'IND', 'NER'];
-    const rows = ids.map((id) => { const c = countryById(id); const p = probe(Object.assign({}, L, { countryData: c, country: id }), 2); return '<tr><td>' + countryNm(c) + '</td><td>' + pct(socialRate(c)) + '</td><td class="cl-n">' + pct(p.gross ? p.taxes / p.gross : 0) + ' · ' + money$(p.aid) + '</td></tr>'; }).join('');
-    return '<h5>Comparer des États (même parcours, ailleurs)</h5><table class="cl-t"><tr><th></th><th>Dépenses sociales</th><th>Prélèvement · aides</th></tr>' + rows + '</table>';
+    const rows = ids.map((id) => { const c = countryById(id); const p = probe(Object.assign({}, L, { countryData: c, country: id }), 2); return '<tr><td>' + countryNm(c) + '</td><td>' + pct(socialRate(c)) + '</td><td class="cl-n">' + pct(p.gross ? p.taxes / p.gross : 0) + ' · ' + money$(p.aid) + '</td><td class="cl-n">' + (PUBLIC_DEBT[id] != null ? String(PUBLIC_DEBT[id]).replace('.', ',') + ' %' : '—') + '</td></tr>'; }).join('');
+    return '<h5>Comparer des États (même parcours, ailleurs)</h5><table class="cl-t"><tr><th></th><th>Dépenses sociales</th><th>Prélèvement · aides</th><th>Dette publique (% PIB)</th></tr>' + rows + '</table><p class="cl-note">Dette : FMI, 2024. La dette publique est un stock : l\'État emprunte quand ses dépenses dépassent ses recettes.</p>';
   }
   function rolesTable(c) {
     return "<h5>Les rôles de l'État dans ce pays</h5>" + table([
       ['<b>Sécurité</b> <small>(fonction régalienne)</small>', 'homicides : ' + c.hom + ' pour 100 000'],
       ['<b>Santé</b>', 'reste à charge des ménages : ' + c.oop + ' %'], ['<b>Éducation</b>', 'scolarité attendue : ' + c.eys + ' ans · enseignement supérieur : ' + c.ter + ' %'],
-      ['<b>Protection sociale</b> <small>(État-providence)</small>', 'dépenses sociales ≈ ' + pct(socialRate(c)) + ' de la richesse nationale']]);
+      ['<b>Protection sociale</b> <small>(État-providence)</small>', 'dépenses sociales ≈ ' + pct(socialRate(c)) + ' de la richesse nationale'],
+      ['<b>Dette publique</b> <small>(FMI, 2024)</small>', debtTxt(c)],
+      ['<b>Emploi public</b> <small>(part de l\'emploi total)</small>', pct(pubShare(c)) + (PUBLIC_EMP[c.id] != null ? ' (OCDE, 2023)' : ' (estimation)')]]);
   }
   function viewCh1(L) {
     const b = L.budget || {}, c = L.countryData;
@@ -286,7 +294,8 @@
     const paye = b.taxes || 0, recu = (b.aid || 0) + (b.healthCovered || 0) + (b.pension || 0);
     return "<h5>Ce que l'État prend et ce qu'il rend (cette année)</h5>" + table([
       ['Prélèvements (cotisations + impôts)', money$(paye)], ['Prestations, pension et santé prise en charge', money$(recu)],
-      ["Solde avec l'État", sgn(recu - paye), null, 'cl-key']])
+      ["Solde avec l'État", sgn(recu - paye), null, 'cl-key'],
+      ["Secteur d'emploi du personnage", sectorOf(L) ? SECTOR_LABEL[sectorOf(L)] : '—']])
       + "<h5>Les rôles de l'État dans ce pays</h5>" + table([
         ['Sécurité <small>(fonction régalienne)</small>', 'homicides : ' + c.hom + ' pour 100 000'],
         ['Santé', 'reste à charge des ménages : ' + c.oop + ' %'], ['Éducation', 'scolarité attendue : ' + c.eys + ' ans · enseignement supérieur : ' + c.ter + ' %'],
@@ -531,6 +540,7 @@
         ['Prestations sous conditions de ressources (assistance)', money$(cu.aa)], ['Prestations familiales à l’âge adulte', money$(cu.af)],
         ['Santé prise en charge par la protection sociale', money$(cu.hcov)], ['Pensions de retraite', money$(cu.pen)],
         ['= Total reçu', money$(cu.recu), null, 'cl-sum'], ['Solde avec l’État (reçu − prélevé)', sgn(cu.solde), null, 'cl-key']])
+        + '<p class="cl-small">Secteur d’emploi : <b>' + (L.sector ? SECTOR_LABEL[L.sector] : 'non renseigné') + '</b> · dette publique du pays : <b>' + debtTxt(c) + '</b> (FMI, 2024).</p>'
         + '<p class="cl-small">Pendant l’enfance (estimation, par an) : allocations familiales versées aux parents ' + money$(k.fam) + ' · soins pris en charge ' + money$(k.hcov) + ' · ' + pct(k.school) + ' des frais d’études financés par l’État.</p>'
         + rolesTable(c) + compare(L);
       case '3': return '<h2>Inflation, crédit et pouvoir d’achat</h2><ul>' + evts(/inflation|prix|crédit|emprunt|dette|prêt/i) + '</ul>' + table([['Prélèvements sur la vie', money$(cu.prel)], ['Prestations et santé prise en charge', money$(cu.recu - cu.pen)], ['Solde de l’État vis-à-vis du personnage (pensions incluses)', sgn(cu.solde), null, 'cl-key']]) + compare(L);
