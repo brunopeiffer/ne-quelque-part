@@ -2983,3 +2983,7 @@ body.theme-dark .ltb-event{background:#4a3b1c;color:#ffe3a3}
 #classePrint .cl-t{width:100%;border-collapse:collapse;font-size:12px;margin:4px 0}#classePrint .cl-t td,#classePrint .cl-t th{border:1px solid #999;padding:3px 6px;text-align:left}
 #classePrint .cl-t td:nth-child(2){text-align:right;white-space:nowrap}#classePrint .cl-t tr.cl-sum td{font-weight:700;background:#eee}#classePrint .cl-t tr.cl-key td{font-weight:700}
 #classePrint .cl-small{font-size:11px;color:#444}
+
+body.classe-on #view-life #lifeClasse{order:1 !important}
+body.classe-on #view-life #lifeEventsFeed{order:2 !important;max-height:300px}
+.cl-warn{background:#fdecd6;border-left:4px solid #e2705a;padding:8px 12px;border-radius:8px;font-size:13px;margin:8px 0}

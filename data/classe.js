@@ -59,6 +59,7 @@
     de_child_vaccines: T(2, 'Externalité positive · bien public', "La vaccination des enfants limite la circulation des maladies : un avantage pour tous, d'où l'intervention publique."),
     de_bednet: T(2, 'Externalité positive', "Une moustiquaire protège aussi les voisins : le bénéfice dépasse celui de l'acheteur."),
     de_malaria: T(2, 'Externalité · prévention', "Le paludisme se propage ; la prévention collective rapporte plus que la somme des choix individuels."),
+    sm_volunteer: T(2, 'Bien commun · passager clandestin', "Un service rendu à tous profite aussi à ceux qui n'y contribuent pas : chacun préfère laisser les autres agir."),
     sm_cigarette: T(2, 'Externalité négative', "Le tabac coûte à la collectivité (soins, fumée passive) : une externalité négative, taxée pour la corriger."),
     de_quit_smoking: T(2, 'Externalité négative · coût social', "Arrêter de fumer réduit des coûts supportés par l'assurance maladie, donc par les autres."),
     de_alcohol: T(2, 'Externalité négative', "L'alcool provoque des accidents et des violences : des coûts imposés à d'autres."),
@@ -139,7 +140,7 @@
   const Phi = (z) => 0.5 * (1 + erf(z / Math.SQRT2));
   const PhiInv = (p) => { let lo = -6, hi = 6; for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (Phi(m) < p) lo = m; else hi = m; } return (lo + hi) / 2; };
   const Z_ABS = 1095;                                      // 3 $ par jour en parité de pouvoir d'achat (seuil de pauvreté extrême, Banque mondiale)
-  const median = (c) => 0.5 * (c.ppp || 12000);            // niveau de vie médian estimé
+  const median = (c) => { const nv = (q) => yearBudget({ countryData: c, age: 35, stats: { employment: 'employed', incomeQuartile: q, education: 2, kids: [], married: false, relationship: 'single' }, job: { mult: 1 } }).nv; return (nv(2) + nv(3)) / 2; };   // niveau de vie médian estimé : salarié seul de 35 ans, entre le 2e et le 3e quartile, aides comprises
   const zRelOf = (c) => 0.6 * median(c);                   // seuil de pauvreté relative : 60 % du niveau de vie médian
   const sigma = (c) => Math.max(0.25, Math.SQRT2 * PhiInv(((c.gi != null ? c.gi : 0.38) + 1) / 2));
   const rateUnder = (c, z) => Phi(Math.log(z / median(c)) / sigma(c));   // part de la population sous le seuil (loi log-normale)
@@ -175,7 +176,7 @@
     const I = (t, ex, hint) => ({ t, ok: !!ex, ex: ex || null, hint: hint || '' });
     switch (String(ch)) {
       case '1': return [
-        I("Une mission régalienne de l'État (sécurité, justice, défense)", logHit(L, /police|sécurité|tribunal|justice|cambriol|armée|conscription|frontière|violence|guerre|arrêt|vol/i), "Cherchez un événement du Récit (sécurité, justice, armée) ou la ligne « Sécurité » dans « Les chiffres »."),
+        I("Une mission régalienne de l'État (sécurité, justice, défense)", logHit(L, /police|sécurité|tribunal|justice|cambriol|armée|conscription|frontière|violence|guerre|arrêté|\bvol\b|volé/i), "Cherchez un événement du Récit (sécurité, justice, armée) ou la ligne « Sécurité » dans « Les chiffres »."),
         I("Un service public (école, santé, vaccination)", logHit(L, /école|collège|lycée|universit|vaccin|hôpital|soins|médecin|dépistage|concours/i), "Cherchez dans le Récit une école, un soin ou un vaccin, ou les lignes « Santé » et « Éducation » de « Les chiffres »."),
         I("Une prestation versée par l'État", adult && (b.aid > 0 || b.pension > 0) ? 'cette année : ' + money$((b.aid || 0) + (b.pension || 0)) : (adult ? logHit(L, /aide|allocation|pension|bourse|prime/i) : null), "Dans « Les chiffres », lisez la ligne « Allocations familiales » (ou « Prestations » à l'âge adulte), puis cliquez ici pour la cocher."),
         I("Un prélèvement (impôt ou cotisation)", adult && b.taxes > 0 ? 'cette année : ' + money$(b.taxes) : null, "Dans « Les chiffres », lisez la ligne « Prélèvements », puis cliquez ici pour la cocher."),
@@ -190,7 +191,7 @@
         I("Une défaillance de l'État", carnetHit(L, /défaillance de l'état|corruption/i), "Continuez la vie : corruption ou favoritisme peuvent en montrer une."),
       ];
       case '3': return [
-        I("Un épisode d'inflation (prix qui montent)", carnetHit(L, /inflation/i) || logHit(L, /inflation|prix/i), "Continuez la vie : une décision sur les prix ou l'épargne peut apparaître."),
+        I("Un épisode d'inflation (prix qui montent)", carnetHit(L, /inflation/i) || logHit(L, /inflation|les prix/i), "Continuez la vie : une décision sur les prix ou l'épargne peut apparaître."),
         I("Un crédit ou une dette", carnetHit(L, /crédit|prêt/i) || logHit(L, /crédit|emprunt|dette|prêt/i), "Continuez la vie : un prêt ou une dette peut apparaître."),
         I("Le bilan budgétaire (prélèvements et prestations)", adult ? 'cette année : prélèvements ' + money$(b.taxes || 0) + ', prestations ' + money$(b.aid || 0) : null, "Disponible à partir de 18 ans, dans « Les chiffres »."),
       ];
@@ -205,16 +206,16 @@
       case '5': return [
         I("Une période d'études", histHas(L, (h) => h.emp === 'university') ? 'études supérieures' : null, "Repérez-la sur la frise (études supérieures en violet), ou cliquez ici si le personnage n'a connu que l'école."),
         I("Une période d'emploi", histHas(L, (h) => h.emp === 'employed') ? 'oui' : null, "Elle apparaît en vert sur la frise dès la vie active."),
-        I("Une période sans emploi ou inactif", histHas(L, (h, a) => a >= 18 && h.emp === 'none') ? 'oui' : null, "Elle apparaît en gris après 18 ans, si le personnage n'a pas d'emploi."),
+        I("Une période de chômage ou d'inactivité", histHas(L, (h, a) => a >= 19 && (h.emp === 'none' || h.emp === 'seeking')) ? 'oui' : null, "Elle apparaît en gris ou en rouge après 19 ans (scolarité jusqu'à 18 ans). Continuez la vie : une perte d'emploi peut survenir."),
         I("La retraite, ou un travail sans droit à pension", L.stats.employment === 'retired' || (L.age >= 60 && !hasPension(L)) ? (hasPension(L) ? 'retraite avec pension' : 'sans pension') : null, "Apparaît autour de 60 ans."),
       ];
       case '8': return [
-        I("Un lien avec l'étranger (migration, transfert d'argent, emploi à l'étranger)", logHit(L, /migr|étranger|passeur|expuls|frontière|transfert|envoy|visa|Golfe/i), "Continuez la vie : une décision de départ ou d'envoi d'argent peut apparaître."),
+        I("Un lien avec l'étranger (migration, transfert d'argent, emploi à l'étranger)", logHit(L, /\bmigr|\bétranger|passeur|expuls|frontière|transfert|\benvoy|\bvisa\b|Golfe/i), "Continuez la vie : une décision de départ ou d'envoi d'argent peut apparaître."),
         I("L'accès à Internet du pays", null, "Lisez le tableau « Ouverture au monde » dans « Les chiffres », puis cliquez ici."),
         I("Un écart de niveau de vie avec un autre pays", null, "Comparez les PIB par habitant dans « Les chiffres », puis cliquez ici."),
       ];
       case '11': return [
-        I("Un choc environnemental (sécheresse, inondation, incendie, eau)", logHit(L, /sécheresse|inondation|incendie|eau|tremblement|mousson|cyclone/i), "Continuez la vie : un événement climatique peut apparaître."),
+        I("Un choc environnemental (sécheresse, inondation, incendie, eau)", logHit(L, /sécheresse|inondation|incendie|\beau\b|tremblement|mousson|cyclone/i), "Continuez la vie : un événement climatique peut apparaître."),
         I("L'indice de développement estimé du pays", null, "Lisez le tableau « Indice de développement » dans « Les chiffres », puis cliquez ici."),
         I("L'espérance de vie et la scolarité du pays", null, "Elles composent l'indice : repérez-les puis cliquez ici."),
       ];
@@ -233,13 +234,14 @@
     const b = L.budget || {}, c = L.countryData;
     if (L.age < 18) return childTable(L) + note("Avancez jusqu'à la vie active pour voir cotisations, impôts et prestations du personnage lui-même.");
     const gross = b.gross || 0, prel = b.taxes || 0, taux = gross > 0 ? prel / gross : 0;
-    const recu = (b.aid || 0) + (b.healthCovered || 0) + (b.pensionAssist || 0);
+    const recu = (b.aid || 0) + (b.healthCovered || 0) + (b.pensionAssist || 0) + (b.unemp || 0);
     const rows = [
       ["Revenu d'activité", money$(b.income || 0)], ['Pension de retraite', money$(b.pension || 0)],
       ['= Revenu primaire', money$(gross), null, 'cl-sum'],
       ['− Cotisations sociales <small>(assurance)</small>', money$(b.cotis || 0)], ['− Impôts', money$(b.impots || 0)],
       ['+ Prestations sous conditions de ressources <small>(assistance · redistribution verticale)</small>', money$(b.aidAssist || 0)],
       ['+ Prestations familiales <small>(universelles · redistribution horizontale)</small>', money$(b.aidFamily || 0)],
+      ['+ Allocation chômage <small>(assurance)</small>', money$(b.unemp || 0)],
       ['= Revenu disponible', money$(b.net || 0), null, 'cl-sum'],
     ];
     const q = [1, 2, 3, 4].map((k) => { const p = probe(L, k); return { k, rate: p.gross ? p.taxes / p.gross : 0 }; });
@@ -291,7 +293,7 @@
   function viewCh1(L) {
     const b = L.budget || {}, c = L.countryData;
     if (L.age < 18) return childTable(L) + rolesTable(L.countryData) + compare(L);
-    const paye = b.taxes || 0, recu = (b.aid || 0) + (b.healthCovered || 0) + (b.pension || 0);
+    const paye = b.taxes || 0, recu = (b.aid || 0) + (b.healthCovered || 0) + (b.pension || 0) + (b.unemp || 0);
     return "<h5>Ce que l'État prend et ce qu'il rend (cette année)</h5>" + table([
       ['Prélèvements (cotisations + impôts)', money$(paye)], ['Prestations, pension et santé prise en charge', money$(recu)],
       ["Solde avec l'État", sgn(recu - paye), null, 'cl-key'],
@@ -308,10 +310,10 @@
     return '<h5>Notions rencontrées</h5>' + list.slice(-8).reverse().map((x) => '<div class="cl-card"><b>' + esc(x.n) + '</b> <small>' + x.age + ' ans</small><br>' + esc(x.t) + '<br><em>Votre choix : ' + esc(x.label) + '</em></div>').join('');
   }
   function viewCh5(L) {
-    const hist = L.hist || {}, col = { employed: '#2f9e8f', university: '#8a82e6', retired: '#f0a23a', none: '#c9c4b8' };
-    const lab = { employed: 'Actif occupé', university: 'Études', retired: 'Retraité (inactif)', none: 'Sans emploi / inactif' };
+    const hist = L.hist || {}, col = { employed: '#2f9e8f', university: '#8a82e6', retired: '#f0a23a', none: '#c9c4b8', seeking: '#e2705a' };
+    const lab = { employed: 'Actif occupé', university: 'Études', retired: 'Retraité (inactif)', none: 'Inactif', seeking: 'Chômage (en recherche d\'emploi)' };
     let strip = '';
-    const cnt = { employed: 0, university: 0, retired: 0, none: 0 };
+    const cnt = { employed: 0, university: 0, retired: 0, none: 0, seeking: 0 };
     for (let a = 0; a <= L.age; a++) {
       const e = (hist[a] && hist[a].emp) || 'none';
       if (a >= 16) cnt[e] = (cnt[e] || 0) + 1;
@@ -320,7 +322,7 @@
     const informal = hasPension(L) ? 0 : cnt.employed;
     const legend = Object.keys(lab).map((k) => '<span class="cl-key-i"><u style="background:' + col[k] + '"></u>' + lab[k] + '</span>').join('');
     return '<h5>Statut sur le marché du travail, âge par âge</h5><div class="cl-strip">' + strip + '</div><div class="cl-legend">' + legend + '</div>'
-      + table([['Années de vie active (actif occupé)', cnt.employed + ' ans'], ["Années d'études", cnt.university + ' ans'], ['Années sans emploi ou inactif (hors retraite)', cnt.none + ' ans'],
+      + table([['Années de vie active (actif occupé)', cnt.employed + ' ans'], ["Années d'études", cnt.university + ' ans'], ['Années de chômage', cnt.seeking + ' ans'], ['Années d\'inactivité (hors retraite)', cnt.none + ' ans'],
                ['Années en emploi sans droit à pension (informel ou non déclaré)', informal + ' ans', null, 'cl-key']])
       + note("Un taux d'activité, un taux d'emploi et un taux de chômage se calculent sur une population : utilisez le « tableau de classe » avec les résultats de tous les élèves.");
   }
@@ -328,14 +330,14 @@
     const c = L.countryData, refs = [c, countryById('FRA'), countryById('NER')].filter((x, i, a) => x && a.findIndex((y) => y.id === x.id) === i);
     const f = (v) => v.toFixed(2).replace('.', ',');
     const rows = refs.map((x) => { const d = idh(x); return '<tr><td>' + countryNm(x) + '</td><td>santé ' + f(d.h) + ' · éducation ' + f(d.e) + ' · revenu ' + f(d.i) + '</td><td class="cl-n"><b>' + f(d.v) + '</b></td></tr>'; }).join('');
-    const ev = (L.log || []).filter((e) => /sécheresse|inondation|incendie|eau|tremblement|mousson|cyclone/i.test(e.text || '')).slice(-4).map((e) => '<li>' + e.age + ' ans : ' + esc(e.text) + '</li>').join('');
+    const ev = (L.log || []).filter((e) => /sécheresse|inondation|incendie|\beau\b|tremblement|mousson|cyclone/i.test(e.text || '')).slice(-4).map((e) => '<li>' + e.age + ' ans : ' + esc(e.text) + '</li>').join('');
     return '<h5>Indice de développement humain estimé (santé, éducation, revenu)</h5><table class="cl-t"><tr><th></th><th>Composantes</th><th>Indice</th></tr>' + rows + '</table>'
       + note("Estimation simplifiée à partir de l'espérance de vie, de la scolarité attendue et du PIB par habitant : elle ne remplace pas l'IDH publié.")
       + '<h5>Chocs environnementaux vécus par votre personnage</h5>' + (ev ? '<ul class="cl-ul">' + ev + '</ul>' : note('Aucun pour le moment.'));
   }
   function viewCh3(L) {
     const b = L.budget || {}, c = L.countryData;
-    const ev = (L.log || []).filter((e) => /inflation|prix|crédit|emprunt|dette|crise/i.test(e.text || '')).slice(-4).map((e) => '<li>' + e.age + ' ans : ' + esc(e.text) + '</li>').join('');
+    const ev = (L.log || []).filter((e) => /inflation|les prix|crédit|emprunt|dette|crise/i.test(e.text || '')).slice(-4).map((e) => '<li>' + e.age + ' ans : ' + esc(e.text) + '</li>').join('');
     const list = (L.carnet || []).filter((x) => x.ch === 3).slice(-4).map((x) => '<div class="cl-card"><b>' + esc(x.n) + '</b> <small>' + x.age + ' ans</small><br>' + esc(x.t) + '<br><em>Votre choix : ' + esc(x.label) + '</em></div>').join('');
     const bilan = L.age < 18 ? note("Avant 18 ans, le personnage ne perçoit pas de revenu : avancez jusqu'à la vie active pour voir l'effet de la politique budgétaire.")
       : '<h5>Bilan budgétaire de la personne (cette année)</h5>' + table([['Revenu primaire', money$(b.gross || 0)], ['− Prélèvements obligatoires', money$(b.taxes || 0)], ['+ Prestations (assistance, famille)', money$(b.aid || 0)], ['= Revenu disponible (pouvoir d\'achat)', money$(b.net || 0), null, 'cl-sum'], ['Solde de l\'État vis-à-vis du personnage', sgn((b.aid || 0) + (b.healthCovered || 0) + (b.pension || 0) - (b.taxes || 0)), null, 'cl-key']]);
@@ -344,7 +346,7 @@
   }
   function viewCh8(L) {
     const c = L.countryData, hist = L.log || [];
-    const ev = hist.filter((e) => /migr|étranger|passeur|expuls|frontière|transfert|envoy|rentr|visa|Golfe|contrat à l/i.test(e.text || '')).slice(-5).map((e) => '<li>' + e.age + ' ans : ' + esc(e.text) + '</li>').join('');
+    const ev = hist.filter((e) => /\bmigr|\bétranger|passeur|expuls|frontière|transfert|\benvoy|rentr|\bvisa\b|Golfe|contrat à l/i.test(e.text || '')).slice(-5).map((e) => '<li>' + e.age + ' ans : ' + esc(e.text) + '</li>').join('');
     const refs = [c, countryById('FRA'), countryById('NER')].filter((x, i, a) => x && a.findIndex((y) => y.id === x.id) === i);
     const rows = refs.map((x) => '<tr><td>' + countryNm(x) + '</td><td>' + (x.net != null ? x.net + ' %' : '—') + '</td><td class="cl-n">' + money$(x.ppp) + '</td></tr>').join('');
     return '<h5>Les liens de votre personnage avec le reste du monde</h5>' + (ev ? '<ul class="cl-ul">' + ev + '</ul>' : note('Aucune migration ni aucun transfert pour le moment.'))
@@ -359,6 +361,23 @@
     if (!CL.cfg) return;
     const n = NOTIONS[d.id];
     if (n) (life.carnet = life.carnet || []).push({ age: d.age, id: d.id, ch: n.ch, n: n.n, t: n.t, label: d.label });
+  };
+  // Décisions garanties par chapitre (option « garantir » du professeur) : âge minimal, puis une décision parmi la liste.
+  const SCEN = {
+    '2': [[13, ['de_vaccination', 'de_child_vaccines', 'de_bednet', 'sm_volunteer']], [14, ['sm_cigarette', 'de_alcohol']], [24, ['de_fin_insurance', 'de_health_warning', 'de_screening']], [28, ['de_water', 'de_neighbourhood_watch', 'de_hypertension']], [32, ['de_bribe', 'de_nepotism', 'de_fin_savings']]],
+    '3': [[21, ['de_inflation', 'de_inflation_hedge']], [25, ['de_loan_request', 'de_student_loan', 'de_fin_savings']]],
+    '8': [[20, ['de_migration', 'de_gulf_job', 'de_remittance', 'de_fin_remit']]],
+    '11': [[20, ['de_drought', 'de_flood', 'de_wildfire', 'de_water']]],
+  };
+  CL.scenario = (life, age) => {
+    if (!CL.cfg || !CL.cfg.g || !life.classe) return null;
+    const list = SCEN[CL.cfg.c]; if (!list) return null;
+    const done = new Set((life.decisions || []).map((d) => d.id)), tries = life.scenTries = life.scenTries || {};
+    for (const [a, ids] of list) {
+      if (age < a || (tries[a] || 0) > 6 || ids.some((i) => done.has(i))) continue;
+      tries[a] = (tries[a] || 0) + 1; return ids;
+    }
+    return null;
   };
   CL.onStart = (life) => { if (CL.cfg) life.classe = { n: CL.cfg.n, ch: CL.cfg.c }; };
   CL.onEnd = () => { unseed(); };
@@ -462,9 +481,9 @@
       } else if (st.step === 3) {
         h += '<h3>Derniers réglages</h3><label>Nom de la séance<input id="wzName" type="text" value="' + esc(st.name || (CHAPS[st.c].t.split(' · ')[0] + ' · ' + today)) + '"></label>'
           + '<label class="cl-chk wz-chk"><input type="checkbox" id="wzSame"' + (st.same ? ' checked' : '') + '><span><b>Même hasard pour tous les élèves</b> (recommandé)<br><small>À choix identiques, deux élèves d’un même pays obtiennent exactement la même vie, et les vies de pays différents restent comparables : vous pouvez dire « toutes choses égales par ailleurs ».</small></span></label>'
-          + '<div class="wz-sum"><b>Récapitulatif</b><br>' + esc(CHAPS[st.c].t) + '<br>Pays : ' + countriesOf().map((id) => { const c = countryById(id); return c ? countryNm(c) : id; }).join(' · ') + '</div>' + nav(true, true, 'Générer le code →');
+          + (SCEN[st.c] ? '<label class="cl-chk wz-chk"><input type="checkbox" id="wzScen"' + (st.scen ? ' checked' : '') + '><span><b>Garantir des décisions liées au chapitre</b><br><small>Chaque élève rencontre au moins une décision du chapitre (santé, crédit, migration, climat…) : plus de vies où rien ne se passe.</small></span></label>' : '') + '<div class="wz-sum"><b>Récapitulatif</b><br>' + esc(CHAPS[st.c].t) + '<br>Pays : ' + countriesOf().map((id) => { const c = countryById(id); return c ? countryNm(c) : id; }).join(' · ') + '</div>' + nav(true, true, 'Générer le code →');
       } else {
-        const cfg = { n: ($('#wzName', m) ? $('#wzName', m).value : st.name).trim() || 'Séance', c: st.c, p: countriesOf(), s: 1 + Math.floor(Math.random() * 99999), m: st.same ? 1 : 0 };
+        const cfg = { n: ($('#wzName', m) ? $('#wzName', m).value : st.name).trim() || 'Séance', c: st.c, p: countriesOf(), s: 1 + Math.floor(Math.random() * 99999), m: st.same ? 1 : 0, g: SCEN[st.c] && st.scen ? 1 : 0 };
         st.cfg = st.cfg || cfg; const code = enc(st.cfg), url = location.origin + location.pathname + '?classe=' + code;
         const names = st.cfg.p.map((id) => { const c = countryById(id); return c ? localize(c).name : id; });
         const repart = names.map((n, k) => 'binômes ' + (k === 0 ? '1, ' + (names.length + 1) + ', …' : (k + 1) + ', ' + (names.length + k + 1) + ', …') + ' : ' + n).join(' · ');
@@ -480,7 +499,7 @@
       if (bk) bk.addEventListener('click', () => { st.step--; st.cfg = null; draw(); });
       if (nx) nx.addEventListener('click', () => {
         if (st.step === 2) { const sel = $('#wzCtry', body); if (sel && sel.selectedOptions.length) st.custom = [...sel.selectedOptions].map((o) => o.value); }
-        if (st.step === 3) { st.name = $('#wzName', body).value; st.same = $('#wzSame', body).checked; }
+        if (st.step === 3) { st.name = $('#wzName', body).value; st.same = $('#wzSame', body).checked; st.scen = !!($('#wzScen', body) && $('#wzScen', body).checked); }
         st.step++; draw();
       });
       if (st.step === 4) {
@@ -507,9 +526,10 @@
     return { act, inac, etu, yAbs, yRel, aid, hc, rate: sumGross > 0 ? sumPrel / sumGross : 0, avgInc: act ? sumInc / act : 0 };
   }
   const csvHead = 'classe;eleve;pays;sexe;milieu_quartile;age_deces;cause;patrimoine_final;revenu_moyen_actif;taux_prelevement;aides_cumulees;reste_charge_sante_cumule;annees_pauvrete_absolue;annees_pauvrete_relative;pension;annees_actif;annees_etudes;annees_inactif;notions;solde_etat_cumule;sante_prise_en_charge_cumulee';
+  const eur = (v) => Math.round((v || 0) * (typeof CURRENCY_RATES !== 'undefined' ? CURRENCY_RATES['€'] : 0.92));
   function csvLine(L) {
     const r = results(L), c = L.countryData;
-    return [CL.cfg ? CL.cfg.n : '', localStorage.getItem(LS_STU) || '', c.id, L.sex, L.stats.incomeQuartile, L.deathAge || L.age, causeLabel(L.cause || ''), Math.round(L.stats.netAssets), Math.round(r.avgInc), (r.rate * 100).toFixed(1), Math.round(r.aid), Math.round(r.hc), r.yAbs, r.yRel, hasPension(L) ? 'oui' : 'non', r.act, r.etu, r.inac, (L.carnet || []).length, Math.round(cumul(L).solde), Math.round(cumul(L).hcov)].join(';');
+    return [CL.cfg ? CL.cfg.n : '', localStorage.getItem(LS_STU) || '', c.id, L.sex, L.stats.incomeQuartile, L.deathAge || L.age, causeLabel(L.cause || ''), eur(L.stats.netAssets), eur(r.avgInc), (r.rate * 100).toFixed(1), eur(r.aid), eur(r.hc), r.yAbs, r.yRel, hasPension(L) ? 'oui' : 'non', r.act, r.etu, r.inac, (L.carnet || []).length, eur(cumul(L).solde), eur(cumul(L).hcov)].join(';');
   }
   CL.renderEnd = () => {
     const L = STATE.life; if (!CL.cfg || !L || !L.classe) return;
@@ -517,17 +537,17 @@
     let el = $('#classeSheet');
     if (!el) { el = document.createElement('div'); el.id = 'classeSheet'; end.insertBefore(el, end.firstChild); }
     const ch = CHAPS[CL.cfg.c] || CHAPS['4'];
-    el.innerHTML = '<div class="bt bt-class"><h3>🎓 Mode classe · fiche de synthèse</h3><p>' + esc(ch.t) + ' · ' + esc(localize(L.countryData).name) + '</p><div class="cl-btns"><button type="button" id="clPrint">Imprimer ou enregistrer en PDF</button><button type="button" id="clCopy" class="ghost">Copier mes résultats (CSV)</button><button type="button" class="ghost" id="clAgg2">Tableau de classe</button></div><p class="cl-small" id="clMsg"></p></div>';
+    el.innerHTML = '<div class="bt bt-class"><h3>🎓 Mode classe · fiche de synthèse</h3><p>' + esc(ch.t) + ' · ' + esc(localize(L.countryData).name) + '</p>' + ((L.deathAge || L.age) < 40 ? '<p class="cl-warn">⚠ Vie courte (décès avant 40 ans) : les observations sont limitées. Recommencez avec un autre personnage pour voir plus de situations.</p>' : '') + '<div class="cl-btns"><button type="button" id="clPrint">Imprimer ou enregistrer en PDF</button><button type="button" id="clCopy" class="ghost">Copier mes résultats (CSV)</button><button type="button" class="ghost" id="clAgg2">Tableau de classe</button></div><p class="cl-small" id="clMsg"></p></div>';
     $('#clPrint', el).addEventListener('click', () => printSheet(L));
     $('#clCopy', el).addEventListener('click', () => { const t = csvHead + '\n' + csvLine(L); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => { $('#clMsg', el).textContent = 'Résultats copiés : collez-les dans un tableur ou envoyez-les à votre enseignant.'; }).catch(() => { $('#clMsg', el).textContent = t; }); });
     $('#clAgg2', el).addEventListener('click', aggregator);
   };
   // Ce que la collectivité a prélevé et versé sur toute la vie (somme des années de l'historique).
   function cumul(L) {
-    const hist = L.hist || {}; let prel = 0, aa = 0, af = 0, hcov = 0, pen = 0, hc = 0, cot = 0, imp = 0;
-    Object.keys(hist).forEach((k) => { const b = hist[k].b; if (!b) return; cot += b.cot; imp += b.imp; prel += b.cot + b.imp; aa += b.aa; af += b.af; hcov += Math.max(0, b.ht - b.hc); pen += b.pen; hc += b.hc; });
-    const recu = aa + af + hcov + pen;
-    return { cot, imp, prel, aa, af, hcov, pen, hc, recu, solde: recu - prel };
+    const hist = L.hist || {}; let prel = 0, aa = 0, af = 0, hcov = 0, pen = 0, hc = 0, cot = 0, imp = 0, un = 0;
+    Object.keys(hist).forEach((k) => { const b = hist[k].b; if (!b) return; cot += b.cot; imp += b.imp; prel += b.cot + b.imp; aa += b.aa; af += b.af; hcov += Math.max(0, b.ht - b.hc); pen += b.pen; hc += b.hc; un += b.un || 0; });
+    const recu = aa + af + hcov + pen + un;
+    return { cot, imp, prel, aa, af, hcov, pen, hc, un, recu, solde: recu - prel };
   }
   // Bloc propre au chapitre, à partir de l'historique de la vie (pas seulement de la dernière année).
   function chapterBlock(L, ch) {
@@ -543,7 +563,7 @@
         + '<p class="cl-small">Secteur d’emploi : <b>' + (L.sector ? SECTOR_LABEL[L.sector] : 'non renseigné') + '</b> · dette publique du pays : <b>' + debtTxt(c) + '</b> (FMI, 2024).</p>'
         + '<p class="cl-small">Pendant l’enfance (estimation, par an) : allocations familiales versées aux parents ' + money$(k.fam) + ' · soins pris en charge ' + money$(k.hcov) + ' · ' + pct(k.school) + ' des frais d’études financés par l’État.</p>'
         + rolesTable(c) + compare(L);
-      case '3': return '<h2>Inflation, crédit et pouvoir d’achat</h2><ul>' + evts(/inflation|prix|crédit|emprunt|dette|prêt/i) + '</ul>' + table([['Prélèvements sur la vie', money$(cu.prel)], ['Prestations et santé prise en charge', money$(cu.recu - cu.pen)], ['Solde de l’État vis-à-vis du personnage (pensions incluses)', sgn(cu.solde), null, 'cl-key']]) + compare(L);
+      case '3': return '<h2>Inflation, crédit et pouvoir d’achat</h2><ul>' + evts(/inflation|les prix|crédit|emprunt|dette|\bprêt\b/i) + '</ul>' + table([['Prélèvements sur la vie', money$(cu.prel)], ['Prestations et santé prise en charge', money$(cu.recu - cu.pen)], ['Solde de l’État vis-à-vis du personnage (pensions incluses)', sgn(cu.solde), null, 'cl-key']]) + compare(L);
       case '4': {
         const q = [1, 2, 3, 4].map((x) => { const p = probe(L, x); return [x === 1 ? 'Quartile 1 (revenus les plus bas)' : x === 4 ? 'Quartile 4 (revenus les plus hauts)' : 'Quartile ' + x, pct(p.gross ? p.taxes / p.gross : 0, 1)]; });
         const rr = socialRate(c), oop = c.oop != null ? c.oop : 30;
@@ -552,8 +572,8 @@
           + '<h2>Assurance et assistance sur la vie</h2>' + table([['Cotisations versées (logique d’assurance)', money$(cu.cot)], ['Santé prise en charge', money$(cu.hcov)], ['Pensions reçues', money$(cu.pen)], ['Assistance reçue (sous conditions de ressources)', money$(cu.aa)], ['Prestations familiales reçues', money$(cu.af)]]);
       }
       case '5': return '<h2>Statut sur le marché du travail</h2>' + table([['Années d’activité (actif occupé)', r.act + ' ans'], ['Années d’études supérieures', r.etu + ' ans'], ['Années sans emploi ou inactif (hors retraite)', r.inac + ' ans'], ['Droit à une pension', hasPension(L) ? 'oui' : 'non']]) + '<p class="cl-small">Pour un taux d’activité ou d’emploi, utilisez le tableau de classe.</p>';
-      case '8': return '<h2>Liens avec l’étranger</h2><ul>' + evts(/migr|étranger|passeur|expuls|frontière|transfert|envoy|visa|Golfe/i) + '</ul>' + table([['Usage d’Internet dans le pays', c.net != null ? c.net + ' %' : '—'], ['PIB par habitant (parité de pouvoir d’achat)', money$(c.ppp)]]);
-      case '11': { const d = idh(c), f = (v) => v.toFixed(2).replace('.', ','); return '<h2>Indice de développement estimé</h2>' + table([['Santé (espérance de vie ' + c.le + ' ans)', f(d.h)], ['Éducation (scolarité attendue ' + c.eys + ' ans)', f(d.e)], ['Revenu (PIB par habitant)', f(d.i)], ['Indice', f(d.v), null, 'cl-key']]) + '<h2>Chocs environnementaux vécus</h2><ul>' + evts(/sécheresse|inondation|incendie|eau|tremblement|mousson|cyclone/i) + '</ul>'; }
+      case '8': return '<h2>Liens avec l’étranger</h2><ul>' + evts(/\bmigr|\bétranger|passeur|expuls|frontière|transfert|\benvoy|\bvisa\b|Golfe/i) + '</ul>' + table([['Usage d’Internet dans le pays', c.net != null ? c.net + ' %' : '—'], ['PIB par habitant (parité de pouvoir d’achat)', money$(c.ppp)]]);
+      case '11': { const d = idh(c), f = (v) => v.toFixed(2).replace('.', ','); return '<h2>Indice de développement estimé</h2>' + table([['Santé (espérance de vie ' + c.le + ' ans)', f(d.h)], ['Éducation (scolarité attendue ' + c.eys + ' ans)', f(d.e)], ['Revenu (PIB par habitant)', f(d.i)], ['Indice', f(d.v), null, 'cl-key']]) + '<h2>Chocs environnementaux vécus</h2><ul>' + evts(/sécheresse|inondation|incendie|\beau\b|tremblement|mousson|cyclone/i) + '</ul>'; }
       case '12': {
         const ages = [20, 30, 40, 50, 60, 70].filter((a) => hist[a] && hist[a].b);
         const zr = zRelOf(c), refs = [c, countryById('FRA'), countryById('NER')].filter((x, i2, a) => x && a.findIndex((y) => y.id === x.id) === i2);
@@ -567,8 +587,8 @@
   function printSheet(L) {
     const ch = CHAPS[CL.cfg.c] || CHAPS['4'], c = L.countryData, hist = L.hist || {}, r = results(L), d = idh(c), cu = cumul(L);
     const ages = [20, 30, 40, 50, 60, 70, 80].filter((a) => hist[a] && hist[a].b);
-    const head = '<tr><th>Âge</th><th>Revenu d’activité</th><th>Pension</th><th>Cotisations</th><th>Impôts</th><th>Assistance</th><th>Prest. familiales</th><th>Santé prise en charge</th><th>Santé reste à charge</th><th>Revenu disponible</th><th>Solde avec l’État</th><th>Patrimoine</th></tr>';
-    const rows = ages.map((a) => { const h = hist[a], b = h.b, hcov = Math.max(0, b.ht - b.hc), solde = b.aa + b.af + hcov + b.pen - b.cot - b.imp; return '<tr><td>' + a + '</td><td>' + money$(b.inc) + '</td><td>' + money$(b.pen) + '</td><td>' + money$(b.cot) + '</td><td>' + money$(b.imp) + '</td><td>' + money$(b.aa) + '</td><td>' + money$(b.af) + '</td><td>' + money$(hcov) + '</td><td>' + money$(b.hc) + '</td><td>' + money$(b.net) + '</td><td>' + sgn(solde) + '</td><td>' + money$(h.a) + '</td></tr>'; }).join('');
+    const head = '<tr><th>Âge</th><th>Revenu d’activité</th><th>Pension</th><th>Cotisations</th><th>Impôts</th><th>Assistance</th><th>Prest. familiales</th><th>Chômage</th><th>Santé prise en charge</th><th>Santé reste à charge</th><th>Revenu disponible</th><th>Solde avec l’État</th><th>Patrimoine</th></tr>';
+    const rows = ages.map((a) => { const h = hist[a], b = h.b, hcov = Math.max(0, b.ht - b.hc), solde = b.aa + b.af + hcov + b.pen + (b.un || 0) - b.cot - b.imp; return '<tr><td>' + a + '</td><td>' + money$(b.inc) + '</td><td>' + money$(b.pen) + '</td><td>' + money$(b.cot) + '</td><td>' + money$(b.imp) + '</td><td>' + money$(b.aa) + '</td><td>' + money$(b.af) + '</td><td>' + money$(b.un || 0) + '</td><td>' + money$(hcov) + '</td><td>' + money$(b.hc) + '</td><td>' + money$(b.net) + '</td><td>' + sgn(solde) + '</td><td>' + money$(h.a) + '</td></tr>'; }).join('');
     const carnet = (L.carnet || []).map((x) => '<li><b>' + esc(x.n) + '</b> (' + x.age + ' ans, chap. ' + x.ch + ') — ' + esc(x.t) + ' <em>Choix : ' + esc(x.label) + '</em></li>').join('') || '<li>Aucune notion enregistrée.</li>';
     const qs = ch.q.map((x) => '<li>' + esc(x) + '<div class="cl-lines"></div></li>').join('');
     const f = L.sex === 'F' ? 'e' : '';
@@ -598,9 +618,9 @@
       const mean = (rs, i) => rs.reduce((s, r) => s + (parseFloat(String(r[i]).replace(',', '.')) || 0), 0) / rs.length;
       const lines = Object.keys(by).map((id) => {
         const rs = by[id], c = countryById(id), nm = c ? countryNm(c) : id, act = mean(rs, 15), etu = mean(rs, 16), ina = mean(rs, 17), tot = act + etu + ina || 1;
-        return '<tr><td>' + nm + '</td><td>' + rs.length + '</td><td>' + Math.round(mean(rs, 5)) + '</td><td>' + mean(rs, 9).toFixed(1).replace('.', ',') + ' %</td><td>' + Math.round(mean(rs, 10)).toLocaleString('fr-FR') + '</td><td>' + mean(rs, 12).toFixed(1).replace('.', ',') + ' / ' + mean(rs, 13).toFixed(1).replace('.', ',') + '</td><td>' + Math.round(rs.filter((r) => r[14] === 'oui').length / rs.length * 100) + ' %</td><td>' + (act / tot * 100).toFixed(0) + ' %</td></tr>';
+        return '<tr><td>' + nm + '</td><td>' + rs.length + '</td><td>' + Math.round(mean(rs, 5)) + '</td><td>' + mean(rs, 9).toFixed(1).replace('.', ',') + ' %</td><td>' + Math.round(mean(rs, 10)).toLocaleString('fr-FR') + '</td><td>' + mean(rs, 12).toFixed(1).replace('.', ',') + ' / ' + mean(rs, 13).toFixed(1).replace('.', ',') + '</td><td>' + Math.round(rs.filter((r) => r[14] === 'oui').length / rs.length * 100) + ' %</td><td>' + (act / tot * 100).toFixed(0) + ' %</td><td>' + Math.round(mean(rs, 19)).toLocaleString('fr-FR') + ' €</td><td>' + Math.round(mean(rs, 20)).toLocaleString('fr-FR') + ' €</td></tr>';
       }).join('');
-      out.innerHTML = '<table class="cl-t"><tr><th>Pays</th><th>Élèves</th><th>Âge au décès</th><th>Prélèvement moyen</th><th>Aides cumulées</th><th>Années pauvres abs./rel.</th><th>Avec pension</th><th>Part des années en activité</th></tr>' + lines + '</table><p class="cl-small">Part des années en activité = années d\'activité ÷ (activité + études + inactivité) après 18 ans : une approche du taux d\'emploi. Montants en dollars PPA du modèle.</p>';
+      out.innerHTML = '<table class="cl-t"><tr><th>Pays</th><th>Élèves</th><th>Âge au décès</th><th>Prélèvement moyen</th><th>Aides cumulées</th><th>Années pauvres abs./rel.</th><th>Avec pension</th><th>Part des années en activité</th><th>Solde avec l’État</th><th>Santé prise en charge</th></tr>' + lines + '</table><p class="cl-small">Part des années en activité = années d\'activité ÷ (activité + études + inactivité) après 18 ans : une approche du taux d\'emploi. Montants en euros (aides cumulées, solde avec l’État, santé prise en charge : moyennes sur la vie entière).</p>';
     });
   }
 

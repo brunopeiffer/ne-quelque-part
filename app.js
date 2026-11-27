@@ -2176,6 +2176,19 @@ function tryTriggerDecision(life, newAge) {
   // 已經有 modal 在開就不要觸發
   const decM = document.getElementById('decisionModal');
   if (decM && !decM.hasAttribute('hidden')) return false;
+  // Mode classe : décision garantie du chapitre (hors délai de repos), tirée parmi celles qui sont possibles pour ce personnage
+  const wanted = window.CLASSE && CLASSE.scenario ? CLASSE.scenario(life, newAge) : null;
+  if (wanted) {
+    const pool = DECISIONS.filter(d => wanted.includes(d.id) && !(life.decisions || []).some(x => x.id === d.id));
+    for (let i = 0; i < 400 && pool.length; i++) {
+      const d = pool[Math.floor(Math.random() * pool.length)];
+      let ok = false; try { ok = d.chance(life); } catch (e) {}
+      if (!ok) continue;
+      const payload = d.show(life);
+      if (payload && showDecision({ id: d.id, kind: d.kind, age: newAge, ...payload })) { life.lastDecisionAge = newAge; return true; }
+      break;
+    }
+  }
   // 冷卻期：距上一個決策還不夠就先不要，這一年仍然有機會（隔年再試）
   const lastAge = life.lastDecisionAge;
   if (lastAge != null && newAge - lastAge < DECISION_COOLDOWN) return false;
@@ -3981,6 +3994,24 @@ function milestoneEvents(life, newAge) {
   if (newAge >= 19 && newAge <= 23 && life.stats.employment === 'seeking' && chance(0.4)) {
     life.stats.employment = 'employed';
   }
+  // Chômage : perte d'emploi entre 24 et 58 ans (risque selon la région, le secteur et le diplôme), puis retour à l'emploi.
+  if (newAge >= 24 && newAge <= 58) {
+    const c0 = life.countryData || {};
+    if (life.stats.employment === 'employed') {
+      const reg = ({ hi: 0.035, eca: 0.04, lac: 0.05, mena: 0.05, sa: 0.02, ssa: 0.04, eap: 0.03 })[c0.region] ?? 0.035;
+      const p = reg * (sectorOf(life) === 'public' ? 0.25 : 1) * [1.6, 1.4, 1.1, 0.9, 0.6][Math.min(4, life.stats.education || 0)];
+      if (chance(p)) {
+        life.stats.employment = 'seeking'; life.seekYears = 0;
+        events.push({ age: newAge, kind: 'small', icon: '📭', text: LANG === 'fr' ? "Vous perdez votre emploi : vous voilà en recherche d'emploi." : 'You lose your job and start looking for work.' });
+      }
+    } else if (life.stats.employment === 'seeking') {
+      life.seekYears = (life.seekYears || 0) + 1;
+      if (chance((c0.ppp || 0) > 20000 ? 0.45 : 0.6)) {
+        life.stats.employment = 'employed';
+        events.push({ age: newAge, kind: 'small', icon: '💼', text: LANG === 'fr' ? "Vous retrouvez un emploi." : 'You find a new job.' });
+      }
+    }
+  }
   // Université : entrée à 19 ans pour qui vise le niveau supérieur, trois ans d'études, puis réussite ou échec.
   if (newAge === 19 && life.stats.education >= 3 && tgt >= 4 && !life.univ && ['seeking', 'none'].includes(life.stats.employment)) {
     life.univ = { start: 19, status: 'enrolled' };
@@ -4355,7 +4386,7 @@ function tick() {
   {
     const Lh2 = STATE.life, b = Lh2.budget || {};
     (Lh2.hist || (Lh2.hist = {}))[Lh2.age] = { h: Lh2.stats.happiness, he: Lh2.stats.health, a: Lh2.stats.netAssets, saved: b.saved || 0, habit: b.habit || 0,
-      emp: Lh2.stats.employment, b: { inc: Math.round(b.income || 0), pen: Math.round(b.pension || 0), cot: Math.round(b.cotis || 0), imp: Math.round(b.impots || 0), aa: Math.round(b.aidAssist || 0), af: Math.round(b.aidFamily || 0), hc: Math.round(b.health || 0), ht: Math.round(b.healthTotal || 0), net: Math.round(b.net || 0), nv: Math.round(b.nv || 0) } };
+      emp: Lh2.stats.employment, b: { inc: Math.round(b.income || 0), pen: Math.round(b.pension || 0), cot: Math.round(b.cotis || 0), imp: Math.round(b.impots || 0), aa: Math.round(b.aidAssist || 0), af: Math.round(b.aidFamily || 0), hc: Math.round(b.health || 0), ht: Math.round(b.healthTotal || 0), net: Math.round(b.net || 0), nv: Math.round(b.nv || 0), un: Math.round(b.unemp || 0) } };
   }
   // v5.55：通用決策 — 在每年 tick 末尾試一個未觸發過的事件
   setTimeout(() => tryTriggerDecision(STATE.life, STATE.life.age), 120);
@@ -7980,7 +8011,8 @@ function yearBudget(life) {
   const taxes = gross * Math.min(0.5, r * [0.6, 0.9, 1.15, 1.5][q - 1]);
   const kidsAtHome = (s.kids || []).filter(k => age - k.bornAt < 20).length;
   const aid = r * 1.5 * Math.max(0, 0.6 * base - gross) + r * 0.15 * base * kidsAtHome;
-  const net = gross - taxes + aid;
+  const unemp = s.employment === 'seeking' && r >= 0.12 && (life.seekYears || 0) <= 2 && life.lastWage ? life.lastWage * Math.min(0.6, r * 2.2) : 0;   // allocation chômage : pays à protection sociale développée, 3 ans au plus
+  const net = gross - taxes + aid + unemp;
   const couple = s.married || s.relationship === 'cohab';
   const fullLiving = 0.42 * base * (s.birthPlaceType === 'rural' ? 0.85 : 1.15) * (couple ? 0.8 : 1) * (1 + 0.2 * kidsAtHome);
   const hs = life.housing;
@@ -8004,7 +8036,7 @@ function yearBudget(life) {
   const healthOwn = Math.max(0, health - insPremium);
   const healthTotal = healthOwn / Math.max(0.08, (c.oop ?? 30) / 100);
   return { income, pension, taxes, aid, living, health, school, habit, comfort, saved: net - living - health - school - habit - comfort, r,
-           gross, net, nv: net * (couple ? 1.33 : 1) / (1 + 0.3 * kidsAtHome), cotis, impots: taxes - cotis, aidFamily, aidAssist: aid - aidFamily, pensionAssist, healthTotal, healthCovered: Math.max(0, healthTotal - healthOwn) };
+           gross, net, unemp, nv: net * (couple ? 1.33 : 1) / (1 + 0.3 * kidsAtHome), cotis, impots: taxes - cotis, aidFamily, aidAssist: aid - aidFamily, pensionAssist, healthTotal, healthCovered: Math.max(0, healthTotal - healthOwn) };
 }
 function applyYearBudget(life) {
   const b = yearBudget(life);
